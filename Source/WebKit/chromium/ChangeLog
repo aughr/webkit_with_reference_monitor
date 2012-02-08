@@ -1,3 +1,155 @@
+2012-02-08  Alexei Svitkine  <asvitkine@chromium.org>
+
+        Chromium: Fix Mac rubber band overhang drawing on composited pages and re-enable tests.
+        https://bugs.webkit.org/show_bug.cgi?id=78007
+
+        This got broken by: http://trac.webkit.org/changeset/105470
+        And the tests were accidentally(?) disabled in: http://trac.webkit.org/changeset/95191
+
+        There is still three tests that fail from the set, but the cause for these is different,
+        which I'm still investigating.
+
+        Reviewed by James Robinson.
+
+        * src/NonCompositedContentHost.cpp:
+        (WebKit::NonCompositedContentHost::NonCompositedContentHost):
+
+2012-02-07  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Move geometry headers in Platform API to Platform directory
+        https://bugs.webkit.org/show_bug.cgi?id=78067
+
+        Reviewed by Adam Barth.
+
+        Add forwarding headers for several API types moved into Platform.
+
+        * public/platform/WebFloatPoint.h:
+        * public/platform/WebFloatQuad.h:
+        * public/platform/WebFloatRect.h:
+        * public/platform/WebPoint.h:
+        * public/platform/WebRect.h:
+        * public/platform/WebSize.h:
+
+2012-02-07  MORITA Hajime  <morrita@google.com>
+
+        [Chromium] WebTextCheckingResult should have new default constructor
+        https://bugs.webkit.org/show_bug.cgi?id=78066
+
+        Reviewed by Ryosuke Niwa.
+
+        Added a new default constructor. ex-default constructor will be removed
+        in an upcoming change.
+
+        * public/WebTextCheckingResult.h:
+        (WebKit::WebTextCheckingResult::WebTextCheckingResult):
+        (WebTextCheckingResult):
+
+2012-02-07  Gregg Tavares  <gman@google.com>
+
+        Plumb through webGLErrorsToConsoleEnable in WebSettings
+        https://bugs.webkit.org/show_bug.cgi?id=78061
+
+        Reviewed by Kenneth Russell.
+
+        * public/WebSettings.h:
+        * src/WebSettingsImpl.cpp:
+        (WebKit::WebSettingsImpl::setWebGLErrorsToConsoleEnabled):
+        (WebKit):
+        * src/WebSettingsImpl.h:
+        (WebSettingsImpl):
+
+2012-02-07  Robert Kroeger  <rjkroege@chromium.org>
+
+        [chromium] Remove no longer necessary Chromium gesture recognizer code.
+        https://bugs.webkit.org/show_bug.cgi?id=77492
+
+        Reviewed by Adam Barth.
+
+        * WebKit.gypi:
+        * features.gypi:
+        * src/WebFrameImpl.cpp:
+        (WebKit::WebFrameImpl::createFrameView):
+        * src/WebPopupMenuImpl.cpp:
+        (WebKit::WebPopupMenuImpl::WebPopupMenuImpl):
+        (WebKit::WebPopupMenuImpl::handleTouchEvent):
+        * src/WebPopupMenuImpl.h:
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::WebViewImpl):
+        (WebKit::WebViewImpl::touchEvent):
+        * src/WebViewImpl.h:
+        (WebCore):
+        (WebViewImpl):
+        * tests/InnerGestureRecognizerTest.cpp: Removed.
+
+2012-02-07  David Reveman  <reveman@chromium.org>
+
+        [Chromium] REGRESSION(r101854): Causing large amounts of unnecessary repainting.
+        https://bugs.webkit.org/show_bug.cgi?id=78020
+
+        Reviewed by James Robinson.
+
+        Update TextureManagerTest.requestTextureExceedingPreferredLimit test.
+
+        * tests/TextureManagerTest.cpp:
+        (WTF::TextureManagerTest::requestTexture):
+        (WTF::TEST_F):
+
+2012-02-07  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Unit test for bug #77996
+        https://bugs.webkit.org/show_bug.cgi?id=78019
+
+        Reviewed by James Robinson.
+
+        * tests/CCLayerTreeHostTest.cpp:
+        (CCLayerTreeHostTestManySurfaces):
+        (WTF::CCLayerTreeHostTestManySurfaces::CCLayerTreeHostTestManySurfaces):
+        (WTF::CCLayerTreeHostTestManySurfaces::beginTest):
+        (WTF::CCLayerTreeHostTestManySurfaces::afterTest):
+        (WTF):
+
+2012-02-07  Sadrul Habib Chowdhury  <sadrul@chromium.org>
+
+        Process Scroll-gesture events from the compositor.
+        https://bugs.webkit.org/show_bug.cgi?id=77477
+
+        Reviewed by James Robinson.
+
+        * src/WebCompositorInputHandlerImpl.cpp:
+        (WebKit::WebCompositorInputHandlerImpl::WebCompositorInputHandlerImpl):
+        (WebKit::WebCompositorInputHandlerImpl::handleInputEvent):
+        * src/WebCompositorInputHandlerImpl.h:
+        (WebCompositorInputHandlerImpl):
+
+2012-02-07  Anders Carlsson  <andersca@apple.com>
+
+        ScrollableAreaSet should be moved from Page to FrameView
+        https://bugs.webkit.org/show_bug.cgi?id=62762
+
+        Reviewed by Beth Dakin.
+
+        Update for changes to WebCore now that the scrollable area set is kept per frame view.
+
+        * src/ScrollbarGroup.cpp:
+        (WebKit::ScrollbarGroup::ScrollbarGroup):
+        (WebKit::ScrollbarGroup::~ScrollbarGroup):
+        * src/ScrollbarGroup.h:
+        (WebCore):
+        (ScrollbarGroup):
+        * src/WebPluginContainerImpl.cpp:
+        (WebKit::WebPluginContainerImpl::scrollbarGroup):
+
+2012-02-07  Hans Wennborg  <hans@chromium.org>
+
+        Chromium: remove WebSpeechInputResult::set
+        https://bugs.webkit.org/show_bug.cgi?id=77977
+
+        Reviewed by Darin Fisher.
+
+        It was renamed to assign() in r106475.
+
+        * public/WebSpeechInputResult.h:
+
 2012-02-07  Sheriff Bot  <webkit.review.bot@gmail.com>
 
         Unreviewed, rolling out r106935.

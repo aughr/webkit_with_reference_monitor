@@ -1,3 +1,61 @@
+2012-02-07  Robert Kroeger  <rjkroege@chromium.org>
+
+        [chromium] Remove the enable marcro for the no longer necessary Chromium
+        gesture recognizer.
+        https://bugs.webkit.org/show_bug.cgi?id=77492
+
+        Reviewed by Adam Barth.
+
+        * wtf/Platform.h:
+
+2012-02-07  Tony Chang  <tony@chromium.org>
+
+        merge DashboardSupportCSSPropertyNames.in into CSSPropertyNames.in
+        https://bugs.webkit.org/show_bug.cgi?id=78036
+
+        Reviewed by Darin Adler.
+
+        * Configurations/FeatureDefines.xcconfig: Add ENABLE_DASHBOARD_SUPPORT to FEATURE_DEFINES.
+
+2012-02-07  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [CMAKE] Use *bin* and *lib* directories for executable and libraries.
+        https://bugs.webkit.org/show_bug.cgi?id=77928
+
+        Reviewed by Daniel Bates.
+
+        CMake has used *Programs* directory for executable. In addition, shared libraries are being
+        built in source directory. It is better to set common places in order to maintain executable
+        and libraries. *bin* is for executable and *lib* is for library.
+
+        * shell/CMakeLists.txt: Change *Programs* with *bin*.
+
+2012-02-07  Gavin Barraclough  <barraclough@apple.com>
+
+        Crash on http://www.rickshawbags.com/
+        https://bugs.webkit.org/show_bug.cgi?id=78045
+
+        Reviewed by Darin Adler.
+
+        Problem URL is: http://www.rickshawbags.com/customize/custom-bag#!thl=rickshaw/bag()
+        
+        This is a bug introduced by https://bugs.webkit.org/show_bug.cgi?id=71933,
+        isVariableObject() checks were excluding StaticScopeObjects, this patch
+        inadvertently changed them to be included.
+
+        * runtime/JSType.h:
+            - sort JSType enum such that StaticScopeObjectType comes before VariableObjectType,
+              and thus is excluded from isVariableObject() checks.
+
+2012-02-06  Jer Noble  <jer.noble@apple.com>
+
+        Use CMClock as a timing source for PlatformClock where available.
+        https://bugs.webkit.org/show_bug.cgi?id=77885
+
+        Reviewed by Eric Carlson.
+
+        * wtf/Platform.h: Added WTF_USE_COREMEDIA.
+
 2012-02-06  Filip Pizlo  <fpizlo@apple.com>
 
         ValueToNumber and ValueToDouble nodes don't do anything and should be removed

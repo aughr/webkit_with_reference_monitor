@@ -1,3 +1,288 @@
+2012-02-08  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r106920, r106924, r106933, r106939,
+        and r107090.
+        http://trac.webkit.org/changeset/106920
+        http://trac.webkit.org/changeset/106924
+        http://trac.webkit.org/changeset/106933
+        http://trac.webkit.org/changeset/106939
+        http://trac.webkit.org/changeset/107090
+        https://bugs.webkit.org/show_bug.cgi?id=78124
+
+        Something is completely wrong this change (Requested by
+        Ossy_gardener on #webkit).
+
+        * Shared/WebProcessCreationParameters.cpp:
+        (WebKit::WebProcessCreationParameters::encode):
+        (WebKit::WebProcessCreationParameters::decode):
+        * Shared/WebProcessCreationParameters.h:
+        (WebProcessCreationParameters):
+        * UIProcess/WebContext.cpp:
+        (WebKit::WebContext::WebContext):
+        * UIProcess/qt/WebContextQt.cpp:
+        (WebKit::WebContext::platformInitializeWebProcess):
+        * WebProcess/qt/WebProcessQt.cpp:
+        (WebKit):
+        (WebKit::WebProcess::platformSetCacheModel):
+        (WebKit::WebProcess::platformInitializeWebProcess):
+
+2012-02-08  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Fix a crash when WebKitWebView is created without a WebContext
+        https://bugs.webkit.org/show_bug.cgi?id=78104
+
+        Reviewed by Philippe Normand.
+
+        * UIProcess/API/gtk/WebKitWebView.cpp:
+        (webkitWebViewSetProperty): Make sure WebKitWebView:web-context
+        property is initialized to the default web context when a web
+        context is not passed to g_object_new().
+        * UIProcess/API/gtk/tests/TestWebKitWebView.cpp:
+        (testWebViewDefaultContext): Check that a web view created with
+        g_object_new has the default context.
+
+2012-02-08  Michael Brüning  <michael.bruning@nokia.com>
+
+        [Qt][WK2] Compute and set cache capacities using the current CacheModel
+        https://bugs.webkit.org/show_bug.cgi?id=73918
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * UIProcess/WebContext.cpp:
+        (WebKit::WebContext::WebContext): Set default cacheModel for Qt platform to
+        CacheModelPrimaryWebBrowser.
+
+2012-02-08  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Fix WebKitWebView::decide-policy API documentation
+        https://bugs.webkit.org/show_bug.cgi?id=78101
+
+        Reviewed by Martin Robinson.
+
+        - It refers to WebKitPolicyClient instead of WebKitWebView
+        - Trailing ':' is missing
+        - References @decision as WebKitNavigationPolicyDecision instead
+        of WebKitPolicyDecision
+
+        * UIProcess/API/gtk/WebKitWebView.cpp:
+        (webkit_web_view_class_init):
+
+2012-02-08  Mahesh Kulkarni  <mahesh.kulkarni@nokia.com>
+
+        [Qt] Build broken if qt missing openssl
+        https://bugs.webkit.org/show_bug.cgi?id=77894
+
+        Reviewed by Chang Shu.
+
+        Build fix. No new test content. 
+
+        * WebProcess/qt/QtNetworkAccessManager.cpp:
+        (WebKit::QtNetworkAccessManager::onSslErrors):
+
+2012-02-08  Yael Aharon  <yael.aharon@nokia.com>
+
+        [WK2] Text notifications should have an iconURL
+        https://bugs.webkit.org/show_bug.cgi?id=77968
+
+        Reviewed by Simon Hausmann.
+        
+        Per http://www.w3.org/TR/notifications simple text notifications should have an iconURL.
+        Add an iconURL to WebNotification and add a public API to access it.
+       
+        * UIProcess/API/C/WKNotification.cpp:
+        (WKNotificationCopyiconURL):
+        * UIProcess/API/C/WKNotification.h:
+        * UIProcess/Notifications/WebNotification.cpp:
+        (WebKit::WebNotification::WebNotification):
+        * UIProcess/Notifications/WebNotification.h:
+        (WebKit::WebNotification::create):
+        (WebKit::WebNotification::iconURL):
+        (WebNotification):
+        * UIProcess/Notifications/WebNotificationManagerProxy.cpp:
+        (WebKit::WebNotificationManagerProxy::show):
+        * UIProcess/Notifications/WebNotificationManagerProxy.h:
+        (WebNotificationManagerProxy):
+        * UIProcess/WebPageProxy.cpp:
+        (WebKit::WebPageProxy::showNotification):
+        * UIProcess/WebPageProxy.h:
+        (WebPageProxy):
+        * UIProcess/WebPageProxy.messages.in:
+        * WebProcess/Notifications/WebNotificationManager.cpp:
+        (WebKit::WebNotificationManager::show):
+
+2012-02-08  Philippe Normand  <pnormand@igalia.com>
+
+        [GTK][WK2] enable-webaudio WebSetting
+        https://bugs.webkit.org/show_bug.cgi?id=77959
+
+        Reviewed by Martin Robinson.
+
+        Add a new WebKitGTK WebSetting to enable/disable WebAudio at
+        runtime.
+
+        * UIProcess/API/gtk/WebKitSettings.cpp:
+        (webKitSettingsSetProperty):
+        (webKitSettingsGetProperty):
+        (webkit_settings_class_init):
+        (webkit_settings_get_enable_webaudio):
+        (webkit_settings_set_enable_webaudio):
+        * UIProcess/API/gtk/WebKitSettings.h:
+        * UIProcess/API/gtk/tests/TestWebKitSettings.cpp:
+        (testWebKitSettings):
+
+2012-02-07  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] [WK2] Add WebKitResponsePolicyDecision
+        https://bugs.webkit.org/show_bug.cgi?id=76789
+
+        Reviewed by Philippe Normand.
+
+        Add a WebKitResponsePolicyDecision GObject, use it for response
+        policy decisions and add a test.
+
+        * GNUmakefile.am: Added new source files to the list.
+        * UIProcess/API/gtk/WebKitPolicyClient.cpp:
+        (decidePolicyForResponseCallback): Added this callback which creates the request
+        and fires the signal.
+        (attachPolicyClientToPage): Added new callback to the C API policy client.
+        * UIProcess/API/gtk/WebKitResponsePolicyDecision.cpp: Added.
+        * UIProcess/API/gtk/WebKitResponsePolicyDecision.h: Added.
+        * UIProcess/API/gtk/WebKitResponsePolicyDecisionPrivate.h: Added.
+        * UIProcess/API/gtk/docs/webkit2gtk-docs.sgml: Added new docs.
+        * UIProcess/API/gtk/docs/webkit2gtk-sections.txt: Ditto.
+        * UIProcess/API/gtk/tests/TestWebKitPolicyClient.cpp:
+        (testResponsePolicy): Added this test for response policy decisions.
+        (serverCallback): Added a SoupServer to test policy response policy decisions.
+        (beforeAll): Ditto.
+        (afterAll): Ditto.
+
+2012-02-07  Timothy Hatcher  <timothy@apple.com>
+
+        Avoid making a window for the Web Inspector when it is docked.
+
+        This also makes sure the inspector WKView is in a window before the page is loaded.
+        This avoids some redundant work caused by moving it to a window later.
+
+        https://webkit.org/b/78064
+
+        Reviewed by Brian Weinstein.
+
+        * UIProcess/WebInspectorProxy.cpp:
+        (WebKit::WebInspectorProxy::createInspectorPage): Set m_isAttached here...
+        (WebKit::WebInspectorProxy::didLoadInspectorPage): ... instead of here.
+        * UIProcess/WebInspectorProxy.h:
+        (WebInspectorProxy):
+        * UIProcess/mac/WebInspectorProxyMac.mm:
+        (WebKit::WebInspectorProxy::createInspectorWindow): Added. Factored out of platformOpen.
+        (WebKit::WebInspectorProxy::updateInspectorWindowTitle): Added. Factored out of platformInspectedURLChanged.
+        (WebKit::WebInspectorProxy::platformCreateInspectorPage): Call platformAttach or createInspectorWindow.
+        (WebKit::WebInspectorProxy::platformOpen): Make the view or window visible.
+        (WebKit::WebInspectorProxy::platformDidClose): Only message m_inspectorWindow if it isn't nil.
+        (WebKit::WebInspectorProxy::platformInspectedURLChanged): Store the urlString and call updateInspectorWindowTitle.
+        (WebKit::WebInspectorProxy::inspectedViewFrameDidChange): Return early if not visible.
+        (WebKit::WebInspectorProxy::platformAttach): Start out hidden if we are not visible yet. Destroy the window.
+        (WebKit::WebInspectorProxy::platformDetach): Use createInspectorWindow to create it again.
+
+2012-02-07  Tony Chang  <tony@chromium.org>
+
+        merge DashboardSupportCSSPropertyNames.in into CSSPropertyNames.in
+        https://bugs.webkit.org/show_bug.cgi?id=78036
+
+        Reviewed by Darin Adler.
+
+        * Configurations/FeatureDefines.xcconfig: Add ENABLE_DASHBOARD_SUPPORT to FEATURE_DEFINES.
+
+2012-02-07  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [CMAKE] Use *bin* and *lib* directories for executable and libraries.
+        https://bugs.webkit.org/show_bug.cgi?id=77928
+
+        Reviewed by Daniel Bates.
+
+        CMake has used *Programs* directory for executable. In addition, shared libraries are being
+        built in source directory. It is better to set common places in order to maintain executable
+        and libraries. *bin* is for executable and *lib* is for library.
+
+        * CMakeLists.txt:
+
+2012-02-07  Timothy Hatcher  <timothy@apple.com>
+
+        Initilize the WebPageProxy intrinsicDeviceScaleFactor on creation of the WKView.
+
+        If WKView was created and loaded a page with canvas elements before beinging moved
+        to a window, the canvas elements would be locked in at a pixel ratio of 1. With this
+        change the WKView will use the main screen's pixel ratio until it moves to a window.
+
+        Reviewed by Anders Carlsson.
+
+        * UIProcess/API/mac/WKView.mm:
+        (-[WKView initWithFrame:contextRef:pageGroupRef:]): Call setIntrinsicDeviceScaleFactor.
+
+2012-02-07  Alexey Proskuryakov  <ap@apple.com>
+
+        Keep a reference in didReceiveInvalidMessage.
+        https://bugs.webkit.org/show_bug.cgi?id=78024
+
+        Reviewed by Anders Carlsson.
+
+        * UIProcess/WebConnectionToWebProcess.cpp:
+        (WebKit::WebConnectionToWebProcess::didReceiveInvalidMessage):
+
+2012-02-06  Anders Carlsson  <andersca@apple.com>
+
+        ScrollableAreaSet should be moved from Page to FrameView
+        https://bugs.webkit.org/show_bug.cgi?id=62762
+
+        Reviewed by Beth Dakin.
+
+        * WebProcess/Plugins/PDF/BuiltInPDFView.cpp:
+        (WebKit::BuiltInPDFView::initialize):
+        Call FrameView::addScrollableArea instead.
+
+        (WebKit::BuiltInPDFView::destroy):
+        Call FrameView::removeScrollableArea instead.
+
+        * WebProcess/Plugins/PDF/BuiltInPDFView.h:
+        Remove disconnectFromPage since it no longer exists on ScrollableArea.
+
+2012-02-07  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Add cut, copy and paste methods to WebKit2 GTK+ API
+        https://bugs.webkit.org/show_bug.cgi?id=76998
+
+        Reviewed by Martin Robinson.
+
+        * GNUmakefile.am: Add WebKitEditingCommands.h.
+        * UIProcess/API/gtk/WebKitEditingCommands.h: Added.
+        * UIProcess/API/gtk/WebKitWebView.cpp:
+        (didValidateCommand): Callback called by the C API when an editor
+        command has been validated.
+        (webkit_web_view_can_execute_editing_command): Asynchronously
+        validate the given editing command.
+        (webkit_web_view_can_execute_editing_command_finish): Finish async
+        operation started by webkit_web_view_can_execute_editing_command().
+        (webkit_web_view_execute_editing_command): Execute the given
+        command.
+        * UIProcess/API/gtk/WebKitWebView.h:
+        * UIProcess/API/gtk/docs/webkit2gtk-sections.txt: Add new symbols.
+        * UIProcess/API/gtk/tests/GNUmakefile.am:
+        * UIProcess/API/gtk/tests/LoadTrackingTest.cpp:
+        (LoadTrackingTest::provisionalLoadFailed): Do not finish the main
+        loop on load failure, now finished is always called.
+        * UIProcess/API/gtk/tests/TestBackForwardList.cpp: Use WebViewTest
+        instead of LoadTrackingTest.
+        * UIProcess/API/gtk/tests/TestWebViewEditor.cpp: Added.
+        (testWebViewEditorCutCopyPasteNonEditable):
+        (testWebViewEditorCutCopyPasteEditable):
+        (beforeAll):
+        (afterAll):
+        * UIProcess/API/gtk/tests/WebViewTest.cpp:
+        (loadChanged):
+        (WebViewTest::waitUntilLoadFinished): Run a main loop until load
+        finished.
+        * UIProcess/API/gtk/tests/WebViewTest.h: Add waitUntilLoadFinished().
+        * UIProcess/API/gtk/webkit2.h: Include WebKitEditingCommands.h.
+
 2012-02-07  Allan Sandfeld Jensen  <allan.jensen@nokia.com>
 
         Encode radius, force and rotationAngle in WebPlatformTouchPoint.

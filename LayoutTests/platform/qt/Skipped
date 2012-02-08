@@ -443,6 +443,7 @@ fast/events/moving-text-should-fire-drop-and-dragend-events-2.html
 http/tests/misc/favicon-as-image.html
 
 # No authentication challenge handling
+http/tests/loading/authentication-after-redirect-stores-wrong-credentials/authentication-after-redirect-stores-wrong-credentials.html
 http/tests/loading/basic-credentials-sent-automatically.html
 http/tests/loading/basic-auth-resend-wrong-credentials.html
 http/tests/misc/authentication-redirect-1/authentication-sent-to-redirect-cross-origin.html
@@ -556,6 +557,7 @@ http/tests/misc/xslt-bad-import.html
 # [Qt] http/tests/misc/onload-remove-iframe-crash-2.html crashing after r100311
 # https://bugs.webkit.org/show_bug.cgi?id=72491
 http/tests/misc/onload-remove-iframe-crash-2.html
+
 
 # =========================================================================== #
 #       Failing xmlhttprequest tests                                          #
@@ -1380,6 +1382,10 @@ svg/as-image/svg-nested.html
 #https://bugs.webkit.org/show_bug.cgi?id=77964
 svg/hittest/zero-length-round-cap-path.xhtml
 svg/hittest/zero-length-square-cap-path.xhtml
+
+# [Qt] svg/zoom/page/zoom-coords-viewattr-01-b.svg fails
+# https://bugs.webkit.org/show_bug.cgi?id=78128
+svg/zoom/page/zoom-coords-viewattr-01-b.svg
 
 # ============================================================================= #
 # Failing CSS Tests
@@ -2521,15 +2527,18 @@ fast/multicol/span/span-as-immediate-columns-child-removal.html
 # new test introduced in http://trac.webkit.org/changeset/106072 - need more investigation
 fast/parser/nested-fragment-parser-crash.html
 
-# REGRESSION(r106554): It made 4 tests assert
-# Hovered node gets stuck on touch events
-# https://bugs.webkit.org/show_bug.cgi?id=77620
-fast/events/touch/basic-multi-touch-events.html
-fast/events/touch/touch-target.html
-fast/events/touch/touch-before-pressing-spin-button.html
-fast/events/touch/touch-coords-in-zoom-and-scroll.html
-fast/events/touch/touch-inside-iframe.html
-
 # new test introduced in http://trac.webkit.org/changeset/106642 failes on Qt Release
 # https://bugs.webkit.org/show_bug.cgi?id=77729
 fast/events/touch/emulate-touch-events.html 
+
+# [Qt] REGRESSION(r106918): It made svg/as-object/nested-embedded-svg-size-changes.html fail in debug mode
+# https://bugs.webkit.org/show_bug.cgi?id=78026
+svg/as-object/nested-embedded-svg-size-changes.html
+
+# [Qt] fast/text/international/inline-plaintext-is-isolated.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=78092
+fast/text/international/inline-plaintext-is-isolated.html
+
+# Synthetic bold is illegible under some scaling transforms
+# https://bugs.webkit.org/show_bug.cgi?id=78044
+fast/text/synthetic-bold-transformed.html
