@@ -572,6 +572,11 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsNaN(ExecState* exec)
     return JSValue::encode(jsBoolean(isnan(exec->argument(0).toNumber(exec))));
 }
 
+EncodedJSValue JSC_HOST_CALL globalFuncTaint(ExecState* exec)
+{
+    return JSValue::encode(exec->argument(0));
+}
+
 EncodedJSValue JSC_HOST_CALL globalFuncIsFinite(ExecState* exec)
 {
     double n = exec->argument(0).toNumber(exec);
