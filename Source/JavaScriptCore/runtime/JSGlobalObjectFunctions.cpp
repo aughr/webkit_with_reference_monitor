@@ -572,9 +572,14 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsNaN(ExecState* exec)
     return JSValue::encode(jsBoolean(isnan(exec->argument(0).toNumber(exec))));
 }
 
+void JSC_HOST_CALL taint(JSValue *to_taint) {
+}
+
 EncodedJSValue JSC_HOST_CALL globalFuncTaint(ExecState* exec)
 {
-    return JSValue::encode(exec->argument(0));
+	JSValue argument = exec->argument(0);
+	taint(&argument);
+    return JSValue::encode(argument);
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncIsFinite(ExecState* exec)
