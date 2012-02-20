@@ -92,7 +92,8 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = { &sup
   decodeURIComponent    globalFuncDecodeURIComponent    DontEnum|Function 1
   encodeURI             globalFuncEncodeURI             DontEnum|Function 1
   encodeURIComponent    globalFuncEncodeURIComponent    DontEnum|Function 1
-  taint					globalFuncTaint					DontEnum|Function 1
+  taint                 globalFuncTaint                 DontEnum|Function 1
+  isTainted             globalFuncIsTainted             DontEnum|Function 1
 @end
 */
 
