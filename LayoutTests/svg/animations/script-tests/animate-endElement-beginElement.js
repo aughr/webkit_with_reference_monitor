@@ -8,6 +8,7 @@ rect.setAttribute("id", "rect");
 rect.setAttribute("width", "50px");
 rect.setAttribute("height", "50px");
 rect.setAttribute("fill", "green");
+rect.setAttribute("onclick", "executeTest()");
 
 var animateX = createSVGElement("animate");
 animateX.setAttribute("id", "animateX");
@@ -24,36 +25,35 @@ rootSVGElement.appendChild(rect);
 
 function sample1() {
     // Check half-time conditions
-    shouldBe("rect.x.animVal.value", "50");
-}
-
-function startRestart() {
-    animateX.beginElement();
-    setTimeout(end,0);
-}
-
-function end() {
-    animateX.endElement();
-    setTimeout(begin,0);
-}
-
-function begin() {
-    animateX.beginElement();      
-    const expectedValues = [
-        // [animationId, time, elementId, sampleCallback]
-        ["animateX", 1.0, "rect", sample1]
-    ];
-    runAnimationTest(expectedValues);
+    shouldBeCloseEnough("rect.x.animVal.value", "50");
+    shouldBe("rect.x.baseVal.value", "0");
 }
 
 function executeTest() {
-    //BeginElement-endElement-beginElement musn't execute in zero time, because in the current
-    //implemetation of the svg animation will loose the commands order!
-    startRestart();        
+    // Start animating, and stop it again after 100ms.
+    animateX.beginElement();
+    setTimeout(end, 100);
 }
 
-// Begin test async
-rect.setAttribute("onclick", "executeTest()");
-window.setTimeout("triggerUpdate(50, 50)", 0);
-var successfullyParsed = true;
+function end() {
+    // Stop animating, and restart it in 100ms.
+    animateX.endElement();
+    setTimeout(begin, 100);
+}
 
+function begin() {
+    // Once the animation is running again, sample it.
+    animateX.beginElement();
+
+    setTimeout(function() {
+        const expectedValues = [
+            // [animationId, time, sampleCallback]
+            ["animateX", 1.0, sample1]
+        ];
+        runAnimationTest(expectedValues);
+    }, 100);
+}
+
+window.clickX = 40;
+window.clickY = 40;
+var successfullyParsed = true;

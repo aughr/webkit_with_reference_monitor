@@ -255,7 +255,7 @@ void RenderListBox::computeLogicalHeight()
         m_vBar->setSteps(1, max(1, numVisibleItems() - 1), itemHeight);
         m_vBar->setProportion(numVisibleItems(), numItems());
         if (!enabled) {
-            scrollToYOffsetWithoutAnimation(0);
+            scrollToOffsetWithoutAnimation(VerticalScrollbar, 0);
             m_indexOffset = 0;
         }
     }
@@ -316,7 +316,7 @@ void RenderListBox::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOf
     }
 }
 
-void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset)
+void RenderListBox::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint& additionalOffset)
 {
     if (!isSpatialNavigationEnabled(frame()))
         return RenderBlock::addFocusRingRects(rects, additionalOffset);
@@ -326,7 +326,7 @@ void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoi
     // Focus the last selected item.
     int selectedItem = select->activeSelectionEndListIndex();
     if (selectedItem >= 0) {
-        rects.append(itemBoundingBoxRect(additionalOffset, selectedItem));
+        rects.append(pixelSnappedIntRect(itemBoundingBoxRect(additionalOffset, selectedItem)));
         return;
     }
 
@@ -336,7 +336,7 @@ void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoi
     for (int i = 0; i < size; ++i) {
         HTMLElement* element = listItems[i];
         if (element->hasTagName(optionTag) && !toHTMLOptionElement(element)->disabled()) {
-            rects.append(itemBoundingBoxRect(additionalOffset, i));
+            rects.append(pixelSnappedIntRect(itemBoundingBoxRect(additionalOffset, i)));
             return;
         }
     }
@@ -345,7 +345,7 @@ void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoi
 void RenderListBox::paintScrollbar(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     if (m_vBar) {
-        LayoutRect scrollRect(paintOffset.x() + width() - borderRight() - m_vBar->width(),
+        IntRect scrollRect = pixelSnappedIntRect(paintOffset.x() + width() - borderRight() - m_vBar->width(),
             paintOffset.y() + borderTop(),
             m_vBar->width(),
             height() - (borderTop() + borderBottom()));
@@ -409,7 +409,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
 
     unsigned length = itemText.length();
     const UChar* string = itemText.characters();
-    TextRun textRun(string, length, false, 0, 0, TextRun::AllowTrailingExpansion, itemStyle->direction(), itemStyle->unicodeBidi() == Override, TextRun::NoRounding);
+    TextRun textRun(string, length, false, 0, 0, TextRun::AllowTrailingExpansion, itemStyle->direction(), isOverride(itemStyle->unicodeBidi()), TextRun::NoRounding);
     Font itemFont = style()->font();
     LayoutRect r = itemBoundingBoxRect(paintOffset, listIndex);
     r.move(itemOffsetForAlignment(textRun, itemStyle, itemFont, r));
@@ -422,7 +422,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     }
 
     // Draw the item text
-    paintInfo.context->drawBidiText(itemFont, textRun, r.location());
+    paintInfo.context->drawBidiText(itemFont, textRun, roundedIntPoint(r.location()));
 }
 
 void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint& paintOffset, int listIndex)
@@ -444,7 +444,7 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
         ColorSpace colorSpace = element->renderStyle() ? element->renderStyle()->colorSpace() : style()->colorSpace();
         LayoutRect itemRect = itemBoundingBoxRect(paintOffset, listIndex);
         itemRect.intersect(controlClipRect(paintOffset));
-        paintInfo.context->fillRect(itemRect, backColor, colorSpace);
+        paintInfo.context->fillRect(pixelSnappedIntRect(itemRect), backColor, colorSpace);
     }
 }
 
@@ -473,7 +473,7 @@ int RenderListBox::listIndexAtOffset(const LayoutSize& offset)
     if (offset.height() < borderTop() + paddingTop() || offset.height() > height() - paddingBottom() - borderBottom())
         return -1;
 
-    LayoutUnit scrollbarWidth = m_vBar ? m_vBar->width() : LayoutUnit(0);
+    int scrollbarWidth = m_vBar ? m_vBar->width() : 0;
     if (offset.width() < borderLeft() + paddingLeft() || offset.width() > width() - borderRight() - paddingRight() - scrollbarWidth)
         return -1;
 
@@ -490,7 +490,7 @@ void RenderListBox::panScroll(const IntPoint& panStartMousePosition)
     // FIXME: This doesn't work correctly with transforms.
     FloatPoint absOffset = localToAbsolute();
 
-    IntPoint currentMousePosition = roundedIntPoint(frame()->eventHandler()->currentMousePosition());
+    IntPoint currentMousePosition = frame()->eventHandler()->currentMousePosition();
     // We need to check if the current mouse position is out of the window. When the mouse is out of the window, the position is incoherent
     static IntPoint previousMousePosition;
     if (currentMousePosition.y() < 0)
@@ -579,7 +579,7 @@ bool RenderListBox::scrollToRevealElementAtListIndex(int index)
     else
         newOffset = index - numVisibleItems() + 1;
 
-    ScrollableArea::scrollToYOffsetWithoutAnimation(newOffset);
+    scrollToOffsetWithoutAnimation(VerticalScrollbar, newOffset);
 
     return true;
 }
@@ -638,20 +638,20 @@ LayoutUnit RenderListBox::itemHeight() const
 
 int RenderListBox::verticalScrollbarWidth() const
 {
-    return m_vBar && !m_vBar->isOverlayScrollbar() ? m_vBar->width() : LayoutUnit(0);
+    return m_vBar && !m_vBar->isOverlayScrollbar() ? m_vBar->width() : 0;
 }
 
 // FIXME: We ignore padding in the vertical direction as far as these values are concerned, since that's
 // how the control currently paints.
-LayoutUnit RenderListBox::scrollWidth() const
+int RenderListBox::scrollWidth() const
 {
     // There is no horizontal scrolling allowed.
-    return clientWidth();
+    return pixelSnappedClientWidth();
 }
 
 int RenderListBox::scrollHeight() const
 {
-    return max(pixelSnappedClientHeight(), listHeight());
+    return max(pixelSnappedClientHeight(), roundToInt(listHeight()));
 }
 
 int RenderListBox::scrollLeft() const
@@ -675,7 +675,7 @@ void RenderListBox::setScrollTop(int newTop)
     if (index < 0 || index >= numItems() || index == m_indexOffset)
         return;
     
-    ScrollableArea::scrollToYOffsetWithoutAnimation(index);
+    scrollToOffsetWithoutAnimation(VerticalScrollbar, index);
 }
 
 bool RenderListBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const LayoutPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)

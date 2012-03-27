@@ -80,6 +80,7 @@ void WebPreferences::reset()
     defaultTextEncodingName = WebString::fromUTF8("ISO-8859-1");
     developerExtrasEnabled = true;
     experimentalWebGLEnabled = false;
+    experimentalCSSRegionsEnabled = true;
     javaEnabled = false;
     javaScriptCanAccessClipboard = true;
     javaScriptCanOpenWindowsAutomatically = true;
@@ -117,6 +118,8 @@ void WebPreferences::reset()
     forceCompositingMode = false;
     hixie76WebSocketProtocolEnabled = true;
     perTilePaintingEnabled = false;
+    mockScrollbarsEnabled = false;
+    cssCustomFilterEnabled = false;
 }
 
 static void setStandardFontFamilyWrapper(WebSettings* settings, const WebKit::WebString& font, UScriptCode script)
@@ -192,6 +195,8 @@ void WebPreferences::applyTo(WebView* webView)
     settings->setDefaultTextEncodingName(defaultTextEncodingName);
     settings->setDeveloperExtrasEnabled(developerExtrasEnabled);
     settings->setExperimentalWebGLEnabled(experimentalWebGLEnabled);
+    settings->setExperimentalCSSRegionsEnabled(experimentalCSSRegionsEnabled);
+    settings->setExperimentalCSSCustomFilterEnabled(cssCustomFilterEnabled);
     settings->setJavaEnabled(javaEnabled);
     settings->setJavaScriptCanAccessClipboard(javaScriptCanAccessClipboard);
     settings->setJavaScriptCanOpenWindowsAutomatically(javaScriptCanOpenWindowsAutomatically);
@@ -222,6 +227,7 @@ void WebPreferences::applyTo(WebView* webView)
     settings->setAcceleratedPaintingEnabled(acceleratedPaintingEnabled);
     settings->setHixie76WebSocketProtocolEnabled(hixie76WebSocketProtocolEnabled);
     settings->setPerTilePaintingEnabled(perTilePaintingEnabled);
+    settings->setMockScrollbarsEnabled(mockScrollbarsEnabled);
 
     // Fixed values.
     settings->setTextDirectionSubmenuInclusionBehaviorNeverIncluded();
@@ -231,7 +237,6 @@ void WebPreferences::applyTo(WebView* webView)
     settings->setEditableLinkBehaviorNeverLive();
     settings->setEnableScrollAnimator(false);
     settings->setFontRenderingModeNormal();
-    settings->setMockScrollbarsEnabled(false);
     settings->setTextDirectionSubmenuInclusionBehaviorNeverIncluded();
     settings->setUsesEncodingDetector(false);
     settings->setImagesEnabled(true);
@@ -240,4 +245,5 @@ void WebPreferences::applyTo(WebView* webView)
     settings->setFullScreenEnabled(true);
     settings->setValidationMessageTimerMagnification(-1);
     settings->setVisualWordMovementEnabled(false);
+    settings->setPasswordEchoEnabled(false);
 }

@@ -10,6 +10,7 @@
 
 function test()
 {
+    var pendingCallbacks = [];
     InspectorTest.runAfterCachedResourcesProcessed(runTestSuite);
 
     var styleResource;
@@ -32,22 +33,12 @@ function test()
 
             function testSetResourceContentMinor(next)
             {
-                function callback()
-                {
-                    dumpHistory();
-                    next();
-                }
-                styleResource.setContent("body {\n  margin: 15px;\n  padding: 10px;\n}", false, callback);
+                styleResource.setContent("body {\n  margin: 15px;\n  padding: 10px;\n}", false, dumpHistory(next));
             },
 
             function testSetResourceContentMajor(next)
             {
-                function callback()
-                {
-                    dumpHistory();
-                    next();
-                }
-                styleResource.setContent("body {\n  margin: 20px;\n  padding: 10px;\n}", true, callback);
+                styleResource.setContent("body {\n  margin: 20px;\n  padding: 10px;\n}", true, dumpHistory(next));
             },
 
             function testSetContentViaModelMinor(next)
@@ -58,15 +49,10 @@ function test()
                 {
                     var style = styleSheet.rules[0].style;
                     var property = style.getLiveProperty("margin");
-                    property.setText("margin:25px;", false, step2);
+                    property.setText("margin:25px;", false, true, dumpHistory(next));
                 }
-
-                function step2(error)
-                {
-                    dumpHistory();
-                    next();
-                }                
             },
+
             function testSetContentViaModelMajor(next)
             {
                 styleSheetForResource(step1);
@@ -75,14 +61,9 @@ function test()
                 {
                     var style = styleSheet.rules[0].style;
                     var property = style.getLiveProperty("margin");
-                    property.setText("margin:30px;", true, step2);
+                    property.setText("margin:30px;", true, true);
+                    InspectorTest.runAfterPendingDispatches(dumpHistory(next));
                 }
-
-                function step2(error)
-                {
-                    dumpHistory();
-                    next();
-                }                
             }
         ]);
     }
@@ -110,18 +91,24 @@ function test()
         }
     }
 
-    function dumpHistory()
+    function dumpHistory(next)
     {
-        InspectorTest.addResult("History length: " + styleResource.history.length);
-        for (var i = 0; i < styleResource.history.length; ++i)
-            styleResource.history[i].requestContent(dumpRevision.bind(this, i));
-        styleResource.requestContent(dumpRevision.bind(this, "<tip>"));
+        function result()
+        {
+            InspectorTest.addResult("History length: " + styleResource.history.length);
+            for (var i = 0; i < styleResource.history.length; ++i)
+                styleResource.history[i].requestContent(dumpRevision.bind(this, i, null));
+            styleResource.requestContent(dumpRevision.bind(this, "<tip>", next));
+        }
+        return result;
     }
 
-    function dumpRevision(index, content)
+    function dumpRevision(index, next, content)
     {
         InspectorTest.addResult("Item " + index + ":");
         InspectorTest.addResult(content);
+        if (next)
+            next();
     }
 }
 

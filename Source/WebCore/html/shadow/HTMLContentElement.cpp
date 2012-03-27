@@ -27,11 +27,13 @@
 #include "config.h"
 #include "HTMLContentElement.h"
 
-#include "ContentInclusionSelector.h"
 #include "ContentSelectorQuery.h"
+#include "HTMLContentSelector.h"
 #include "HTMLNames.h"
 #include "QualifiedName.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ShadowRoot.h"
+#include "ShadowTree.h"
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -41,10 +43,11 @@ using HTMLNames::selectAttr;
 static const QualifiedName& contentTagName()
 {
 #if ENABLE(SHADOW_DOM)
+    if (!RuntimeEnabledFeatures::shadowDOMEnabled())
+        return HTMLNames::webkitShadowContentTag;
     return HTMLNames::contentTag;
 #else
-    DEFINE_STATIC_LOCAL(QualifiedName, tagName, (nullAtom, "webkitShadowContent", HTMLNames::divTag.namespaceURI()));
-    return tagName;
+    return HTMLNames::webkitShadowContentTag;
 #endif
 }
 
@@ -59,47 +62,12 @@ PassRefPtr<HTMLContentElement> HTMLContentElement::create(const QualifiedName& t
 }
 
 HTMLContentElement::HTMLContentElement(const QualifiedName& name, Document* document)
-    : HTMLElement(name, document)
-    , m_inclusions(adoptPtr(new ShadowInclusionList()))
+    : InsertionPoint(name, document)
 {
 }
 
 HTMLContentElement::~HTMLContentElement()
 {
-}
-
-void HTMLContentElement::attach()
-{
-    ShadowRoot* root = toShadowRoot(shadowTreeRootNode());
-
-    // Before calling StyledElement::attach, selector must be calculated.
-    if (root) {
-        ContentInclusionSelector* selector = root->ensureInclusions();
-        selector->unselect(m_inclusions.get());
-        selector->select(this, m_inclusions.get());
-    }
-
-    HTMLElement::attach();
-
-    if (root) {
-        for (ShadowInclusion* inclusion = m_inclusions->first(); inclusion; inclusion = inclusion->next())
-            inclusion->content()->attach();
-    }
-}
-
-void HTMLContentElement::detach()
-{
-    if (ShadowRoot* root = toShadowRoot(shadowTreeRootNode())) {
-        if (ContentInclusionSelector* selector = root->inclusions())
-            selector->unselect(m_inclusions.get());
-
-        // When content element is detached, shadow tree should be recreated to re-calculate inclusions for
-        // other content elements.
-        root->setNeedsReattachHostChildrenAndShadow();
-    }
-
-    ASSERT(m_inclusions->isEmpty());
-    HTMLElement::detach();
 }
 
 const AtomicString& HTMLContentElement::select() const
@@ -122,9 +90,9 @@ void HTMLContentElement::parseAttribute(Attribute* attr)
 {
     if (attr->name() == selectAttr) {
         if (ShadowRoot* root = toShadowRoot(shadowTreeRootNode()))
-            root->setNeedsReattachHostChildrenAndShadow();
+            root->tree()->setNeedsReattachHostChildrenAndShadow();
     } else
-        HTMLElement::parseAttribute(attr);
+        InsertionPoint::parseAttribute(attr);
 }
 
 }

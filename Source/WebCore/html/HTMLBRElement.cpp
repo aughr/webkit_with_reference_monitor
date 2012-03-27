@@ -25,6 +25,7 @@
 
 #include "Attribute.h"
 #include "CSSPropertyNames.h"
+#include "CSSValueKeywords.h"
 #include "HTMLNames.h"
 #include "RenderBR.h"
 
@@ -48,21 +49,26 @@ PassRefPtr<HTMLBRElement> HTMLBRElement::create(const QualifiedName& tagName, Do
     return adoptRef(new HTMLBRElement(tagName, document));
 }
 
-void HTMLBRElement::parseAttribute(Attribute* attr)
+bool HTMLBRElement::isPresentationAttribute(const QualifiedName& name) const
+{
+    if (name == clearAttr)
+        return true;
+    return HTMLElement::isPresentationAttribute(name);
+}
+
+void HTMLBRElement::collectStyleForAttribute(Attribute* attr, StylePropertySet* style)
 {
     if (attr->name() == clearAttr) {
-        // If the string is empty, then don't add the clear property. 
+        // If the string is empty, then don't add the clear property.
         // <br clear> and <br clear=""> are just treated like <br> by Gecko, Mac IE, etc. -dwh
-        if (attr->value().isNull())
-            removeCSSProperty(CSSPropertyClear);
-        else if (!attr->value().isEmpty()) {
+        if (!attr->isEmpty()) {
             if (equalIgnoringCase(attr->value(), "all"))
-                addCSSProperty(CSSPropertyClear, "both");
+                addPropertyToAttributeStyle(style, CSSPropertyClear, CSSValueBoth);
             else
-                addCSSProperty(CSSPropertyClear, attr->value());
+                addPropertyToAttributeStyle(style, CSSPropertyClear, attr->value());
         }
     } else
-        HTMLElement::parseAttribute(attr);
+        HTMLElement::collectStyleForAttribute(attr, style);
 }
 
 RenderObject* HTMLBRElement::createRenderer(RenderArena* arena, RenderStyle* style)

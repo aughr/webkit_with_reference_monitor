@@ -63,10 +63,6 @@ void KeyframeValueList::insert(const AnimationValue* value)
     m_values.append(value);
 }
 
-#ifndef NDEBUG
-static bool s_inPaintContents = false;
-#endif
-
 GraphicsLayer::GraphicsLayer(GraphicsLayerClient* client)
     : m_client(client)
     , m_anchorPoint(0.5f, 0.5f, 0)
@@ -91,12 +87,18 @@ GraphicsLayer::GraphicsLayer(GraphicsLayerClient* client)
     , m_replicatedLayer(0)
     , m_repaintCount(0)
 {
-    ASSERT(!s_inPaintContents);
+#ifndef NDEBUG
+    if (m_client)
+        m_client->verifyNotPainting();
+#endif
 }
 
 GraphicsLayer::~GraphicsLayer()
 {
-    ASSERT(!s_inPaintContents);
+#ifndef NDEBUG
+    if (m_client)
+        m_client->verifyNotPainting();
+#endif
     removeAllChildren();
     removeFromParent();
 }
@@ -288,9 +290,6 @@ void GraphicsLayer::clearBackgroundColor()
 
 void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const IntRect& clip)
 {
-#ifndef NDEBUG
-    s_inPaintContents = true;
-#endif
     if (m_client) {
         LayoutSize offset = offsetFromRenderer();
         context.translate(-offset);
@@ -298,11 +297,8 @@ void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const I
         LayoutRect clipRect(clip);
         clipRect.move(offset);
 
-        m_client->paintContents(this, context, m_paintingPhase, clipRect);
+        m_client->paintContents(this, context, m_paintingPhase, pixelSnappedIntRect(clipRect));
     }
-#ifndef NDEBUG
-    s_inPaintContents = false;
-#endif
 }
 
 String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
@@ -377,6 +373,46 @@ GraphicsLayer::GraphicsLayerFactory* GraphicsLayer::s_graphicsLayerFactory = 0;
 void GraphicsLayer::setGraphicsLayerFactory(GraphicsLayer::GraphicsLayerFactory factory)
 {
     s_graphicsLayerFactory = factory;
+}
+#endif
+
+#if ENABLE(CSS_FILTERS)
+static inline const FilterOperations* filterOperationsAt(const KeyframeValueList& valueList, size_t index)
+{
+    return static_cast<const FilterAnimationValue*>(valueList.at(index))->value();
+}
+
+int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
+{
+    ASSERT(valueList.property() == AnimatedPropertyWebkitFilter);
+
+    if (valueList.size() < 2)
+        return -1;
+
+    // Empty filters match anything, so find the first non-empty entry as the reference
+    size_t firstIndex = 0;
+    for ( ; firstIndex < valueList.size(); ++firstIndex) {
+        if (filterOperationsAt(valueList, firstIndex)->operations().size() > 0)
+            break;
+    }
+
+    if (firstIndex >= valueList.size())
+        return -1;
+
+    const FilterOperations* firstVal = filterOperationsAt(valueList, firstIndex);
+    
+    for (size_t i = firstIndex + 1; i < valueList.size(); ++i) {
+        const FilterOperations* val = filterOperationsAt(valueList, i);
+        
+        // An emtpy filter list matches anything.
+        if (val->operations().isEmpty())
+            continue;
+        
+        if (!firstVal->operationsMatch(*val))
+            return -1;
+    }
+    
+    return firstIndex;
 }
 #endif
 

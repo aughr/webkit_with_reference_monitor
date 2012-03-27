@@ -34,8 +34,8 @@
 
 #include "V8WebKitMutationObserver.h"
 
+#include "Dictionary.h"
 #include "ExceptionCode.h"
-#include "OptionsObject.h"
 #include "V8Binding.h"
 #include "V8BindingMacros.h"
 #include "V8DOMWrapper.h"
@@ -75,8 +75,7 @@ v8::Handle<v8::Value> V8WebKitMutationObserver::constructorCallback(const v8::Ar
     RefPtr<WebKitMutationObserver> observer = WebKitMutationObserver::create(callback.release());
 
     V8DOMWrapper::setDOMWrapper(args.Holder(), &info, observer.get());
-    observer->ref();
-    V8DOMWrapper::setJSWrapperForDOMObject(observer.get(), v8::Persistent<v8::Object>::New(args.Holder()));
+    V8DOMWrapper::setJSWrapperForDOMObject(observer.release(), v8::Persistent<v8::Object>::New(args.Holder()));
     return args.Holder();
 }
 
@@ -91,7 +90,7 @@ v8::Handle<v8::Value> V8WebKitMutationObserver::observeCallback(const v8::Argume
     if (!args[1]->IsObject())
         return throwError(TYPE_MISMATCH_ERR);
 
-    OptionsObject optionsObject(args[1]);
+    Dictionary optionsObject(args[1]);
     unsigned options = 0;
     HashSet<AtomicString> attributeFilter;
     bool option;

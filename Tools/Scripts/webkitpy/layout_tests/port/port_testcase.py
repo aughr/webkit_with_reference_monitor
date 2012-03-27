@@ -30,23 +30,17 @@
 
 import errno
 import socket
-
 import sys
 import time
 import unittest
 
-# Handle Python < 2.6 where multiprocessing isn't available.
-try:
-    import multiprocessing
-except ImportError:
-    multiprocessing = None
-
-from webkitpy.layout_tests.servers import http_server_base
-
 from webkitpy.common.system.filesystem_mock import MockFileSystem
-from webkitpy.tool.mocktool import MockOptions
 from webkitpy.common.system.executive_mock import MockExecutive
 from webkitpy.common.system.systemhost_mock import MockSystemHost
+from webkitpy.layout_tests.servers import http_server_base
+from webkitpy.layout_tests.servers import http_server_base
+from webkitpy.layout_tests.port import factory
+from webkitpy.tool.mocktool import MockOptions
 
 
 class PortTestCase(unittest.TestCase):
@@ -65,13 +59,6 @@ class PortTestCase(unittest.TestCase):
         port_name = port_name or self.port_name
         port_name = self.port_maker.determine_full_port_name(host, options, port_name)
         return self.port_maker(host, port_name, options=options, **kwargs)
-
-    def test_default_worker_model(self):
-        port = self.make_port()
-        if multiprocessing:
-            self.assertEqual(port.default_worker_model(), 'processes')
-        else:
-            self.assertEqual(port.default_worker_model(), 'inline')
 
     def test_driver_cmd_line(self):
         port = self.make_port()
@@ -319,6 +306,14 @@ class PortTestCase(unittest.TestCase):
                 time.sleep(0.1)
 
             i += 1
+
+    def test_get_crash_log(self):
+        port = self.make_port()
+        self.assertEquals(port._get_crash_log(None, None, None, None),
+           ('crash log for <unknown process name> (pid <unknown>):\n'
+            'STDOUT: <empty>\n'
+            'STDERR: <empty>\n'))
+
 
 # FIXME: This class and main() should be merged into test-webkitpy.
 class EnhancedTestLoader(unittest.TestLoader):

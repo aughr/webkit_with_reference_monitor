@@ -276,11 +276,6 @@ JSValueRef LayoutTestController::computedStyleIncludingVisitedInfo(JSContextRef 
     return [[mainFrame webView] _computedStyleIncludingVisitedInfo:context forElement:value];
 }
 
-JSValueRef LayoutTestController::nodesFromRect(JSContextRef context, JSValueRef value, int x, int y, unsigned top, unsigned right, unsigned bottom, unsigned left, bool ignoreClipping)
-{
-    return [[mainFrame webView] _nodesFromRect:context forDocument:value x:x y:y top:top right:right bottom:bottom left:left ignoreClipping:ignoreClipping];
-}
-
 JSRetainPtr<JSStringRef> LayoutTestController::layerTreeAsText() const
 {
     JSRetainPtr<JSStringRef> string(Adopt, JSStringCreateWithCFString((CFStringRef)[mainFrame _layerTreeAsText]));
@@ -849,16 +844,6 @@ bool LayoutTestController::pauseTransitionAtTimeOnElementWithId(JSStringRef prop
     return [mainFrame _pauseTransitionOfProperty:nameNS onNode:[[mainFrame DOMDocument] getElementById:idNS] atTime:time];
 }
 
-bool LayoutTestController::sampleSVGAnimationForElementAtTime(JSStringRef animationId, double time, JSStringRef elementId)
-{
-    RetainPtr<CFStringRef> animationIDCF(AdoptCF, JSStringCopyCFString(kCFAllocatorDefault, animationId));
-    NSString *animationIDNS = (NSString *)animationIDCF.get();
-    RetainPtr<CFStringRef> elementIDCF(AdoptCF, JSStringCopyCFString(kCFAllocatorDefault, elementId));
-    NSString *elementIDNS = (NSString *)elementIDCF.get();
-
-    return [mainFrame _pauseSVGAnimation:elementIDNS onSMILNode:[[mainFrame DOMDocument] getElementById:animationIDNS] atTime:time];
-}
-
 unsigned LayoutTestController::numberOfActiveAnimations() const
 {
     return [mainFrame _numberOfActiveAnimations];
@@ -1172,16 +1157,6 @@ void LayoutTestController::setEditingBehavior(const char* editingBehavior)
 void LayoutTestController::abortModal()
 {
     [NSApp abortModal];
-}
-
-bool LayoutTestController::hasSpellingMarker(int from, int length)
-{
-    return [mainFrame hasSpellingMarker:from length:length];
-}
-
-bool LayoutTestController::hasGrammarMarker(int from, int length)
-{
-    return [mainFrame hasGrammarMarker:from length:length];
 }
 
 void LayoutTestController::dumpConfigurationForViewport(int /*deviceDPI*/, int /*deviceWidth*/, int /*deviceHeight*/, int /*availableWidth*/, int /*availableHeight*/)

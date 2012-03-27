@@ -51,8 +51,30 @@ public:
 
     enum SelectorMatch { SelectorMatches, SelectorFailsLocally, SelectorFailsAllSiblings, SelectorFailsCompletely };
     enum VisitedMatchType { VisitedMatchDisabled, VisitedMatchEnabled };
+
+    struct SelectorCheckingContext {
+        // Initial selector constructor
+        SelectorCheckingContext(CSSSelector* selector, Element* element, VisitedMatchType visitedMatchType)
+            : selector(selector)
+            , element(element)
+            , scope(0)
+            , visitedMatchType(visitedMatchType)
+            , elementStyle(0)
+            , elementParentStyle(0)
+            , isSubSelector(false)
+        { }
+
+        CSSSelector* selector;
+        Element* element;
+        const ContainerNode* scope;
+        VisitedMatchType visitedMatchType;
+        RenderStyle* elementStyle;
+        RenderStyle* elementParentStyle;
+        bool isSubSelector;
+    };
+
     bool checkSelector(CSSSelector*, Element*, bool isFastCheckableSelector = false) const;
-    SelectorMatch checkSelector(CSSSelector*, Element*, PseudoId& dynamicPseudo, bool isSubSelector, VisitedMatchType, RenderStyle* = 0, RenderStyle* elementParentStyle = 0) const;
+    SelectorMatch checkSelector(const SelectorCheckingContext&, PseudoId&) const;
     static bool isFastCheckableSelector(const CSSSelector*);
     bool fastCheckSelector(const CSSSelector*, const Element*) const;
 
@@ -96,7 +118,7 @@ public:
     static bool determineSelectorScopes(const CSSSelectorList&, HashSet<AtomicStringImpl*>& idScopes, HashSet<AtomicStringImpl*>& classScopes);
 
 private:
-    bool checkOneSelector(CSSSelector*, Element*, PseudoId& dynamicPseudo, bool isSubSelector, VisitedMatchType, RenderStyle*, RenderStyle* elementParentStyle) const;
+    bool checkOneSelector(const SelectorCheckingContext&, PseudoId&) const;
     bool checkScrollbarPseudoClass(CSSSelector*, PseudoId& dynamicPseudo) const;
     static bool isFrameFocused(const Element*);
 
@@ -123,7 +145,7 @@ private:
         Vector<unsigned, 4> identifierHashes;
     };
     Vector<ParentStackFrame> m_parentStack;
-    
+
     // With 100 unique strings in the filter, 2^12 slot table has false positive rate of ~0.2%.
     static const unsigned bloomFilterKeyBits = 12;
     OwnPtr<BloomFilter<bloomFilterKeyBits> > m_ancestorIdentifierFilter;

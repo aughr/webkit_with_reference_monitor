@@ -12,6 +12,7 @@ JAVASCRIPTCORE_GENERATED_SOURCES_DIR = $${ROOT_BUILD_DIR}/Source/JavaScriptCore/
 INCLUDEPATH += \
     $$SOURCE_DIR \
     $$SOURCE_DIR/.. \
+    $$SOURCE_DIR/../WTF \
     $$SOURCE_DIR/assembler \
     $$SOURCE_DIR/bytecode \
     $$SOURCE_DIR/bytecompiler \
@@ -20,6 +21,7 @@ INCLUDEPATH += \
     $$SOURCE_DIR/debugger \
     $$SOURCE_DIR/interpreter \
     $$SOURCE_DIR/jit \
+    $$SOURCE_DIR/llint \
     $$SOURCE_DIR/parser \
     $$SOURCE_DIR/profiler \
     $$SOURCE_DIR/runtime \
@@ -30,7 +32,6 @@ INCLUDEPATH += \
     $$JAVASCRIPTCORE_GENERATED_SOURCES_DIR
 
 win32-* {
-    DEFINES += _HAS_TR1=0
     LIBS += -lwinmm
 
     win32-g++* {

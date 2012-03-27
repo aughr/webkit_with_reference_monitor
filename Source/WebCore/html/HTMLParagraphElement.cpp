@@ -39,26 +39,36 @@ inline HTMLParagraphElement::HTMLParagraphElement(const QualifiedName& tagName, 
     ASSERT(hasTagName(pTag));
 }
 
+PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(Document* document)
+{
+    return adoptRef(new HTMLParagraphElement(pTag, document));
+}
+
 PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(const QualifiedName& tagName, Document* document)
 {
     return adoptRef(new HTMLParagraphElement(tagName, document));
 }
 
-void HTMLParagraphElement::parseAttribute(Attribute* attr)
+bool HTMLParagraphElement::isPresentationAttribute(const QualifiedName& name) const
+{
+    if (name == alignAttr)
+        return true;
+    return HTMLElement::isPresentationAttribute(name);
+}
+
+void HTMLParagraphElement::collectStyleForAttribute(Attribute* attr, StylePropertySet* style)
 {
     if (attr->name() == alignAttr) {
-        if (attr->value().isNull())
-            removeCSSProperty(CSSPropertyTextAlign);
-        else if (equalIgnoringCase(attr->value(), "middle") || equalIgnoringCase(attr->value(), "center"))
-            addCSSProperty(CSSPropertyTextAlign, CSSValueWebkitCenter);
+        if (equalIgnoringCase(attr->value(), "middle") || equalIgnoringCase(attr->value(), "center"))
+            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitCenter);
         else if (equalIgnoringCase(attr->value(), "left"))
-            addCSSProperty(CSSPropertyTextAlign, CSSValueWebkitLeft);
+            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitLeft);
         else if (equalIgnoringCase(attr->value(), "right"))
-            addCSSProperty(CSSPropertyTextAlign, CSSValueWebkitRight);
+            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, CSSValueWebkitRight);
         else
-            addCSSProperty(CSSPropertyTextAlign, attr->value());
+            addPropertyToAttributeStyle(style, CSSPropertyTextAlign, attr->value());
     } else
-        HTMLElement::parseAttribute(attr);
+        HTMLElement::collectStyleForAttribute(attr, style);
 }
 
 }

@@ -47,6 +47,7 @@
 #include "WebFrame.h"
 #include "WebGeolocationClientMock.h"
 #include "WebHistoryItem.h"
+#include "WebIntent.h"
 #include "WebKit.h"
 #include "WebNode.h"
 #include "WebPluginParams.h"
@@ -137,7 +138,10 @@ static string descriptionSuitableForTestResult(const string& url)
 // dragging a file.
 static void addDRTFakeFileToDataObject(WebDragData* dragData)
 {
-    dragData->appendToFilenames(WebString::fromUTF8("DRTFakeFile"));
+    WebDragData::Item item;
+    item.storageType = WebDragData::Item::StorageTypeFilename;
+    item.filenameData = WebString::fromUTF8("DRTFakeFile");
+    dragData->addItem(item);
 }
 
 // Get a debugging string from a WebNavigationType.
@@ -238,7 +242,7 @@ static string textAffinityDescription(WebTextAffinity affinity)
 
 // WebViewClient -------------------------------------------------------------
 
-WebView* WebViewHost::createView(WebFrame*, const WebURLRequest& request, const WebWindowFeatures&, const WebString&)
+WebView* WebViewHost::createView(WebFrame*, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
 {
     if (!layoutTestController()->canOpenWindows())
         return 0;
@@ -251,6 +255,7 @@ WebWidget* WebViewHost::createPopupMenu(WebPopupType type)
 {
     switch (type) {
     case WebKit::WebPopupTypeNone:
+    case WebKit::WebPopupTypePage:
         break;
     case WebKit::WebPopupTypeSelect:
     case WebKit::WebPopupTypeSuggestion:
@@ -269,14 +274,14 @@ WebWidget* WebViewHost::createPopupMenu(const WebPopupMenuInfo&)
 
 WebStorageNamespace* WebViewHost::createSessionStorageNamespace(unsigned quota)
 {
-    return WebKit::WebStorageNamespace::createSessionStorageNamespace(quota);
+    return webkit_support::CreateSessionStorageNamespace(quota);
 }
 
-WebKit::WebGraphicsContext3D* WebViewHost::createGraphicsContext3D(const WebKit::WebGraphicsContext3D::Attributes& attributes, bool direct)
+WebKit::WebGraphicsContext3D* WebViewHost::createGraphicsContext3D(const WebKit::WebGraphicsContext3D::Attributes& attributes)
 {
     if (!webView())
         return 0;
-    return webkit_support::CreateGraphicsContext3D(attributes, webView(), direct);
+    return webkit_support::CreateGraphicsContext3D(attributes, webView(), true);
 }
 
 void WebViewHost::didAddMessageToConsole(const WebConsoleMessage& message, const WebString& sourceName, unsigned sourceLine)
@@ -471,7 +476,10 @@ void WebViewHost::finishLastTextCheck()
         m_spellcheck.spellCheckWord(WebString(text.characters(), text.length()), &misspelledPosition, &misspelledLength);
         if (!misspelledLength)
             break;
-        results.append(WebTextCheckingResult(WebTextCheckingResult::ErrorSpelling, offset + misspelledPosition, misspelledLength));
+        Vector<WebString> suggestions;
+        m_spellcheck.fillSuggestionList(WebString(text.characters() + misspelledPosition, misspelledLength), &suggestions);
+        results.append(WebTextCheckingResult(WebTextCheckingTypeSpelling, offset + misspelledPosition, misspelledLength,
+                                             suggestions.isEmpty() ? WebString() : suggestions[0]));
         text = text.substring(misspelledPosition + misspelledLength);
         offset += misspelledPosition + misspelledLength;
     }
@@ -706,6 +714,7 @@ WebDeviceOrientationClient* WebViewHost::deviceOrientationClient()
     return deviceOrientationClientMock();
 }
 
+#if ENABLE(MEDIA_STREAM)
 WebUserMediaClient* WebViewHost::userMediaClient()
 {
     return userMediaClientMock();
@@ -717,6 +726,7 @@ WebUserMediaClientMock* WebViewHost::userMediaClientMock()
         m_userMediaClientMock = WebUserMediaClientMock::create();
     return m_userMediaClientMock.get();
 }
+#endif
 
 // WebWidgetClient -----------------------------------------------------------
 
@@ -747,9 +757,16 @@ void WebViewHost::scheduleComposite()
 }
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
+void WebViewHost::serviceAnimation()
+{
+    if (webView()->settings()->scrollAnimatorEnabled())
+        webView()->animate(0.0);
+    scheduleComposite();
+}
+
 void WebViewHost::scheduleAnimation()
 {
-    postDelayedTask(new HostMethodTask(this, &WebViewHost::scheduleComposite), 0);
+    postDelayedTask(new HostMethodTask(this, &WebViewHost::serviceAnimation), 0);
 }
 #endif
 
@@ -890,11 +907,21 @@ WebRect WebViewHost::windowResizerRect()
 
 void WebViewHost::runModal()
 {
+    if (m_shell->isDisplayingModalDialog()) {
+        // DumpRenderTree doesn't support real modal dialogs, so a test shouldn't try to start two modal dialogs at the same time.
+        ASSERT_NOT_REACHED();
+        return;
+    }
+    // This WebViewHost might get deleted before RunMessageLoop() returns, so keep a copy of the m_shell member variable around.
+    ASSERT(m_shell->webViewHost() != this);
+    TestShell* shell = m_shell;
+    shell->setIsDisplayingModalDialog(true);
     bool oldState = webkit_support::MessageLoopNestableTasksAllowed();
     webkit_support::MessageLoopSetNestableTasksAllowed(true);
     m_inModalLoop = true;
     webkit_support::RunMessageLoop();
     webkit_support::MessageLoopSetNestableTasksAllowed(oldState);
+    shell->setIsDisplayingModalDialog(false);
 }
 
 bool WebViewHost::enterFullScreen()
@@ -913,14 +940,18 @@ void WebViewHost::exitFullScreen()
 WebPlugin* WebViewHost::createPlugin(WebFrame* frame, const WebPluginParams& params)
 {
     if (params.mimeType == TestWebPlugin::mimeType())
-        return new TestWebPlugin(this, frame, params);
+        return new TestWebPlugin(frame, params);
 
     return webkit_support::CreateWebPlugin(frame, params);
 }
 
 WebMediaPlayer* WebViewHost::createMediaPlayer(WebFrame* frame, WebMediaPlayerClient* client)
 {
+#if ENABLE(MEDIA_STREAM)
     return webkit_support::CreateMediaPlayer(frame, client, testMediaStreamClient());
+#else
+    return webkit_support::CreateMediaPlayer(frame, client);
+#endif
 }
 
 WebApplicationCacheHost* WebViewHost::createApplicationCacheHost(WebFrame* frame, WebApplicationCacheHostClient* client)
@@ -1291,6 +1322,14 @@ bool WebViewHost::willCheckAndDispatchMessageEvent(WebFrame* source, WebSecurity
     return false;
 }
 
+void WebViewHost::dispatchIntent(WebFrame* source, const WebIntentRequest& request)
+{
+    printf("Received Web Intent: action=%s type=%s\n",
+           request.intent().action().utf8().data(),
+           request.intent().type().utf8().data());
+    m_currentRequest = request;
+}
+
 // Public functions -----------------------------------------------------------
 
 WebViewHost::WebViewHost(TestShell* shell)
@@ -1633,6 +1672,7 @@ void WebViewHost::exitFullScreenNow()
     webView()->didExitFullScreen();
 }
 
+#if ENABLE(MEDIA_STREAM)
 webkit_support::MediaStreamUtil* WebViewHost::mediaStreamUtil()
 {
     return userMediaClientMock();
@@ -1644,6 +1684,7 @@ webkit_support::TestMediaStreamClient* WebViewHost::testMediaStreamClient()
         m_testMediaStreamClient = adoptPtr(new webkit_support::TestMediaStreamClient(mediaStreamUtil()));
     return m_testMediaStreamClient.get();
 }
+#endif
 
 // Painting functions ---------------------------------------------------------
 

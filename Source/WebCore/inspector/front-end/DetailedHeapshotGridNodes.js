@@ -62,25 +62,27 @@ WebInspector.HeapSnapshotGridNode.prototype = {
 
     _toPercentString: function(num)
     {
-        return num.toFixed(2) + "%";
+        return num.toFixed(0) + "\u2009%"; // \u2009 is a thin space.
     },
 
     _createValueCell: function(columnIdentifier)
     {
         var cell = document.createElement("td");
         cell.className = columnIdentifier + "-column";
-        var div = document.createElement("div");
-        var valueSpan = document.createElement("span");
-        valueSpan.textContent = this.data[columnIdentifier];
-        var percentColumn = columnIdentifier + "-percent";
-        if (percentColumn in this.data) {
-            var percentSpan = document.createElement("span");
-            percentSpan.className = "percent-column";
-            percentSpan.textContent = this.data[percentColumn];
-            div.appendChild(percentSpan);
+        if (this.dataGrid.snapshot.totalSize !== 0) {
+            var div = document.createElement("div");
+            var valueSpan = document.createElement("span");
+            valueSpan.textContent = this.data[columnIdentifier];
+            div.appendChild(valueSpan);
+            var percentColumn = columnIdentifier + "-percent";
+            if (percentColumn in this.data) {
+                var percentSpan = document.createElement("span");
+                percentSpan.className = "percent-column";
+                percentSpan.textContent = this.data[percentColumn];
+                div.appendChild(percentSpan);
+            }
+            cell.appendChild(div);
         }
-        div.appendChild(valueSpan);
-        cell.appendChild(div);
         return cell;
     },
 
@@ -201,13 +203,14 @@ WebInspector.HeapSnapshotGenericObjectNode = function(tree, node)
     WebInspector.HeapSnapshotGridNode.call(this, tree, false);
     this._name = node.name;
     this._type = node.type;
+    this._distanceToWindow = node.distanceToWindow;
     this._shallowSize = node.selfSize;
     this._retainedSize = node.retainedSize;
     this.snapshotNodeId = node.id;
     this.snapshotNodeIndex = node.nodeIndex;
     if (this._type === "string")
         this.hasHoverMessage = true;
-    else if (this._type === "object" && this.isDOMWindow(this._name)) {
+    else if (this._type === "object" && this.isWindow(this._name)) {
         this._name = this.shortenWindowURL(this._name, false);
         this.hasHoverMessage = true;
     } else if (node.flags & tree.snapshot.nodeFlags.canBeQueried)
@@ -298,12 +301,11 @@ WebInspector.HeapSnapshotGenericObjectNode.prototype = {
         data["object"] = { valueStyle: valueStyle, value: value, nodeId: this.snapshotNodeId };
 
         var view = this.dataGrid.snapshotView;
+        data["distanceToWindow"] =  this._distanceToWindow;
         data["shallowSize"] = Number.withThousandsSeparator(this._shallowSize);
         data["retainedSize"] = Number.withThousandsSeparator(this._retainedSize);
-        if (view._showPercentage) {
-            data["shallowSize-percent"] = this._toPercentString(this._shallowSizePercent);
-            data["retainedSize-percent"] = this._toPercentString(this._retainedSizePercent);
-        }
+        data["shallowSize-percent"] = this._toPercentString(this._shallowSizePercent);
+        data["retainedSize-percent"] = this._toPercentString(this._retainedSizePercent);
 
         return this._enhanceData ? this._enhanceData(data) : data;
     },
@@ -343,9 +345,9 @@ WebInspector.HeapSnapshotGenericObjectNode.prototype = {
         this._provider.isEmpty(isEmptyCallback.bind(this));
     },
 
-    isDOMWindow: function(fullName)
+    isWindow: function(fullName)
     {
-        return fullName.substr(0, 9) === "DOMWindow";
+        return fullName.substr(0, 9) === "Window";
     },
 
     shortenWindowURL: function(fullName, hasObjectId)
@@ -381,16 +383,14 @@ WebInspector.HeapSnapshotObjectNode = function(tree, isFromBaseSnapshot, edge, p
 WebInspector.HeapSnapshotObjectNode.prototype = {
     updateHasChildren: function(parentGridNode)
     {
-        if (this.showRetainingEdges) {
-            this._parentGridNode = parentGridNode;
-            var ancestor = parentGridNode;
-            while (ancestor) {
-                if (ancestor.snapshotNodeId === this.snapshotNodeId) {
-                    this._cycledWithAncestorGridNode = ancestor;
-                    return;
-                }
-                ancestor = ancestor._parentGridNode;
+        this._parentGridNode = parentGridNode;
+        var ancestor = parentGridNode;
+        while (ancestor) {
+            if (ancestor.snapshotNodeId === this.snapshotNodeId) {
+                this._cycledWithAncestorGridNode = ancestor;
+                return;
             }
+            ancestor = ancestor._parentGridNode;
         }
         WebInspector.HeapSnapshotGenericObjectNode.prototype.updateHasChildren.call(this);
     },
@@ -470,7 +470,7 @@ WebInspector.HeapSnapshotObjectNode.prototype = {
 
     _prefixObjectCell: function(div, data)
     {
-        if (this.showRetainingEdges && this._cycledWithAncestorGridNode)
+        if (this._cycledWithAncestorGridNode)
             div.className += " cycled-ancessor-node";
 
         var nameSpan = document.createElement("span");
@@ -503,7 +503,7 @@ WebInspector.HeapSnapshotInstanceNode.prototype = {
 
     _createProvider: function(snapshot, nodeIndex)
     {
-        var showHiddenData = WebInspector.DetailedHeapshotView.prototype.showHiddenData;
+        var showHiddenData = WebInspector.settings.showHeapSnapshotObjectsHiddenProperties.get();
         return snapshot.createEdgesProvider(
             nodeIndex,
             "function(edge) {" +
@@ -528,6 +528,7 @@ WebInspector.HeapSnapshotInstanceNode.prototype = {
         var sortColumnIdentifier = this.dataGrid.sortColumnIdentifier;
         var sortFields = {
             object: ["!edgeName", sortAscending, "retainedSize", false],
+            distanceToWindow: ["distanceToWindow", sortAscending, "retainedSize", false],
             count: ["!edgeName", true, "retainedSize", false],
             addedSize: ["selfSize", sortAscending, "!edgeName", true],
             removedSize: ["selfSize", sortAscending, "!edgeName", true],
@@ -570,6 +571,7 @@ WebInspector.HeapSnapshotConstructorNode = function(tree, className, aggregate, 
 {
     WebInspector.HeapSnapshotGridNode.call(this, tree, aggregate.count > 0);
     this._name = className;
+    this._distanceToWindow = aggregate.distanceToWindow;
     this._count = aggregate.count;
     this._shallowSize = aggregate.self;
     this._retainedSize = aggregate.maxRet;
@@ -601,6 +603,7 @@ WebInspector.HeapSnapshotConstructorNode.prototype = {
         var sortColumnIdentifier = this.dataGrid.sortColumnIdentifier;
         var sortFields = {
             object: ["id", sortAscending, "retainedSize", false],
+            distanceToWindow: ["distanceToWindow", true, "retainedSize", false],
             count: ["id", true, "retainedSize", false],
             shallowSize: ["selfSize", sortAscending, "id", true],
             retainedSize: ["retainedSize", sortAscending, "id", true]
@@ -623,12 +626,12 @@ WebInspector.HeapSnapshotConstructorNode.prototype = {
         var data = { object: this._name };
         var view = this.dataGrid.snapshotView;
         data["count"] =  Number.withThousandsSeparator(this._count);
+        data["distanceToWindow"] =  this._distanceToWindow;
         data["shallowSize"] = Number.withThousandsSeparator(this._shallowSize);
         data["retainedSize"] = Number.withThousandsSeparator(this._retainedSize);
-        if (view._showPercentage) {
-            data["shallowSize-percent"] = this._toPercentString(this._shallowSizePercent);
-            data["retainedSize-percent"] = this._toPercentString(this._retainedSizePercent);
-        }
+        data["count-percent"] =  this._toPercentString(this._countPercent);
+        data["shallowSize-percent"] = this._toPercentString(this._shallowSizePercent);
+        data["retainedSize-percent"] = this._toPercentString(this._retainedSizePercent);
         return data;
     },
 
@@ -833,11 +836,8 @@ WebInspector.HeapSnapshotDominatorObjectNode.prototype = {
 
     _createProvider: function(snapshot, nodeIndex)
     {
-        var showHiddenData = WebInspector.DetailedHeapshotView.prototype.showHiddenData;
         return snapshot.createNodesProviderForDominator(nodeIndex,
-            "function (node) {" +
-            "     return " + showHiddenData + " || !node.isHidden;" +
-            "}");
+            "function (node) { return true; }");
     },
 
     _childHashForEntity: function(node)

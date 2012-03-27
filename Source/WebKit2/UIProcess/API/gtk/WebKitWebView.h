@@ -28,11 +28,17 @@
 #ifndef WebKitWebView_h
 #define WebKitWebView_h
 
+#include <JavaScriptCore/JSBase.h>
 #include <webkit2/WebKitBackForwardList.h>
 #include <webkit2/WebKitDefines.h>
-#include <webkit2/WebKitWebContext.h>
+#include <webkit2/WebKitFindController.h>
+#include <webkit2/WebKitHitTestResult.h>
+#include <webkit2/WebKitJavascriptResult.h>
+#include <webkit2/WebKitScriptDialog.h>
 #include <webkit2/WebKitSettings.h>
 #include <webkit2/WebKitURIRequest.h>
+#include <webkit2/WebKitWebContext.h>
+#include <webkit2/WebKitWebResource.h>
 #include <webkit2/WebKitWebViewBase.h>
 #include <webkit2/WebKitWindowProperties.h>
 #include <webkit2/WebKitPolicyDecision.h>
@@ -46,7 +52,6 @@ G_BEGIN_DECLS
 #define WEBKIT_IS_WEB_VIEW_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_TYPE_WEB_VIEW))
 #define WEBKIT_WEB_VIEW_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_TYPE_WEB_VIEW, WebKitWebViewClass))
 
-typedef struct _WebKitWebView WebKitWebView;
 typedef struct _WebKitWebViewClass WebKitWebViewClass;
 typedef struct _WebKitWebViewPrivate WebKitWebViewPrivate;
 
@@ -76,7 +81,7 @@ typedef struct _WebKitWebViewPrivate WebKitWebViewPrivate;
  *   or to block the transfer of resources entirely.
  *
  * Enum values used for determining the type of a policy decision during
- * WebKitWebView::decide-policy.
+ * #WebKitWebView::decide-policy.
  */
 typedef enum {
     WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION,
@@ -85,7 +90,7 @@ typedef enum {
 } WebKitPolicyDecisionType;
 
 /**
- * WebKitLoadEvent
+ * WebKitLoadEvent:
  * @WEBKIT_LOAD_STARTED: A new load request has been made.
  * No data has been received yet, empty structures have
  * been allocated to perform the load; the load may still
@@ -98,6 +103,9 @@ typedef enum {
  * load is being performed.
  * @WEBKIT_LOAD_FINISHED: Load completed. All resources are done loading
  * or there was an error during the load operation.
+ *
+ * Enum values used to denote the different events that happen during a
+ * #WebKitWebView load operation.
  */
 typedef enum {
     WEBKIT_LOAD_STARTED,
@@ -116,29 +124,31 @@ struct _WebKitWebView {
 struct _WebKitWebViewClass {
     WebKitWebViewBaseClass parent;
 
-    void       (* load_changed)   (WebKitWebView             *web_view,
-                                   WebKitLoadEvent            load_event);
-    gboolean   (* load_failed)    (WebKitWebView             *web_view,
-                                   WebKitLoadEvent            load_event,
-                                   const gchar               *failing_uri,
-                                   GError                    *error);
+    void       (* load_changed)          (WebKitWebView             *web_view,
+                                          WebKitLoadEvent            load_event);
+    gboolean   (* load_failed)           (WebKitWebView             *web_view,
+                                          WebKitLoadEvent            load_event,
+                                          const gchar               *failing_uri,
+                                          GError                    *error);
 
-    GtkWidget *(* create)         (WebKitWebView             *web_view);
-    void       (* ready_to_show)  (WebKitWebView             *web_view);
-    void       (* close)          (WebKitWebView             *web_view);
+    GtkWidget *(* create)                (WebKitWebView             *web_view);
+    void       (* ready_to_show)         (WebKitWebView             *web_view);
+    void       (* close)                 (WebKitWebView             *web_view);
 
-    gboolean   (* script_alert)   (WebKitWebView             *web_view,
-                                   const gchar               *message);
-    gboolean   (* script_confirm) (WebKitWebView             *web_view,
-                                   const gchar               *message,
-                                   gboolean                  *confirmed);
-    gboolean   (* script_prompt)  (WebKitWebView             *web_view,
-                                   const gchar               *message,
-                                   const gchar               *default_text,
-                                   gchar                    **text);
-    gboolean   (* decide_policy)  (WebKitWebView             *web_view,
-                                   WebKitPolicyDecision      *decision,
-                                   WebKitPolicyDecisionType  type);
+    gboolean   (* script_dialog)         (WebKitWebView             *web_view,
+                                          WebKitScriptDialog        *dialog);
+
+    gboolean   (* decide_policy)         (WebKitWebView             *web_view,
+                                          WebKitPolicyDecision      *decision,
+                                          WebKitPolicyDecisionType   type);
+    void       (* mouse_target_changed)  (WebKitWebView             *web_view,
+                                          WebKitHitTestResult       *hit_test_result,
+                                          guint                      modifiers);
+    gboolean   (* print_requested)       (WebKitWebView             *web_view,
+                                          WebKitPrintOperation      *print_operation);
+    void       (* resource_load_started) (WebKitWebView             *web_view,
+                                          WebKitWebResource         *resource,
+                                          WebKitURIRequest          *request);
 
     /* Padding for future expansion */
     void (*_webkit_reserved0) (void);
@@ -259,6 +269,28 @@ webkit_web_view_can_execute_editing_command_finish (WebKitWebView             *w
 WEBKIT_API void
 webkit_web_view_execute_editing_command            (WebKitWebView             *web_view,
                                                     const gchar               *command);
+
+WEBKIT_API WebKitFindController *
+webkit_web_view_get_find_controller                (WebKitWebView             *web_view);
+
+WEBKIT_API JSGlobalContextRef
+webkit_web_view_get_javascript_global_context      (WebKitWebView             *web_view);
+
+WEBKIT_API void
+webkit_web_view_run_javascript                     (WebKitWebView             *web_view,
+                                                    const gchar               *script,
+                                                    GAsyncReadyCallback        callback,
+                                                    gpointer                   user_data);
+WEBKIT_API WebKitJavascriptResult *
+webkit_web_view_run_javascript_finish              (WebKitWebView             *web_view,
+                                                    GAsyncResult              *result,
+                                                    GError                   **error);
+
+WEBKIT_API WebKitWebResource *
+webkit_web_view_get_main_resource                  (WebKitWebView             *web_view);
+
+WEBKIT_API GList *
+webkit_web_view_get_subresources                   (WebKitWebView             *web_view);
 G_END_DECLS
 
 #endif

@@ -32,6 +32,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSProperty.h"
+#include "CSSPropertyLonghand.h"
 #include "CSSPropertyNames.h"
 #include "CSSReflectValue.h"
 #include "CSSSelector.h"
@@ -225,6 +226,7 @@ static const int computedProperties[] = {
     CSSPropertyWebkitFlexItemAlign,
     CSSPropertyWebkitFlexDirection,
     CSSPropertyWebkitFlexFlow,
+    CSSPropertyWebkitFlexLinePack,
     CSSPropertyWebkitFlexWrap,
     CSSPropertyWebkitFontKerning,
     CSSPropertyWebkitFontSmoothing,
@@ -232,6 +234,9 @@ static const int computedProperties[] = {
 #if ENABLE(CSS_GRID_LAYOUT)
     CSSPropertyWebkitGridColumns,
     CSSPropertyWebkitGridRows,
+
+    CSSPropertyWebkitGridColumn,
+    CSSPropertyWebkitGridRow,
 #endif
     CSSPropertyWebkitHighlight,
     CSSPropertyWebkitHyphenateCharacter,
@@ -239,11 +244,12 @@ static const int computedProperties[] = {
     CSSPropertyWebkitHyphenateLimitBefore,
     CSSPropertyWebkitHyphenateLimitLines,
     CSSPropertyWebkitHyphens,
+    CSSPropertyWebkitLineAlign,
     CSSPropertyWebkitLineBoxContain,
     CSSPropertyWebkitLineBreak,
     CSSPropertyWebkitLineClamp,
     CSSPropertyWebkitLineGrid,
-    CSSPropertyWebkitLineGridSnap,
+    CSSPropertyWebkitLineSnap,
     CSSPropertyWebkitLocale,
     CSSPropertyWebkitMarginBeforeCollapse,
     CSSPropertyWebkitMarginAfterCollapse,
@@ -266,6 +272,9 @@ static const int computedProperties[] = {
     CSSPropertyWebkitMaskRepeat,
     CSSPropertyWebkitMaskSize,
     CSSPropertyWebkitNbspMode,
+#if ENABLE(OVERFLOW_SCROLLING)
+    CSSPropertyWebkitOverflowScrolling,
+#endif
     CSSPropertyWebkitPerspective,
     CSSPropertyWebkitPerspectiveOrigin,
     CSSPropertyWebkitPrintColorAdjust,
@@ -909,6 +918,15 @@ static PassRefPtr<CSSValue> valueForGridTrackList(const Vector<Length>& trackLen
         list->append(valueForGridTrackBreadth(trackLengths[i], style, cssValuePool));
     return list.release();
 }
+
+static PassRefPtr<CSSValue> valueForGridPosition(const Length& position, CSSValuePool* cssValuePool)
+{
+    if (position.isAuto())
+        return cssValuePool->createIdentifierValue(CSSValueAuto);
+
+    ASSERT(position.isFixed());
+    return cssValuePool->createValue(position.value(), CSSPrimitiveValue::CSS_NUMBER);
+}
 #endif
 
 static PassRefPtr<CSSValue> getDelayValue(const AnimationList* animList, CSSValuePool* cssValuePool)
@@ -979,6 +997,7 @@ static PassRefPtr<CSSValue> createLineBoxContainValue(CSSValuePool* cssValuePool
 CSSComputedStyleDeclaration::CSSComputedStyleDeclaration(PassRefPtr<Node> n, bool allowVisitedStyle, const String& pseudoElementName)
     : m_node(n)
     , m_allowVisitedStyle(allowVisitedStyle)
+    , m_refCount(1)
 {
     unsigned nameWithoutColonsStart = pseudoElementName[0] == ':' ? (pseudoElementName[1] == ':' ? 2 : 1) : 0;
     m_pseudoElementSpecifier = CSSSelector::pseudoId(CSSSelector::parsePseudoType(
@@ -987,6 +1006,18 @@ CSSComputedStyleDeclaration::CSSComputedStyleDeclaration(PassRefPtr<Node> n, boo
 
 CSSComputedStyleDeclaration::~CSSComputedStyleDeclaration()
 {
+}
+
+void CSSComputedStyleDeclaration::ref()
+{
+    ++m_refCount;
+}
+
+void CSSComputedStyleDeclaration::deref()
+{
+    ASSERT(m_refCount);
+    if (!--m_refCount)
+        delete this;
 }
 
 String CSSComputedStyleDeclaration::cssText() const
@@ -1099,6 +1130,31 @@ static PassRefPtr<CSSPrimitiveValue> valueForFamily(const AtomicString& family, 
     return cssValuePool->createValue(family.string(), CSSPrimitiveValue::CSS_STRING);
 }
 
+static PassRefPtr<CSSValue> renderUnicodeBidiFlagsToCSSValue(EUnicodeBidi unicodeBidi, CSSValuePool* cssValuePool)
+{
+    switch (unicodeBidi) {
+    case UBNormal:
+        return cssValuePool->createIdentifierValue(CSSValueNormal);
+    case Embed:
+        return cssValuePool->createIdentifierValue(CSSValueEmbed);
+    case Plaintext:
+        return cssValuePool->createIdentifierValue(CSSValueWebkitPlaintext);
+    case Override:
+        return cssValuePool->createIdentifierValue(CSSValueBidiOverride);
+    case Isolate:
+        return cssValuePool->createIdentifierValue(CSSValueWebkitIsolate);
+    case OverrideIsolate:
+    {
+        RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
+        list->append(cssValuePool->createIdentifierValue(CSSValueBidiOverride));
+        list->append(cssValuePool->createIdentifierValue(CSSValueWebkitIsolate));
+        return list;
+    }
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
 static PassRefPtr<CSSValue> renderTextDecorationFlagsToCSSValue(int textDecoration, CSSValuePool* cssValuePool)
 {
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
@@ -1133,7 +1189,7 @@ static PassRefPtr<CSSValue> fillRepeatToCSSValue(EFillRepeat xRepeat, EFillRepea
     return list.release();
 }
 
-static PassRefPtr<CSSValue> fillSizeToCSSValue(const FillSize& fillSize, CSSValuePool* cssValuePool)
+static PassRefPtr<CSSValue> fillSizeToCSSValue(const FillSize& fillSize, const RenderStyle* style, CSSValuePool* cssValuePool)
 {
     if (fillSize.type == Contain)
         return cssValuePool->createIdentifierValue(CSSValueContain);
@@ -1142,11 +1198,11 @@ static PassRefPtr<CSSValue> fillSizeToCSSValue(const FillSize& fillSize, CSSValu
         return cssValuePool->createIdentifierValue(CSSValueCover);
 
     if (fillSize.size.height().isAuto())
-        return cssValuePool->createValue(fillSize.size.width());
+        return zoomAdjustedPixelValueForLength(fillSize.size.width(), style, cssValuePool);
 
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    list->append(cssValuePool->createValue(fillSize.size.width()));
-    list->append(cssValuePool->createValue(fillSize.size.height()));
+    list->append(zoomAdjustedPixelValueForLength(fillSize.size.width(), style, cssValuePool));
+    list->append(zoomAdjustedPixelValueForLength(fillSize.size.height(), style, cssValuePool));
     return list.release();
 }
 
@@ -1287,6 +1343,13 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
     if (!style)
         return 0;
 
+    if (renderer) {
+        if (m_pseudoElementSpecifier == AFTER)
+            renderer = renderer->afterPseudoElementRenderer();
+        else if (m_pseudoElementSpecifier == BEFORE)
+            renderer = renderer->beforePseudoElementRenderer();
+    }
+
     CSSValuePool* cssValuePool = node->document()->cssValuePool().get();
 
     propertyID = CSSProperty::resolveDirectionAwareProperty(propertyID, style->direction(), style->writingMode());
@@ -1324,11 +1387,11 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
         case CSSPropertyWebkitMaskSize: {
             const FillLayer* layers = propertyID == CSSPropertyWebkitMaskSize ? style->maskLayers() : style->backgroundLayers();
             if (!layers->next())
-                return fillSizeToCSSValue(layers->size(), cssValuePool);
+                return fillSizeToCSSValue(layers->size(), style.get(), cssValuePool);
 
             RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
             for (const FillLayer* currLayer = layers; currLayer; currLayer = currLayer->next())
-                list->append(fillSizeToCSSValue(currLayer->size(), cssValuePool));
+                list->append(fillSizeToCSSValue(currLayer->size(), style.get(), cssValuePool));
 
             return list.release();
         }
@@ -1394,16 +1457,16 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             const FillLayer* layers = propertyID == CSSPropertyWebkitMaskPosition ? style->maskLayers() : style->backgroundLayers();
             if (!layers->next()) {
                 RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-                list->append(cssValuePool->createValue(layers->xPosition()));
-                list->append(cssValuePool->createValue(layers->yPosition()));
+                list->append(zoomAdjustedPixelValueForLength(layers->xPosition(), style.get(), cssValuePool));
+                list->append(zoomAdjustedPixelValueForLength(layers->yPosition(), style.get(), cssValuePool));
                 return list.release();
             }
 
             RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
             for (const FillLayer* currLayer = layers; currLayer; currLayer = currLayer->next()) {
                 RefPtr<CSSValueList> positionList = CSSValueList::createSpaceSeparated();
-                positionList->append(cssValuePool->createValue(currLayer->xPosition()));
-                positionList->append(cssValuePool->createValue(currLayer->yPosition()));
+                positionList->append(zoomAdjustedPixelValueForLength(currLayer->xPosition(), style.get(), cssValuePool));
+                positionList->append(zoomAdjustedPixelValueForLength(currLayer->yPosition(), style.get(), cssValuePool));
                 list->append(positionList);
             }
 
@@ -1571,13 +1634,15 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
         case CSSPropertyWebkitFlexAlign:
             return cssValuePool->createValue(style->flexAlign());
         case CSSPropertyWebkitFlexItemAlign:
-            // FIXME: If flex-item-align:auto, then we should return the parent's flex-align.
-            // http://webkit.org/b/76326
+            if (style->flexItemAlign() == AlignAuto && m_node && m_node->parentNode() && m_node->parentNode()->computedStyle())
+                return cssValuePool->createValue(m_node->parentNode()->computedStyle()->flexAlign());
             return cssValuePool->createValue(style->flexItemAlign());
         case CSSPropertyWebkitFlexDirection:
             return cssValuePool->createValue(style->flexDirection());
         case CSSPropertyWebkitFlexWrap:
             return cssValuePool->createValue(style->flexWrap());
+        case CSSPropertyWebkitFlexLinePack:
+            return cssValuePool->createValue(style->flexLinePack());
         case CSSPropertyWebkitFlexFlow: {
             RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
             list->append(cssValuePool->createValue(style->flexDirection()));
@@ -1631,6 +1696,11 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
         case CSSPropertyWebkitGridRows: {
             return valueForGridTrackList(style->gridRows(), style.get(), cssValuePool);
         }
+
+        case CSSPropertyWebkitGridColumn:
+            return valueForGridPosition(style->gridItemColumn(), cssValuePool);
+        case CSSPropertyWebkitGridRow:
+            return valueForGridPosition(style->gridItemRow(), cssValuePool);
 #endif
         case CSSPropertyHeight:
             if (renderer) {
@@ -1708,7 +1778,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
                 // RenderBox gives a marginRight() that is the distance between the right-edge of the child box
                 // and the right-edge of the containing box, when display == BLOCK. Let's calculate the absolute
                 // value of the specified margin-right % instead of relying on RenderBox's marginRight() value.
-                value = marginRight.calcMinValue(toRenderBox(renderer)->containingBlockLogicalWidthForContent());
+                value = minimumValueForLength(marginRight, toRenderBox(renderer)->containingBlockLogicalWidthForContent());
             else
                 value = toRenderBox(renderer)->marginRight();
             return zoomAdjustedPixelValue(value, style.get(), cssValuePool);
@@ -1741,18 +1811,18 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             const Length& maxHeight = style->maxHeight();
             if (maxHeight.isUndefined())
                 return cssValuePool->createIdentifierValue(CSSValueNone);
-            return cssValuePool->createValue(maxHeight);
+            return zoomAdjustedPixelValueForLength(maxHeight, style.get(), cssValuePool);
         }
         case CSSPropertyMaxWidth: {
             const Length& maxWidth = style->maxWidth();
             if (maxWidth.isUndefined())
                 return cssValuePool->createIdentifierValue(CSSValueNone);
-            return cssValuePool->createValue(maxWidth);
+            return zoomAdjustedPixelValueForLength(maxWidth, style.get(), cssValuePool);
         }
         case CSSPropertyMinHeight:
-            return cssValuePool->createValue(style->minHeight());
+            return zoomAdjustedPixelValueForLength(style->minHeight(), style.get(), cssValuePool);
         case CSSPropertyMinWidth:
-            return cssValuePool->createValue(style->minWidth());
+            return zoomAdjustedPixelValueForLength(style->minWidth(), style.get(), cssValuePool);
         case CSSPropertyOpacity:
             return cssValuePool->createValue(style->opacity(), CSSPrimitiveValue::CSS_NUMBER);
         case CSSPropertyOrphans:
@@ -1775,20 +1845,20 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             return cssValuePool->createValue(style->overflowY());
         case CSSPropertyPaddingTop:
             if (renderer && renderer->isBox())
-                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingTop(false), style.get(), cssValuePool);
-            return cssValuePool->createValue(style->paddingTop());
+                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingTop(ExcludeIntrinsicPadding), style.get(), cssValuePool);
+            return zoomAdjustedPixelValueForLength(style->paddingTop(), style.get(), cssValuePool);
         case CSSPropertyPaddingRight:
             if (renderer && renderer->isBox())
-                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingRight(false), style.get(), cssValuePool);
-            return cssValuePool->createValue(style->paddingRight());
+                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingRight(ExcludeIntrinsicPadding), style.get(), cssValuePool);
+            return zoomAdjustedPixelValueForLength(style->paddingRight(), style.get(), cssValuePool);
         case CSSPropertyPaddingBottom:
             if (renderer && renderer->isBox())
-                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingBottom(false), style.get(), cssValuePool);
-            return cssValuePool->createValue(style->paddingBottom());
+                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingBottom(ExcludeIntrinsicPadding), style.get(), cssValuePool);
+            return zoomAdjustedPixelValueForLength(style->paddingBottom(), style.get(), cssValuePool);
         case CSSPropertyPaddingLeft:
             if (renderer && renderer->isBox())
-                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingLeft(false), style.get(), cssValuePool);
-            return cssValuePool->createValue(style->paddingLeft());
+                return zoomAdjustedPixelValue(toRenderBox(renderer)->paddingLeft(ExcludeIntrinsicPadding), style.get(), cssValuePool);
+            return zoomAdjustedPixelValueForLength(style->paddingLeft(), style.get(), cssValuePool);
         case CSSPropertyPageBreakAfter:
             return cssValuePool->createValue(style->pageBreakAfter());
         case CSSPropertyPageBreakBefore:
@@ -1839,7 +1909,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             }
             }
         case CSSPropertyTextIndent:
-            return cssValuePool->createValue(style->textIndent());
+            return zoomAdjustedPixelValueForLength(style->textIndent(), style.get(), cssValuePool);
         case CSSPropertyTextShadow:
             return valueForShadow(style->textShadow(), propertyID, style.get());
         case CSSPropertyTextRendering:
@@ -1863,7 +1933,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
         case CSSPropertyTop:
             return getPositionOffsetValue(style.get(), CSSPropertyTop, cssValuePool);
         case CSSPropertyUnicodeBidi:
-            return cssValuePool->createValue(style->unicodeBidi());
+            return renderUnicodeBidiFlagsToCSSValue(style->unicodeBidi(), cssValuePool);
         case CSSPropertyVerticalAlign:
             switch (style->verticalAlign()) {
                 case BASELINE:
@@ -2028,7 +2098,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             const AnimationList* t = style->animations();
             if (t) {
                 for (size_t i = 0; i < t->size(); ++i) {
-                    int iterationCount = t->animation(i)->iterationCount();
+                    double iterationCount = t->animation(i)->iterationCount();
                     if (iterationCount == Animation::IterationCountInfinite)
                         list->append(cssValuePool->createIdentifierValue(CSSValueInfinite));
                     else
@@ -2106,6 +2176,12 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
         case CSSPropertyWebkitMarginTopCollapse:
         case CSSPropertyWebkitMarginBeforeCollapse:
             return cssValuePool->createValue(style->marginBeforeCollapse());
+#if ENABLE(OVERFLOW_SCROLLING)
+        case CSSPropertyWebkitOverflowScrolling:
+            if (!style->useTouchOverflowScrolling())
+                return cssValuePool->createIdentifierValue(CSSValueAuto);
+            return cssValuePool->createIdentifierValue(CSSValueTouch);
+#endif
         case CSSPropertyWebkitPerspective:
             if (!style->hasPerspective())
                 return cssValuePool->createIdentifierValue(CSSValueNone);
@@ -2114,8 +2190,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
             if (renderer) {
                 LayoutRect box = sizingBox(renderer);
-                list->append(zoomAdjustedPixelValue(style->perspectiveOriginX().calcMinValue(box.width()), style.get(), cssValuePool));
-                list->append(zoomAdjustedPixelValue(style->perspectiveOriginY().calcMinValue(box.height()), style.get(), cssValuePool));
+                list->append(zoomAdjustedPixelValue(minimumValueForLength(style->perspectiveOriginX(), box.width()), style.get(), cssValuePool));
+                list->append(zoomAdjustedPixelValue(minimumValueForLength(style->perspectiveOriginY(), box.height()), style.get(), cssValuePool));
             }
             else {
                 list->append(zoomAdjustedPixelValueForLength(style->perspectiveOriginX(), style.get(), cssValuePool));
@@ -2160,8 +2236,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
             if (renderer) {
                 IntRect box = sizingBox(renderer);
-                list->append(zoomAdjustedPixelValue(style->transformOriginX().calcMinValue(box.width()), style.get(), cssValuePool));
-                list->append(zoomAdjustedPixelValue(style->transformOriginY().calcMinValue(box.height()), style.get(), cssValuePool));
+                list->append(zoomAdjustedPixelValue(minimumValueForLength(style->transformOriginX(), box.width()), style.get(), cssValuePool));
+                list->append(zoomAdjustedPixelValue(minimumValueForLength(style->transformOriginY(), box.height()), style.get(), cssValuePool));
                 if (style->transformOriginZ() != 0)
                     list->append(zoomAdjustedPixelValue(style->transformOriginZ(), style.get(), cssValuePool));
             } else {
@@ -2207,8 +2283,10 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             if (style->lineGrid().isNull())
                 return cssValuePool->createIdentifierValue(CSSValueNone);
             return cssValuePool->createValue(style->lineGrid(), CSSPrimitiveValue::CSS_STRING);
-        case CSSPropertyWebkitLineGridSnap:
-            return CSSPrimitiveValue::create(style->lineGridSnap());
+        case CSSPropertyWebkitLineSnap:
+            return CSSPrimitiveValue::create(style->lineSnap());
+        case CSSPropertyWebkitLineAlign:
+            return CSSPrimitiveValue::create(style->lineAlign());
         case CSSPropertyWebkitWritingMode:
             return cssValuePool->createValue(style->writingMode());
         case CSSPropertyWebkitTextCombine:
@@ -2225,7 +2303,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             return counterToCSSValue(style.get(), propertyID, cssValuePool);
         case CSSPropertyWebkitFlowInto:
             if (style->flowThread().isNull())
-                return cssValuePool->createIdentifierValue(CSSValueAuto);
+                return cssValuePool->createIdentifierValue(CSSValueNone);
             return cssValuePool->createValue(style->flowThread(), CSSPrimitiveValue::CSS_STRING);
         case CSSPropertyWebkitFlowFrom:
             if (style->regionThread().isNull())
@@ -2257,7 +2335,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             const int properties[5] = { CSSPropertyBackgroundColor, CSSPropertyBackgroundImage,
                                         CSSPropertyBackgroundRepeat, CSSPropertyBackgroundAttachment,
                                         CSSPropertyBackgroundPosition };
-            return getCSSPropertyValuesForShorthandProperties(properties, WTF_ARRAY_LENGTH(properties));
+            return getCSSPropertyValuesForShorthandProperties(CSSPropertyLonghand(properties, WTF_ARRAY_LENGTH(properties)));
         }
         case CSSPropertyBorder: {
             RefPtr<CSSValue> value = getPropertyCSSValue(CSSPropertyBorderTop, DoNotUpdateLayout);
@@ -2269,65 +2347,32 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(int proper
             }
             return value.release();
         }
-        case CSSPropertyBorderBottom: {
-            const int properties[3] = { CSSPropertyBorderBottomWidth, CSSPropertyBorderBottomStyle,
-                                        CSSPropertyBorderBottomColor };
-            return getCSSPropertyValuesForShorthandProperties(properties, WTF_ARRAY_LENGTH(properties));
-        }
-        case CSSPropertyBorderColor: {
-            const int properties[4] = { CSSPropertyBorderTopColor, CSSPropertyBorderRightColor,
-                                        CSSPropertyBorderBottomColor, CSSPropertyBorderLeftColor };
-            return getCSSPropertyValuesForSidesShorthand(properties);
-        }
-        case CSSPropertyBorderLeft: {
-            const int properties[3] = { CSSPropertyBorderLeftWidth, CSSPropertyBorderLeftStyle,
-                                        CSSPropertyBorderLeftColor };
-            return getCSSPropertyValuesForShorthandProperties(properties, WTF_ARRAY_LENGTH(properties));
-        }
+        case CSSPropertyBorderBottom:
+            return getCSSPropertyValuesForShorthandProperties(borderBottomLonghand());
+        case CSSPropertyBorderColor:
+            return getCSSPropertyValuesForSidesShorthand(borderColorLonghand());
+        case CSSPropertyBorderLeft:
+            return getCSSPropertyValuesForShorthandProperties(borderLeftLonghand());
         case CSSPropertyBorderImage:
             return valueForNinePieceImage(style->borderImage(), cssValuePool);
         case CSSPropertyBorderRadius:
             return getBorderRadiusShorthandValue(style.get(), cssValuePool);
-        case CSSPropertyBorderRight: {
-            const int properties[3] = { CSSPropertyBorderRightWidth, CSSPropertyBorderRightStyle,
-                                        CSSPropertyBorderRightColor };
-            return getCSSPropertyValuesForShorthandProperties(properties, WTF_ARRAY_LENGTH(properties));
-        }
-        case CSSPropertyBorderStyle: {
-            const int properties[4] = { CSSPropertyBorderTopStyle, CSSPropertyBorderRightStyle,
-                                        CSSPropertyBorderBottomStyle, CSSPropertyBorderLeftStyle };
-            return getCSSPropertyValuesForSidesShorthand(properties);
-        }
-        case CSSPropertyBorderTop: {
-            const int properties[3] = { CSSPropertyBorderTopWidth, CSSPropertyBorderTopStyle,
-                                        CSSPropertyBorderTopColor };
-            return getCSSPropertyValuesForShorthandProperties(properties, WTF_ARRAY_LENGTH(properties));
-        }
-        case CSSPropertyBorderWidth: {
-            const int properties[4] = { CSSPropertyBorderTopWidth, CSSPropertyBorderRightWidth,
-                                        CSSPropertyBorderBottomWidth, CSSPropertyBorderLeftWidth };
-            return getCSSPropertyValuesForSidesShorthand(properties);
-        }
-        case CSSPropertyListStyle: {
-            const int properties[3] = { CSSPropertyListStyleType, CSSPropertyListStylePosition,
-                                        CSSPropertyListStyleImage };
-            return getCSSPropertyValuesForShorthandProperties(properties, WTF_ARRAY_LENGTH(properties));
-        }
-        case CSSPropertyMargin: {
-            const int properties[4] = { CSSPropertyMarginTop, CSSPropertyMarginRight,
-                                        CSSPropertyMarginBottom, CSSPropertyMarginLeft };
-            return getCSSPropertyValuesForSidesShorthand(properties);
-        }
-        case CSSPropertyOutline: {
-            const int properties[3] = { CSSPropertyOutlineColor, CSSPropertyOutlineStyle,
-                                        CSSPropertyOutlineWidth };
-            return getCSSPropertyValuesForShorthandProperties(properties, WTF_ARRAY_LENGTH(properties));
-        }
-        case CSSPropertyPadding: {
-            const int properties[4] = { CSSPropertyPaddingTop, CSSPropertyPaddingRight,
-                                        CSSPropertyPaddingBottom, CSSPropertyPaddingLeft };
-            return getCSSPropertyValuesForSidesShorthand(properties);
-        }
+        case CSSPropertyBorderRight:
+            return getCSSPropertyValuesForShorthandProperties(borderRightLonghand());
+        case CSSPropertyBorderStyle:
+            return getCSSPropertyValuesForSidesShorthand(borderStyleLonghand());
+        case CSSPropertyBorderTop:
+            return getCSSPropertyValuesForShorthandProperties(borderTopLonghand());
+        case CSSPropertyBorderWidth:
+            return getCSSPropertyValuesForSidesShorthand(borderWidthLonghand());
+        case CSSPropertyListStyle:
+            return getCSSPropertyValuesForShorthandProperties(listStyleLonghand());
+        case CSSPropertyMargin:
+            return getCSSPropertyValuesForSidesShorthand(marginLonghand());
+        case CSSPropertyOutline:
+            return getCSSPropertyValuesForShorthandProperties(outlineLonghand());
+        case CSSPropertyPadding:
+            return getCSSPropertyValuesForSidesShorthand(paddingLonghand());
         /* Individual properties not part of the spec */
         case CSSPropertyBackgroundRepeatX:
         case CSSPropertyBackgroundRepeatY:
@@ -2524,24 +2569,24 @@ PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::makeMutable()
     return copy();
 }
 
-PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForShorthandProperties(const int* properties, size_t size) const
+PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForShorthandProperties(const CSSPropertyLonghand& longhand) const
 {
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    for (size_t i = 0; i < size; ++i) {
-        RefPtr<CSSValue> value = getPropertyCSSValue(properties[i], DoNotUpdateLayout);
+    for (size_t i = 0; i < longhand.length(); ++i) {
+        RefPtr<CSSValue> value = getPropertyCSSValue(longhand.properties()[i], DoNotUpdateLayout);
         list->append(value);
     }
     return list.release();
 }
 
-PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForSidesShorthand(const int* properties) const
+PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForSidesShorthand(const CSSPropertyLonghand& longhand) const
 {
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
     // Assume the properties are in the usual order top, right, bottom, left.
-    RefPtr<CSSValue> topValue = getPropertyCSSValue(properties[0], DoNotUpdateLayout);
-    RefPtr<CSSValue> rightValue = getPropertyCSSValue(properties[1], DoNotUpdateLayout);
-    RefPtr<CSSValue> bottomValue = getPropertyCSSValue(properties[2], DoNotUpdateLayout);
-    RefPtr<CSSValue> leftValue = getPropertyCSSValue(properties[3], DoNotUpdateLayout);
+    RefPtr<CSSValue> topValue = getPropertyCSSValue(longhand.properties()[0], DoNotUpdateLayout);
+    RefPtr<CSSValue> rightValue = getPropertyCSSValue(longhand.properties()[1], DoNotUpdateLayout);
+    RefPtr<CSSValue> bottomValue = getPropertyCSSValue(longhand.properties()[2], DoNotUpdateLayout);
+    RefPtr<CSSValue> leftValue = getPropertyCSSValue(longhand.properties()[3], DoNotUpdateLayout);
 
     // All 4 properties must be specified.
     if (!topValue || !rightValue || !bottomValue || !leftValue)

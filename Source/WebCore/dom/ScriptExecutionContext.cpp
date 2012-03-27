@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +31,6 @@
 #include "ActiveDOMObject.h"
 #include "ContentSecurityPolicy.h"
 #include "DOMTimer.h"
-#include "Database.h"
-#include "DatabaseTask.h"
-#include "DatabaseThread.h"
 #include "ErrorEvent.h"
 #include "EventListener.h"
 #include "EventTarget.h"
@@ -93,16 +91,15 @@ ScriptExecutionContext::ScriptExecutionContext()
     : m_iteratingActiveDOMObjects(false)
     , m_inDestructor(false)
     , m_inDispatchErrorEvent(false)
-#if ENABLE(SQL_DATABASE)
-    , m_hasOpenDatabases(false)
-#endif
+    , m_activeDOMObjectsAreSuspended(false)
+    , m_reasonForSuspendingActiveDOMObjects(static_cast<ActiveDOMObject::ReasonForSuspension>(-1))
+    , m_activeDOMObjectsAreStopped(false)
 {
 }
 
 ScriptExecutionContext::~ScriptExecutionContext()
 {
     m_inDestructor = true;
-
     for (HashSet<ContextDestructionObserver*>::iterator iter = m_destructionObservers.begin(); iter != m_destructionObservers.end(); iter = m_destructionObservers.begin()) {
         ContextDestructionObserver* observer = *iter;
         m_destructionObservers.remove(observer);
@@ -115,49 +112,15 @@ ScriptExecutionContext::~ScriptExecutionContext()
         ASSERT((*iter)->scriptExecutionContext() == this);
         (*iter)->contextDestroyed();
     }
-#if ENABLE(SQL_DATABASE)
-    if (m_databaseThread) {
-        ASSERT(m_databaseThread->terminationRequested());
-        m_databaseThread = 0;
-    }
-#endif
-#if ENABLE(BLOB) || ENABLE(FILE_SYSTEM)
+#if ENABLE(BLOB)
     if (m_fileThread) {
         m_fileThread->stop();
         m_fileThread = 0;
     }
-#endif
-#if ENABLE(BLOB)
     if (m_publicURLManager)
         m_publicURLManager->contextDestroyed();
 #endif
 }
-
-#if ENABLE(SQL_DATABASE)
-
-DatabaseThread* ScriptExecutionContext::databaseThread()
-{
-    if (!m_databaseThread && !m_hasOpenDatabases) {
-        // Create the database thread on first request - but not if at least one database was already opened,
-        // because in that case we already had a database thread and terminated it and should not create another.
-        m_databaseThread = DatabaseThread::create();
-        if (!m_databaseThread->start())
-            m_databaseThread = 0;
-    }
-
-    return m_databaseThread.get();
-}
-
-void ScriptExecutionContext::stopDatabases(DatabaseTaskSynchronizer* cleanupSync)
-{
-    ASSERT(isContextThread());
-    if (m_databaseThread)
-        m_databaseThread->requestTermination(cleanupSync);
-    else if (cleanupSync)
-        cleanupSync->taskCompleted();
-}
-
-#endif
 
 void ScriptExecutionContext::processMessagePortMessagesSoon()
 {
@@ -211,11 +174,12 @@ bool ScriptExecutionContext::canSuspendActiveDOMObjects()
     HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
     for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
         ASSERT(iter->first->scriptExecutionContext() == this);
+        ASSERT(iter->first->suspendIfNeededCalled());
         if (!iter->first->canSuspend()) {
             m_iteratingActiveDOMObjects = false;
             return false;
         }
-    }    
+    }
     m_iteratingActiveDOMObjects = false;
     return true;
 }
@@ -227,18 +191,23 @@ void ScriptExecutionContext::suspendActiveDOMObjects(ActiveDOMObject::ReasonForS
     HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
     for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
         ASSERT(iter->first->scriptExecutionContext() == this);
+        ASSERT(iter->first->suspendIfNeededCalled());
         iter->first->suspend(why);
     }
     m_iteratingActiveDOMObjects = false;
+    m_activeDOMObjectsAreSuspended = true;
+    m_reasonForSuspendingActiveDOMObjects = why;
 }
 
 void ScriptExecutionContext::resumeActiveDOMObjects()
 {
+    m_activeDOMObjectsAreSuspended = false;
     // No protection against m_activeDOMObjects changing during iteration: resume() shouldn't execute arbitrary JS.
     m_iteratingActiveDOMObjects = true;
     HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
     for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
         ASSERT(iter->first->scriptExecutionContext() == this);
+        ASSERT(iter->first->suspendIfNeededCalled());
         iter->first->resume();
     }
     m_iteratingActiveDOMObjects = false;
@@ -246,17 +215,27 @@ void ScriptExecutionContext::resumeActiveDOMObjects()
 
 void ScriptExecutionContext::stopActiveDOMObjects()
 {
+    m_activeDOMObjectsAreStopped = true;
     // No protection against m_activeDOMObjects changing during iteration: stop() shouldn't execute arbitrary JS.
     m_iteratingActiveDOMObjects = true;
     HashMap<ActiveDOMObject*, void*>::iterator activeObjectsEnd = m_activeDOMObjects.end();
     for (HashMap<ActiveDOMObject*, void*>::iterator iter = m_activeDOMObjects.begin(); iter != activeObjectsEnd; ++iter) {
         ASSERT(iter->first->scriptExecutionContext() == this);
+        ASSERT(iter->first->suspendIfNeededCalled());
         iter->first->stop();
     }
     m_iteratingActiveDOMObjects = false;
 
     // Also close MessagePorts. If they were ActiveDOMObjects (they could be) then they could be stopped instead.
     closeMessagePorts();
+}
+
+void ScriptExecutionContext::suspendActiveDOMObjectIfNeeded(ActiveDOMObject* object)
+{
+    ASSERT(m_activeDOMObjects.contains(object));
+    // Ensure all ActiveDOMObjects are suspended also newly created ones.
+    if (m_activeDOMObjectsAreSuspended)
+        object->suspend(m_reasonForSuspendingActiveDOMObjects);
 }
 
 void ScriptExecutionContext::didCreateActiveDOMObject(ActiveDOMObject* object, void* upcastPointer)
@@ -378,7 +357,7 @@ DOMTimer* ScriptExecutionContext::findTimeout(int timeoutId)
     return m_timeouts.get(timeoutId);
 }
 
-#if ENABLE(BLOB) || ENABLE(FILE_SYSTEM)
+#if ENABLE(BLOB)
 FileThread* ScriptExecutionContext::fileThread()
 {
     if (!m_fileThread) {
@@ -388,9 +367,7 @@ FileThread* ScriptExecutionContext::fileThread()
     }
     return m_fileThread.get();
 }
-#endif
 
-#if ENABLE(BLOB)
 PublicURLManager& ScriptExecutionContext::publicURLManager()
 {
     if (!m_publicURLManager)

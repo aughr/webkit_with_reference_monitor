@@ -40,7 +40,7 @@
 
 namespace JSC {
 
-    class BumpSpace;
+    class CopiedSpace;
     class CodeBlock;
     class GCActivityCallback;
     class GlobalCodeBlock;
@@ -50,6 +50,7 @@ namespace JSC {
     class JSGlobalData;
     class JSValue;
     class LiveObjectIterator;
+    class LLIntOffsetsExtractor;
     class MarkedArgumentBuffer;
     class RegisterFile;
     class UString;
@@ -95,8 +96,10 @@ namespace JSC {
         // true if an allocation or collection is in progress
         inline bool isBusy();
         
-        MarkedAllocator& allocatorForObject(size_t bytes) { return m_objectSpace.allocatorFor(bytes); }
-        void* allocate(size_t);
+        MarkedAllocator& firstAllocatorWithoutDestructors() { return m_objectSpace.firstAllocator(); }
+        MarkedAllocator& allocatorForObjectWithoutDestructor(size_t bytes) { return m_objectSpace.allocatorFor(bytes); }
+        MarkedAllocator& allocatorForObjectWithDestructor(size_t bytes) { return m_objectSpace.destructorAllocatorFor(bytes); }
+        CopiedAllocator& storageAllocator() { return m_storageSpace.allocator(); }
         CheckedBoolean tryAllocateStorage(size_t, void**);
         CheckedBoolean tryReallocateStorage(void**, size_t, size_t);
 
@@ -135,17 +138,25 @@ namespace JSC {
 
         void getConservativeRegisterRoots(HashSet<JSCell*>& roots);
 
+        double lastGCLength() { return m_lastGCLength; }
+
     private:
+        friend class CodeBlock;
+        friend class LLIntOffsetsExtractor;
         friend class MarkedSpace;
         friend class MarkedAllocator;
         friend class MarkedBlock;
-        friend class BumpSpace;
+        friend class CopiedSpace;
         friend class SlotVisitor;
-        friend class CodeBlock;
+        template<typename T> friend void* allocateCell(Heap&);
+
+        void* allocateWithDestructor(size_t);
+        void* allocateWithoutDestructor(size_t);
 
         size_t waterMark();
         size_t highWaterMark();
         void setHighWaterMark(size_t);
+        bool shouldCollect();
 
         static const size_t minExtraCost = 256;
         static const size_t maxExtraCost = 1024 * 1024;
@@ -183,7 +194,7 @@ namespace JSC {
         void waitForRelativeTimeWhileHoldingLock(double relative);
         void waitForRelativeTime(double relative);
         void blockFreeingThreadMain();
-        static void* blockFreeingThreadStartFunc(void* heap);
+        static void blockFreeingThreadStartFunc(void* heap);
         
         const HeapSize m_heapSize;
         const size_t m_minBytesPerCycle;
@@ -193,7 +204,7 @@ namespace JSC {
         
         OperationInProgress m_operationInProgress;
         MarkedSpace m_objectSpace;
-        BumpSpace m_storageSpace;
+        CopiedSpace m_storageSpace;
 
         DoublyLinkedList<HeapBlock> m_freeBlocks;
         size_t m_numberOfFreeBlocks;
@@ -228,7 +239,17 @@ namespace JSC {
         bool m_isSafeToCollect;
 
         JSGlobalData* m_globalData;
+        double m_lastGCLength;
     };
+
+    inline bool Heap::shouldCollect()
+    {
+#if ENABLE(GGC)
+        return m_objectSpace.nurseryWaterMark() >= m_minBytesPerCycle && m_isSafeToCollect;
+#else
+        return waterMark() >= highWaterMark() && m_isSafeToCollect;
+#endif
+    }
 
     bool Heap::isBusy()
     {
@@ -264,7 +285,7 @@ namespace JSC {
 
     inline size_t Heap::waterMark()
     {
-        return m_objectSpace.waterMark() + m_storageSpace.totalMemoryUtilized();
+        return m_objectSpace.waterMark() + m_storageSpace.waterMark();
     }
 
     inline size_t Heap::highWaterMark()
@@ -334,10 +355,16 @@ namespace JSC {
         return forEachProtectedCell(functor);
     }
 
-    inline void* Heap::allocate(size_t bytes)
+    inline void* Heap::allocateWithDestructor(size_t bytes)
     {
         ASSERT(isValidAllocation(bytes));
-        return m_objectSpace.allocate(bytes);
+        return m_objectSpace.allocateWithDestructor(bytes);
+    }
+    
+    inline void* Heap::allocateWithoutDestructor(size_t bytes)
+    {
+        ASSERT(isValidAllocation(bytes));
+        return m_objectSpace.allocateWithoutDestructor(bytes);
     }
     
     inline CheckedBoolean Heap::tryAllocateStorage(size_t bytes, void** outPtr)

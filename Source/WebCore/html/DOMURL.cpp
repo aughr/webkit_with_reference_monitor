@@ -34,6 +34,7 @@
 #include "Blob.h"
 #include "BlobURL.h"
 #include "KURL.h"
+#include "MemoryCache.h"
 #include "PublicURLManager.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
@@ -88,8 +89,9 @@ void DOMURL::revokeObjectURL(ScriptExecutionContext* scriptExecutionContext, con
     if (!scriptExecutionContext)
         return;
 
-    KURL url(KURL(), urlString);
+    MemoryCache::removeUrlFromCache(scriptExecutionContext, urlString);
 
+    KURL url(KURL(), urlString);
     HashSet<String>& blobURLs = scriptExecutionContext->publicURLManager().blobURLs();
     if (blobURLs.contains(url.string())) {
         ThreadableBlobRegistry::unregisterBlobURL(url);

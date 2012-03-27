@@ -31,8 +31,7 @@
 #include "config.h"
 #include "V8DOMWrapper.h"
 
-#include "ArrayBufferView.h"
-#include "DOMDataStore.h"
+#include <wtf/ArrayBufferView.h>
 #include "DocumentLoader.h"
 #include "EventTargetHeaders.h"
 #include "EventTargetInterfaces.h"
@@ -41,13 +40,11 @@
 #include "V8AbstractEventListener.h"
 #include "V8Binding.h"
 #include "V8Collection.h"
-#include "V8DOMMap.h"
 #include "V8EventListener.h"
 #include "V8EventListenerList.h"
 #include "V8HTMLCollection.h"
 #include "V8HTMLDocument.h"
 #include "V8HiddenPropertyName.h"
-#include "V8IsolatedContext.h"
 #include "V8Location.h"
 #include "V8NamedNodeMap.h"
 #include "V8NodeFilterCondition.h"
@@ -69,33 +66,13 @@
 
 namespace WebCore {
 
-typedef HashMap<Node*, v8::Object*> DOMNodeMap;
-typedef HashMap<void*, v8::Object*> DOMObjectMap;
-
-// The caller must have increased obj's ref count.
-void V8DOMWrapper::setJSWrapperForDOMObject(void* object, v8::Persistent<v8::Object> wrapper)
+void V8DOMWrapper::setJSWrapperForDOMNode(PassRefPtr<Node> node, v8::Persistent<v8::Object> wrapper)
 {
-    ASSERT(V8DOMWrapper::maybeDOMWrapper(wrapper));
-    ASSERT(!domWrapperType(wrapper)->toActiveDOMObjectFunction);
-    getDOMObjectMap().set(object, wrapper);
-}
-
-// The caller must have increased obj's ref count.
-void V8DOMWrapper::setJSWrapperForActiveDOMObject(void* object, v8::Persistent<v8::Object> wrapper)
-{
-    ASSERT(V8DOMWrapper::maybeDOMWrapper(wrapper));
-    ASSERT(domWrapperType(wrapper)->toActiveDOMObjectFunction);
-    getActiveDOMObjectMap().set(object, wrapper);
-}
-
-// The caller must have increased node's ref count.
-void V8DOMWrapper::setJSWrapperForDOMNode(Node* node, v8::Persistent<v8::Object> wrapper)
-{
-    ASSERT(V8DOMWrapper::maybeDOMWrapper(wrapper));
+    ASSERT(maybeDOMWrapper(wrapper));
     if (node->isActiveNode())
-        getActiveDOMNodeMap().set(node, wrapper);
+        getActiveDOMNodeMap().set(node.leakRef(), wrapper);
     else
-        getDOMNodeMap().set(node, wrapper);
+        getDOMNodeMap().set(node.leakRef(), wrapper);
 }
 
 v8::Local<v8::Function> V8DOMWrapper::getConstructor(WrapperTypeInfo* type, v8::Handle<v8::Value> objectPrototype)
@@ -222,7 +199,7 @@ v8::Local<v8::Object> V8DOMWrapper::instantiateV8Object(V8Proxy* proxy, WrapperT
                     proxy = V8Proxy::retrieve(frame);
             }
 #if ENABLE(WORKERS)
-            else
+            else if (isWrapperOfType(globalPrototype, &V8WorkerContext::info))
                 workerContext = V8WorkerContext::toNative(lookupDOMWrapper(V8WorkerContext::GetTemplate(), context->Global()));
 #endif
         }
@@ -290,20 +267,6 @@ bool V8DOMWrapper::isWrapperOfType(v8::Handle<v8::Value> value, WrapperTypeInfo*
 
     WrapperTypeInfo* typeInfo = static_cast<WrapperTypeInfo*>(object->GetPointerFromInternalField(v8DOMWrapperTypeIndex));
     return typeInfo == type;
-}
-
-v8::Handle<v8::Object> V8DOMWrapper::getWrapperSlow(Node* node)
-{
-    V8IsolatedContext* context = V8IsolatedContext::getEntered();
-    if (LIKELY(!context)) {
-        v8::Persistent<v8::Object>* wrapper = node->wrapper();
-        if (!wrapper)
-            return v8::Handle<v8::Object>();
-        return *wrapper;
-    }
-    DOMDataStore* store = context->world()->domDataStore();
-    DOMNodeMapping& domNodeMap = node->isActiveNode() ? store->activeDomNodeMap() : store->domNodeMap();
-    return domNodeMap.get(node);
 }
 
 #define TRY_TO_WRAP_WITH_INTERFACE(interfaceName) \

@@ -67,9 +67,9 @@ static v8::Handle<v8::Value> V8TestNamedConstructorConstructorCallback(const v8:
         return throwError("Not enough arguments", V8Proxy::TypeError);
 
     ExceptionCode ec = 0;
-    STRING_TO_V8PARAMETER_EXCEPTION_BLOCK(V8Parameter<>, str1, MAYBE_MISSING_PARAMETER(args, 0, MissingIsUndefined));
-    STRING_TO_V8PARAMETER_EXCEPTION_BLOCK(V8Parameter<>, str2, MAYBE_MISSING_PARAMETER(args, 1, MissingIsUndefined));
-    STRING_TO_V8PARAMETER_EXCEPTION_BLOCK(V8Parameter<>, str3, MAYBE_MISSING_PARAMETER(args, 2, MissingIsEmpty));
+    STRING_TO_V8PARAMETER_EXCEPTION_BLOCK(V8Parameter<>, str1, MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined));
+    STRING_TO_V8PARAMETER_EXCEPTION_BLOCK(V8Parameter<>, str2, MAYBE_MISSING_PARAMETER(args, 1, DefaultIsUndefined));
+    STRING_TO_V8PARAMETER_EXCEPTION_BLOCK(V8Parameter<>, str3, MAYBE_MISSING_PARAMETER(args, 2, DefaultIsNullString));
 
     RefPtr<TestNamedConstructor> impl = TestNamedConstructor::createForJSConstructor(document, str1, str2, str3, ec);
     v8::Handle<v8::Object> wrapper = args.Holder();
@@ -77,8 +77,7 @@ static v8::Handle<v8::Value> V8TestNamedConstructorConstructorCallback(const v8:
         goto fail;
 
     V8DOMWrapper::setDOMWrapper(wrapper, &V8TestNamedConstructorConstructor::info, impl.get());
-    impl->ref();
-    V8DOMWrapper::setJSWrapperForActiveDOMObject(impl.get(), v8::Persistent<v8::Object>::New(wrapper));
+    V8DOMWrapper::setJSWrapperForActiveDOMObject(impl.release(), v8::Persistent<v8::Object>::New(wrapper));
     return args.Holder();
   fail:
     return throwError(ec);
@@ -155,20 +154,19 @@ ActiveDOMObject* V8TestNamedConstructor::toActiveDOMObject(v8::Handle<v8::Object
     return toNative(object);
 }      
 
-v8::Handle<v8::Object> V8TestNamedConstructor::wrapSlow(TestNamedConstructor* impl)
+v8::Handle<v8::Object> V8TestNamedConstructor::wrapSlow(PassRefPtr<TestNamedConstructor> impl)
 {
     v8::Handle<v8::Object> wrapper;
     V8Proxy* proxy = 0;
-    wrapper = V8DOMWrapper::instantiateV8Object(proxy, &info, impl);
-    if (wrapper.IsEmpty())
+    wrapper = V8DOMWrapper::instantiateV8Object(proxy, &info, impl.get());
+    if (UNLIKELY(wrapper.IsEmpty()))
         return wrapper;
 
-    impl->ref();
     v8::Persistent<v8::Object> wrapperHandle = v8::Persistent<v8::Object>::New(wrapper);
 
     if (!hasDependentLifetime)
         wrapperHandle.MarkIndependent();
-    getActiveDOMObjectMap().set(impl, wrapperHandle);
+    getActiveDOMObjectMap().set(impl.leakRef(), wrapperHandle);
     return wrapper;
 }
 

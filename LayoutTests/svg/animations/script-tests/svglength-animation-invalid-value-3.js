@@ -23,26 +23,25 @@ rootSVGElement.appendChild(rect);
 // Setup animation test
 function sample1() {
     // Check initial/end conditions
-    shouldBe("rect.width.animVal.value", "100");
+    shouldBeCloseEnough("rect.width.animVal.value", "100");
     shouldBe("rect.width.baseVal.value", "100");
 }
 
 function sample2() {
-    shouldBe("rect.width.animVal.value", "0");
-    shouldBe("rect.width.baseVal.value", "0");
+    shouldBeCloseEnough("rect.width.animVal.value", "0");
+    shouldBe("rect.width.baseVal.value", "100");
 }
 
 function executeTest() {
     const expectedValues = [
-        // [animationId, time, elementId, sampleCallback]
-        ["animation", 0.0,    "rect", sample1],
-        ["animation", 2.0,    "rect", sample2],
-        ["animation", 4.0 ,   "rect", sample1]
+        // [animationId, time, sampleCallback]
+        ["animation", 0.0,   sample1],
+        ["animation", 2.0,   sample2],
+        ["animation", 3.999, sample2],
+        ["animation", 4.001, sample1]
     ];
 
     runAnimationTest(expectedValues);
 }
 
-// Begin test async
-window.setTimeout("triggerUpdate(50, 30)", 0);
 var successfullyParsed = true;

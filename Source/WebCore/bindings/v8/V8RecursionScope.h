@@ -31,6 +31,7 @@
 #ifndef V8RecursionScope_h
 #define V8RecursionScope_h
 
+#include "ScriptExecutionContext.h"
 #include "V8Binding.h"
 
 namespace WebCore {
@@ -38,7 +39,12 @@ namespace WebCore {
 class V8RecursionScope {
     WTF_MAKE_NONCOPYABLE(V8RecursionScope);
 public:
-    V8RecursionScope() { V8BindingPerIsolateData::current()->incrementRecursionLevel(); }
+    explicit V8RecursionScope(ScriptExecutionContext* context)
+        : m_isDocumentContext(context && context->isDocument())
+    {
+        V8BindingPerIsolateData::current()->incrementRecursionLevel();
+    }
+
     ~V8RecursionScope()
     {
         if (!V8BindingPerIsolateData::current()->decrementRecursionLevel())
@@ -48,7 +54,9 @@ public:
     static int recursionLevel() { return V8BindingPerIsolateData::current()->recursionLevel(); }
 
 private:
-    static void didLeaveScriptContext();
+    void didLeaveScriptContext();
+
+    bool m_isDocumentContext;
 };
 
 } // namespace WebCore

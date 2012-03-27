@@ -35,7 +35,7 @@ JSC::MacroAssemblerX86Common::SSE2CheckState JSC::MacroAssemblerX86Common::s_sse
 #endif
 
 #include "CodeBlock.h"
-#include "CryptographicallyRandomNumber.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include "DFGNode.h" // for DFG_SUCCESS_STATS
 #include "Interpreter.h"
 #include "JITInlineMethods.h"
@@ -102,7 +102,7 @@ void JIT::emitOptimizationCheck(OptimizationCheckKind kind)
     Jump skipOptimize = branchAdd32(Signed, TrustedImm32(kind == LoopOptimizationCheck ? Options::executionCounterIncrementForLoop : Options::executionCounterIncrementForReturn), AbsoluteAddress(m_codeBlock->addressOfJITExecuteCounter()));
     JITStubCall stubCall(this, kind == LoopOptimizationCheck ? cti_optimize_from_loop : cti_optimize_from_ret);
     if (kind == LoopOptimizationCheck)
-        stubCall.addArgument(Imm32(m_bytecodeOffset));
+        stubCall.addArgument(TrustedImm32(m_bytecodeOffset));
     stubCall.call();
     skipOptimize.link(this);
 }
@@ -219,7 +219,7 @@ void JIT::privateCompileMainPass()
         m_labels[m_bytecodeOffset] = label();
 
 #if ENABLE(JIT_VERBOSE)
-        printf("Old JIT emitting code for bc#%u at offset 0x%lx.\n", m_bytecodeOffset, (long)debugOffset());
+        dataLog("Old JIT emitting code for bc#%u at offset 0x%lx.\n", m_bytecodeOffset, (long)debugOffset());
 #endif
 
         switch (m_interpreter->getOpcodeID(currentInstruction->u.opcode)) {
@@ -235,14 +235,10 @@ void JIT::privateCompileMainPass()
         DEFINE_UNARY_OP(op_is_object)
         DEFINE_UNARY_OP(op_is_string)
         DEFINE_UNARY_OP(op_is_undefined)
-#if USE(JSVALUE64)
-        DEFINE_UNARY_OP(op_negate)
-#endif
         DEFINE_UNARY_OP(op_typeof)
 
         DEFINE_OP(op_add)
         DEFINE_OP(op_bitand)
-        DEFINE_OP(op_bitnot)
         DEFINE_OP(op_bitor)
         DEFINE_OP(op_bitxor)
         DEFINE_OP(op_call)
@@ -302,9 +298,7 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_mod)
         DEFINE_OP(op_mov)
         DEFINE_OP(op_mul)
-#if USE(JSVALUE32_64)
         DEFINE_OP(op_negate)
-#endif
         DEFINE_OP(op_neq)
         DEFINE_OP(op_neq_null)
         DEFINE_OP(op_new_array)
@@ -325,6 +319,8 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_profile_will_call)
         DEFINE_OP(op_push_new_scope)
         DEFINE_OP(op_push_scope)
+        case op_put_by_id_transition_direct:
+        case op_put_by_id_transition_normal:
         DEFINE_OP(op_put_by_id)
         DEFINE_OP(op_put_by_index)
         DEFINE_OP(op_put_by_val)
@@ -429,13 +425,12 @@ void JIT::privateCompileSlowCases()
 #endif
 
 #if ENABLE(JIT_VERBOSE)
-        printf("Old JIT emitting slow code for bc#%u at offset 0x%lx.\n", m_bytecodeOffset, (long)debugOffset());
+        dataLog("Old JIT emitting slow code for bc#%u at offset 0x%lx.\n", m_bytecodeOffset, (long)debugOffset());
 #endif
 
         switch (m_interpreter->getOpcodeID(currentInstruction->u.opcode)) {
         DEFINE_SLOWCASE_OP(op_add)
         DEFINE_SLOWCASE_OP(op_bitand)
-        DEFINE_SLOWCASE_OP(op_bitnot)
         DEFINE_SLOWCASE_OP(op_bitor)
         DEFINE_SLOWCASE_OP(op_bitxor)
         DEFINE_SLOWCASE_OP(op_call)
@@ -473,10 +468,9 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_method_check)
         DEFINE_SLOWCASE_OP(op_mod)
         DEFINE_SLOWCASE_OP(op_mul)
-#if USE(JSVALUE32_64)
         DEFINE_SLOWCASE_OP(op_negate)
-#endif
         DEFINE_SLOWCASE_OP(op_neq)
+        DEFINE_SLOWCASE_OP(op_new_array)
         DEFINE_SLOWCASE_OP(op_new_object)
         DEFINE_SLOWCASE_OP(op_new_func)
         DEFINE_SLOWCASE_OP(op_new_func_exp)
@@ -486,6 +480,8 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_post_inc)
         DEFINE_SLOWCASE_OP(op_pre_dec)
         DEFINE_SLOWCASE_OP(op_pre_inc)
+        case op_put_by_id_transition_direct:
+        case op_put_by_id_transition_normal:
         DEFINE_SLOWCASE_OP(op_put_by_id)
         DEFINE_SLOWCASE_OP(op_put_by_val)
         DEFINE_SLOWCASE_OP(op_resolve_global)
@@ -505,7 +501,7 @@ void JIT::privateCompileSlowCases()
         
 #if ENABLE(VALUE_PROFILER)
         if (m_canBeOptimized)
-            add32(Imm32(1), AbsoluteAddress(&rareCaseProfile->m_counter));
+            add32(TrustedImm32(1), AbsoluteAddress(&rareCaseProfile->m_counter));
 #endif
 
         emitJumpSlowToHot(jump(), 0);
@@ -523,8 +519,12 @@ void JIT::privateCompileSlowCases()
 #endif
 }
 
-JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck)
+JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck, JITCompilationEffort effort)
 {
+#if ENABLE(JIT_VERBOSE_OSR)
+    printf("Compiling JIT code!\n");
+#endif
+    
 #if ENABLE(VALUE_PROFILER)
     m_canBeOptimized = m_codeBlock->canCompileWithDFG();
 #endif
@@ -573,7 +573,7 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck)
         }
 #endif
 
-        addPtr(Imm32(m_codeBlock->m_numCalleeRegisters * sizeof(Register)), callFrameRegister, regT1);
+        addPtr(TrustedImm32(m_codeBlock->m_numCalleeRegisters * sizeof(Register)), callFrameRegister, regT1);
         registerFileCheck = branchPtr(Below, AbsoluteAddress(m_globalData->interpreter->registerFile().addressOfEnd()), regT1);
     }
 
@@ -581,7 +581,7 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck)
     
 #if ENABLE(VALUE_PROFILER)
     if (m_canBeOptimized)
-        add32(Imm32(1), AbsoluteAddress(&m_codeBlock->m_executionEntryCount));
+        add32(TrustedImm32(1), AbsoluteAddress(&m_codeBlock->m_executionEntryCount));
 #endif
 
     privateCompileMainPass();
@@ -606,14 +606,20 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck)
         load32(payloadFor(RegisterFile::ArgumentCount), regT1);
         branch32(AboveOrEqual, regT1, TrustedImm32(m_codeBlock->m_numParameters)).linkTo(beginLabel, this);
 
+        m_bytecodeOffset = 0;
         JITStubCall(this, m_codeBlock->m_isConstructor ? cti_op_construct_arityCheck : cti_op_call_arityCheck).call(callFrameRegister);
+#if !ASSERT_DISABLED
+        m_bytecodeOffset = (unsigned)-1; // Reset this, in order to guard its use with ASSERTs.
+#endif
 
         jump(beginLabel);
     }
 
     ASSERT(m_jmpTable.isEmpty());
 
-    LinkBuffer patchBuffer(*m_globalData, this, m_codeBlock);
+    LinkBuffer patchBuffer(*m_globalData, this, m_codeBlock, effort);
+    if (patchBuffer.didFailToAllocate())
+        return JITCode();
 
     // Translate vPC offsets into addresses in JIT generated code, for switch tables.
     for (unsigned i = 0; i < m_switches.size(); ++i) {
@@ -689,8 +695,12 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck)
         info.callReturnLocation = m_codeBlock->structureStubInfo(m_methodCallCompilationInfo[i].propertyAccessIndex).callReturnLocation;
     }
 
-#if ENABLE(DFG_JIT)
-    if (m_canBeOptimized) {
+#if ENABLE(DFG_JIT) || ENABLE(LLINT)
+    if (canBeOptimized()
+#if ENABLE(LLINT)
+        || true
+#endif
+        ) {
         CompactJITCodeMap::Encoder jitCodeMapEncoder;
         for (unsigned bytecodeOffset = 0; bytecodeOffset < m_labels.size(); ++bytecodeOffset) {
             if (m_labels[bytecodeOffset].isSet())
@@ -705,8 +715,12 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck)
     
     CodeRef result = patchBuffer.finalizeCode();
     
+    m_globalData->machineCodeBytesPerBytecodeWordForBaselineJIT.add(
+        static_cast<double>(result.size()) /
+        static_cast<double>(m_codeBlock->instructions().size()));
+    
 #if ENABLE(JIT_VERBOSE)
-    printf("JIT generated code for %p at [%p, %p).\n", m_codeBlock, result.executableMemory()->start(), result.executableMemory()->end());
+    dataLog("JIT generated code for %p at [%p, %p).\n", m_codeBlock, result.executableMemory()->start(), result.executableMemory()->end());
 #endif
     
     return JITCode(result, JITCode::BaselineJIT);

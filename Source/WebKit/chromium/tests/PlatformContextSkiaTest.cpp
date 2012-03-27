@@ -163,6 +163,30 @@ TEST(PlatformContextSkiaTest, trackOpaqueClipTest)
     context.clearRect(FloatRect(10, 10, 90, 90));
     EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
 
+    // The transform and the clip need to interact correctly (transform first)
+    context.save();
+    context.translate(10, 10);
+    context.clip(FloatRect(20, 20, 10, 10));
+    context.fillRect(FloatRect(10, 10, 90, 90), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    EXPECT_EQ_RECT(IntRect(30, 30, 10, 10), platformContext.opaqueRegion().asRect());
+    EXPECT_PIXELS_MATCH(bitmap, platformContext.opaqueRegion().asRect());
+    context.restore();
+
+    context.clearRect(FloatRect(10, 10, 90, 90));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+
+    // The transform and the clip need to interact correctly (clip first)
+    context.save();
+    context.clip(FloatRect(20, 20, 10, 10));
+    context.translate(10, 10);
+    context.fillRect(FloatRect(10, 10, 90, 90), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    EXPECT_EQ_RECT(IntRect(20, 20, 10, 10), platformContext.opaqueRegion().asRect());
+    EXPECT_PIXELS_MATCH(bitmap, platformContext.opaqueRegion().asRect());
+    context.restore();
+
+    context.clearRect(FloatRect(10, 10, 90, 90));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+
     Path path;
     path.moveTo(FloatPoint(0, 0));
     path.addLineTo(FloatPoint(100, 0));
@@ -546,6 +570,115 @@ TEST(PlatformContextSkiaTest, trackOpaqueOvalTest)
     context.drawEllipse(IntRect(20, 10, 30, 50));
     EXPECT_EQ_RECT(IntRect(51, 41, 49, 59), platformContext.opaqueRegion().asRect());
     EXPECT_PIXELS_MATCH(bitmap, platformContext.opaqueRegion().asRect());
+}
+
+TEST(PlatformContextSkiaTest, layerTransformTranslateOpaqueTest)
+{
+    SkBitmap bitmap;
+    bitmap.setConfig(SkBitmap::kARGB_8888_Config, 400, 400);
+    bitmap.allocPixels();
+    bitmap.eraseColor(0);
+    SkCanvas canvas(bitmap);
+    AffineTransform transform;
+    transform.translate(10, 10);
+
+    PlatformContextSkia platformContext(&canvas);
+    platformContext.setTrackOpaqueRegion(true);
+    platformContext.setOpaqueRegionTransform(transform);
+    GraphicsContext context(&platformContext);
+
+    Color opaque(1.0f, 0.0f, 0.0f, 1.0f);
+
+    context.fillRect(FloatRect(10, 10, 90, 90), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    EXPECT_EQ_RECT(IntRect(20, 20, 90, 90), platformContext.opaqueRegion().asRect());
+    EXPECT_PIXELS_MATCH(bitmap, transform.inverse().mapRect(platformContext.opaqueRegion().asRect()));
+
+    context.clearRect(FloatRect(10, 10, 90, 90));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+
+    context.translate(30, 30);
+
+    context.fillRect(FloatRect(10, 10, 90, 90), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    EXPECT_EQ_RECT(IntRect(50, 50, 90, 90), platformContext.opaqueRegion().asRect());
+    EXPECT_PIXELS_MATCH(bitmap, transform.inverse().mapRect(platformContext.opaqueRegion().asRect()));
+
+    context.clearRect(FloatRect(10, 10, 90, 90));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+}
+
+TEST(PlatformContextSkiaTest, layerTransformScaleOpaqueTest)
+{
+    SkBitmap bitmap;
+    bitmap.setConfig(SkBitmap::kARGB_8888_Config, 400, 400);
+    bitmap.allocPixels();
+    bitmap.eraseColor(0);
+    SkCanvas canvas(bitmap);
+    AffineTransform transform;
+    transform.scale(2);
+
+    PlatformContextSkia platformContext(&canvas);
+    platformContext.setTrackOpaqueRegion(true);
+    platformContext.setOpaqueRegionTransform(transform);
+    GraphicsContext context(&platformContext);
+
+    Color opaque(1.0f, 0.0f, 0.0f, 1.0f);
+
+    context.fillRect(FloatRect(20, 20, 10, 10), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    EXPECT_EQ_RECT(IntRect(40, 40, 20, 20), platformContext.opaqueRegion().asRect());
+    EXPECT_PIXELS_MATCH(bitmap, transform.inverse().mapRect(platformContext.opaqueRegion().asRect()));
+
+    context.clearRect(FloatRect(20, 20, 10, 10));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+
+    context.scale(FloatSize(2, 1));
+    context.translate(0, 10);
+
+    context.fillRect(FloatRect(20, 20, 10, 10), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    EXPECT_EQ_RECT(IntRect(80, 60, 40, 20), platformContext.opaqueRegion().asRect());
+    EXPECT_PIXELS_MATCH(bitmap, transform.inverse().mapRect(platformContext.opaqueRegion().asRect()));
+
+    context.clearRect(FloatRect(20, 20, 10, 10));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+}
+
+TEST(PlatformContextSkiaTest, contextTransparencyLayerTest)
+{
+    SkBitmap bitmap;
+    bitmap.setConfig(SkBitmap::kARGB_8888_Config, 400, 400);
+    bitmap.allocPixels();
+    bitmap.eraseColor(0);
+    SkCanvas canvas(bitmap);
+    AffineTransform transform;
+    transform.scale(2);
+
+    PlatformContextSkia platformContext(&canvas);
+    platformContext.setTrackOpaqueRegion(true);
+    platformContext.setOpaqueRegionTransform(transform);
+    GraphicsContext context(&platformContext);
+    
+    Color opaque(1.0f, 0.0f, 0.0f, 1.0f);
+    
+    context.fillRect(FloatRect(20, 20, 10, 10), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    EXPECT_EQ_RECT(IntRect(40, 40, 20, 20), platformContext.opaqueRegion().asRect());
+    EXPECT_PIXELS_MATCH(bitmap, transform.inverse().mapRect(platformContext.opaqueRegion().asRect()));
+    
+    context.clearRect(FloatRect(20, 20, 10, 10));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+
+    context.beginTransparencyLayer(0.5);
+    context.save();
+    context.fillRect(FloatRect(20, 20, 10, 10), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    context.restore();
+    context.endTransparencyLayer();
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+
+    context.clearRect(FloatRect(20, 20, 10, 10));
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
+
+    context.beginTransparencyLayer(0.5);
+    context.fillRect(FloatRect(20, 20, 10, 10), opaque, ColorSpaceDeviceRGB, CompositeSourceOver);
+    context.endTransparencyLayer();
+    EXPECT_EQ_RECT(IntRect(), platformContext.opaqueRegion().asRect());
 }
 
 } // namespace

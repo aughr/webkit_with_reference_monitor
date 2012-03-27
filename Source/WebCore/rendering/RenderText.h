@@ -54,8 +54,8 @@ public:
     InlineTextBox* createInlineTextBox();
     void dirtyLineBoxes(bool fullLayout);
 
-    virtual void absoluteRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const;
-    void absoluteRectsForRange(Vector<LayoutRect>&, unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = 0);
+    virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const;
+    void absoluteRectsForRange(Vector<IntRect>&, unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = 0);
 
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
     void absoluteQuadsForRange(Vector<FloatQuad>&, unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = 0);
@@ -89,16 +89,18 @@ public:
     float firstRunX() const;
     float firstRunY() const;
 
-    void setText(PassRefPtr<StringImpl>, bool force = false);
+    virtual void setText(PassRefPtr<StringImpl>, bool force = false);
     void setTextWithOffset(PassRefPtr<StringImpl>, unsigned offset, unsigned len, bool force = false);
+
+    virtual void transformText();
 
     virtual bool canBeSelectionLeaf() const { return true; }
     virtual void setSelectionState(SelectionState s);
     virtual LayoutRect selectionRectForRepaint(RenderBoxModelObject* repaintContainer, bool clipToVisibleContent = true);
     virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0);
 
-    virtual LayoutUnit marginLeft() const { return style()->marginLeft().calcMinValue(0); }
-    virtual LayoutUnit marginRight() const { return style()->marginRight().calcMinValue(0); }
+    virtual LayoutUnit marginLeft() const { return minimumValueForLength(style()->marginLeft(), 0); }
+    virtual LayoutUnit marginRight() const { return minimumValueForLength(style()->marginRight(), 0); }
 
     virtual LayoutRect clippedOverflowRectForRepaint(RenderBoxModelObject* repaintContainer) const;
 
@@ -160,7 +162,6 @@ private:
     bool isAllASCII() const { return m_isAllASCII; }
     void updateNeedsTranscoding();
 
-    inline void transformText(String&) const;
     void secureText(UChar mask);
 
     float m_minWidth; // here to minimize padding in 64-bit.

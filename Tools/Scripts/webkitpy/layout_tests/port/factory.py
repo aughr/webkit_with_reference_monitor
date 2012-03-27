@@ -42,9 +42,7 @@ class BuilderOptions(object):
 
 class PortFactory(object):
     PORT_CLASSES = (
-        'chromium_gpu.ChromiumGpuLinuxPort',
-        'chromium_gpu.ChromiumGpuMacPort',
-        'chromium_gpu.ChromiumGpuWinPort',
+        'chromium_android.ChromiumAndroidPort',
         'chromium_linux.ChromiumLinuxPort',
         'chromium_mac.ChromiumMacPort',
         'chromium_win.ChromiumWinPort',
@@ -59,7 +57,7 @@ class PortFactory(object):
         'qt.QtPort',
         'test.TestPort',
         'win.WinPort',
-        )
+    )
 
     def __init__(self, host):
         self._host = host
@@ -85,10 +83,6 @@ class PortFactory(object):
         # can't look at the port_name prefix in this case).
         if port_name == 'chromium':
             port_name = 'chromium-' + self._host.platform.os_name
-
-        # FIXME: Remove this when we remove the chromium-gpu ports.
-        if port_name == 'chromium-gpu':
-            port_name = port_name + '-' + self._host.platform.os_name
 
         for port_class in self.PORT_CLASSES:
             module_name, class_name = port_class.rsplit('.', 1)

@@ -50,10 +50,19 @@ def get_gtkdoc_module_paths(xref_dep_packages):
 
 
 def get_common_options():
+    # TODO: We should consider using an arguments parsing library if
+    # we need more of these complex ones.
+    virtual_root = ''
+    for argument in sys.argv:
+        if argument.startswith('--virtual-root='):
+            virtual_root = argument.split('=')[1]
+            break
+
     return {
         'decorator': 'WEBKIT_API',
         'deprecation_guard': 'WEBKIT_DISABLE_DEPRECATED',
         'library_path' : common.build_path('.libs'),
+        'virtual_root' : virtual_root,
     }
 
 def get_common_xref_deps():
@@ -130,6 +139,9 @@ def generate_doc(pkg_config_path, options):
     return generator.saw_warnings
 
 def rebase_installed_docs(pkg_config_path, options):
+    if not os.path.isdir(options['output_dir']):
+        print "Documentation was not generated"
+        return
     generator = gtkdoc.PkgConfigGTKDoc(pkg_config_path, options)
     generator.rebase_installed_docs()
 
@@ -146,7 +158,7 @@ saw_webkit1_warnings = saw_webkit2_warnings = False
 
 pkg_config_path = common.build_path('Source', 'WebKit', 'gtk', 'webkitgtk-3.0.pc')
 if not os.path.exists(pkg_config_path):
-    pkg_config_path = common.build_path('Source', 'WebKit', 'gtk', 'webkitgtk-1.0.pc')
+    pkg_config_path = common.build_path('Source', 'WebKit', 'gtk', 'webkit-1.0.pc')
 if os.path.exists(pkg_config_path):
     options = get_webkit1_options(common.gtk_version_of_pkg_config_file(pkg_config_path))
     if '--rebase' not in sys.argv:

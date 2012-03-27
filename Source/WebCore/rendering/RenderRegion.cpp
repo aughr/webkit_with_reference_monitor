@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Adobe Systems Incorporated. All Rights Reserved.
+ * Copyright (C) 2011 Adobe Systems Incorporated. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +47,10 @@ RenderRegion::RenderRegion(Node* node, RenderFlowThread* flowThread)
     , m_parentFlowThread(0)
     , m_isValid(false)
     , m_hasCustomRegionStyle(false)
+    , m_regionState(RegionUndefined)
+    , m_dispatchRegionLayoutUpdateEvent(false)
 {
+    ASSERT(node->document()->cssRegionsEnabled());
 }
 
 LayoutRect RenderRegion::regionOverflowRect() const
@@ -137,11 +140,6 @@ void RenderRegion::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintO
     if (!m_flowThread || !isValid())
         return;
 
-    if (Frame* frame = this->frame()) {
-        if (Page* page = frame->page())
-            page->addRelevantRepaintedObject(this, paintInfo.rect);
-    }
-
     setRegionBoxesRegionStyle();
     m_flowThread->paintIntoRegion(paintInfo, this, LayoutPoint(paintOffset.x() + borderLeft() + paddingLeft(), paintOffset.y() + borderTop() + paddingTop()));
     restoreRegionBoxesOriginalStyle();
@@ -157,7 +155,8 @@ bool RenderRegion::nodeAtPoint(const HitTestRequest& request, HitTestResult& res
 
     // Check our bounds next. For this purpose always assume that we can only be hit in the
     // foreground phase (which is true for replaced elements like images).
-    LayoutRect boundsRect(adjustedLocation, size());
+    LayoutRect boundsRect = borderBoxRectInRegion(result.region());
+    boundsRect.moveBy(adjustedLocation);
     if (visibleToHitTesting() && action == HitTestForeground && boundsRect.intersects(result.rectForPoint(pointInContainer))) {
         // Check the contents of the RenderFlowThread.
         if (m_flowThread && m_flowThread->hitTestRegion(this, request, result, pointInContainer, LayoutPoint(adjustedLocation.x() + borderLeft() + paddingLeft(), adjustedLocation.y() + borderTop() + paddingTop())))

@@ -29,12 +29,12 @@
                 testExpected("textCue.startTime", 33);
                 testExpected("textCue.endTime", 3.4);
                 testExpected("textCue.pauseOnExit", false);
-                testExpected("textCue.direction", "horizontal");
+                testExpected("textCue.vertical", "");
                 testExpected("textCue.snapToLines", true);
-                testExpected("textCue.linePosition", -1);
-                testExpected("textCue.textPosition", 50);
+                testExpected("textCue.line", -1);
+                testExpected("textCue.position", 50);
                 testExpected("textCue.size", 100);
-                testExpected("textCue.alignment", "middle");
+                testExpected("textCue.align", "middle");
 
                 consoleWrite("<br>*** Add the new cue to a track, make sure it is inserted correctly.");
                 run("testTrack.track.addCue(textCue)");
@@ -42,6 +42,24 @@
                 testExpected("cues[1].startTime", 31);
                 testExpected("cues[2].startTime", 33);
                 testExpected("cues[3].startTime", 61);
+
+                consoleWrite("<br>*** create a new cue and add it to a track created with video.addTextTrack, make sure it is inserted correctly.");
+                findMediaElement();
+                run('newTrack = video.addTextTrack("subtitles", "French subtitles", "fr")');
+                newTrack.mode = 2;
+                run('newTrack.addCue(new TextTrackCue("test", 0.0, 1.0, "Test!"))');
+                run('newCue = newTrack.cues[0]');
+                testExpected("newCue.track", newTrack);
+                testExpected("newCue.id", "test");
+                testExpected("newCue.startTime", 0.0);
+                testExpected("newCue.endTime", 1.0);
+                testExpected("newCue.pauseOnExit", false);
+                testExpected("newCue.vertical", "");
+                testExpected("newCue.snapToLines", true);
+                testExpected("newCue.line", -1);
+                testExpected("newCue.position", 50);
+                testExpected("newCue.size", 100);
+                testExpected("newCue.align", "middle");
 
                 consoleWrite("<br>*** Remove a cue created with addCue().");
                 run("testTrack.track.removeCue(textCue)");

@@ -10,7 +10,7 @@ include(WTF.pri)
 
 CONFIG += staticlib
 
-VPATH += $$PWD/../JavaScriptCore/wtf
+VPATH += $$PWD/wtf
 
 HEADERS += \
     Alignment.h \
@@ -34,6 +34,7 @@ HEADERS += \
     DateMath.h \
     DecimalNumber.h \
     Decoder.h \
+    DataLog.h \ 
     Deque.h \
     DisallowCType.h \
     dtoa.h \
@@ -171,6 +172,7 @@ SOURCES += \
     CryptographicallyRandomNumber.cpp \
     CurrentTime.cpp \
     DateMath.cpp \
+    DataLog.cpp \
     DecimalNumber.cpp \
     dtoa.cpp \
     dtoa/bignum-dtoa.cc \

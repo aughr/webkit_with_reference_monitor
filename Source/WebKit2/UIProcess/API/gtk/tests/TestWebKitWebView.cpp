@@ -71,24 +71,22 @@ static void testWebViewSettings(WebViewTest* test, gconstpointer)
     g_assert(webkit_settings_get_enable_javascript(settings));
 }
 
-static void replaceContentTitleChangedCallback(WebViewTest* test)
+static void replaceContentLoadCallback(WebKitWebView* webView, WebKitLoadEvent loadEvent, WebViewTest* test)
 {
-    g_main_loop_quit(test->m_mainLoop);
-}
-
-static void replaceContentLoadCallback()
-{
-    g_assert_not_reached();
+    // There might be an event from a previous load,
+    // but never a WEBKIT_LOAD_STARTED after webkit_web_view_replace_content().
+    g_assert_cmpint(loadEvent, !=, WEBKIT_LOAD_STARTED);
 }
 
 static void testWebViewReplaceContent(WebViewTest* test, gconstpointer)
 {
-    g_signal_connect_swapped(test->m_webView, "notify::title", G_CALLBACK(replaceContentTitleChangedCallback), test);
+    test->loadHtml("<html><head><title>Replace Content Test</title></head><body>Content to replace</body></html>", 0);
+    test->waitUntilTitleChangedTo("Replace Content Test");
+
     g_signal_connect(test->m_webView, "load-changed", G_CALLBACK(replaceContentLoadCallback), test);
-    g_signal_connect(test->m_webView, "load-failed", G_CALLBACK(replaceContentLoadCallback), test);
-    test->replaceContent("<html><head><title>Content Replaced</title></head><body>New Content</body></html>",
+    test->replaceContent("<html><body onload='document.title=\"Content Replaced\"'>New Content</body></html>",
                          "http://foo.com/bar", 0);
-    g_main_loop_run(test->m_mainLoop);
+    test->waitUntilTitleChangedTo("Content Replaced");
 }
 
 static const char* kAlertDialogMessage = "WebKitGTK+ alert dialog message";
@@ -104,12 +102,6 @@ public:
         Create,
         ReadyToShow,
         Close
-    };
-
-    enum ScriptType {
-        Alert,
-        Confirm,
-        Prompt
     };
 
     class WindowProperties {
@@ -226,56 +218,75 @@ public:
         return newWebView;
     }
 
-    static gboolean scriptAlert(WebKitWebView*, const char* message, UIClientTest* test)
+    void scriptAlert(WebKitScriptDialog* dialog)
     {
-        switch (test->m_scriptType) {
-        case UIClientTest::Alert:
-            g_assert_cmpstr(message, ==, kAlertDialogMessage);
+        switch (m_scriptDialogType) {
+        case WEBKIT_SCRIPT_DIALOG_ALERT:
+            g_assert_cmpstr(webkit_script_dialog_get_message(dialog), ==, kAlertDialogMessage);
             break;
-        case UIClientTest::Confirm:
-            g_assert(test->m_scriptDialogConfirmed);
-            g_assert_cmpstr(message, ==, "confirmed");
+        case WEBKIT_SCRIPT_DIALOG_CONFIRM:
+            g_assert(m_scriptDialogConfirmed);
+            g_assert_cmpstr(webkit_script_dialog_get_message(dialog), ==, "confirmed");
 
             break;
-        case UIClientTest::Prompt:
-            g_assert_cmpstr(message, ==, kPromptDialogReturnedText);
+        case WEBKIT_SCRIPT_DIALOG_PROMPT:
+            g_assert_cmpstr(webkit_script_dialog_get_message(dialog), ==, kPromptDialogReturnedText);
             break;
         }
 
+        g_main_loop_quit(m_mainLoop);
+    }
+
+    void scriptConfirm(WebKitScriptDialog* dialog)
+    {
+        g_assert_cmpstr(webkit_script_dialog_get_message(dialog), ==, kConfirmDialogMessage);
+        m_scriptDialogConfirmed = !m_scriptDialogConfirmed;
+        webkit_script_dialog_confirm_set_confirmed(dialog, m_scriptDialogConfirmed);
+    }
+
+    void scriptPrompt(WebKitScriptDialog* dialog)
+    {
+        g_assert_cmpstr(webkit_script_dialog_get_message(dialog), ==, kPromptDialogMessage);
+        g_assert_cmpstr(webkit_script_dialog_prompt_get_default_text(dialog), ==, "default");
+        webkit_script_dialog_prompt_set_text(dialog, kPromptDialogReturnedText);
+    }
+
+    static gboolean scriptDialog(WebKitWebView*, WebKitScriptDialog* dialog, UIClientTest* test)
+    {
+        switch (webkit_script_dialog_get_dialog_type(dialog)) {
+        case WEBKIT_SCRIPT_DIALOG_ALERT:
+            test->scriptAlert(dialog);
+            break;
+        case WEBKIT_SCRIPT_DIALOG_CONFIRM:
+            test->scriptConfirm(dialog);
+            break;
+        case WEBKIT_SCRIPT_DIALOG_PROMPT:
+            test->scriptPrompt(dialog);
+            break;
+        }
+
+        return TRUE;
+    }
+
+    static void mouseTargetChanged(WebKitWebView*, WebKitHitTestResult* hitTestResult, guint modifiers, UIClientTest* test)
+    {
+        g_assert(WEBKIT_IS_HIT_TEST_RESULT(hitTestResult));
+        test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(hitTestResult));
+
+        test->m_mouseTargetHitTestResult = hitTestResult;
+        test->m_mouseTargetModifiers = modifiers;
         g_main_loop_quit(test->m_mainLoop);
-
-        return TRUE;
-    }
-
-    static gboolean scriptConfirm(WebKitWebView*, const char* message, gboolean* confirmed, UIClientTest* test)
-    {
-        g_assert_cmpstr(message, ==, kConfirmDialogMessage);
-        g_assert(confirmed);
-        test->m_scriptDialogConfirmed = !test->m_scriptDialogConfirmed;
-        *confirmed = test->m_scriptDialogConfirmed;
-
-        return TRUE;
-    }
-
-    static gboolean scriptPrompt(WebKitWebView*, const char* message, const char* defaultText, char **text, UIClientTest* test)
-    {
-        g_assert_cmpstr(message, ==, kPromptDialogMessage);
-        g_assert_cmpstr(defaultText, ==, "default");
-        g_assert(text);
-        *text = g_strdup(kPromptDialogReturnedText);
-
-        return TRUE;
     }
 
     UIClientTest()
-        : m_scriptType(Alert)
+        : m_scriptDialogType(WEBKIT_SCRIPT_DIALOG_ALERT)
         , m_scriptDialogConfirmed(true)
+        , m_mouseTargetModifiers(0)
     {
         webkit_settings_set_javascript_can_open_windows_automatically(webkit_web_view_get_settings(m_webView), TRUE);
         g_signal_connect(m_webView, "create", G_CALLBACK(viewCreate), this);
-        g_signal_connect(m_webView, "script-alert", G_CALLBACK(scriptAlert), this);
-        g_signal_connect(m_webView, "script-confirm", G_CALLBACK(scriptConfirm), this);
-        g_signal_connect(m_webView, "script-prompt", G_CALLBACK(scriptPrompt), this);
+        g_signal_connect(m_webView, "script-dialog", G_CALLBACK(scriptDialog), this);
+        g_signal_connect(m_webView, "mouse-target-changed", G_CALLBACK(mouseTargetChanged), this);
     }
 
     ~UIClientTest()
@@ -293,11 +304,20 @@ public:
         m_windowProperties = windowProperties;
     }
 
+    WebKitHitTestResult* moveMouseAndWaitUntilMouseTargetChanged(int x, int y, unsigned int mouseModifiers = 0)
+    {
+        mouseMoveTo(x, y, mouseModifiers);
+        g_main_loop_run(m_mainLoop);
+        return m_mouseTargetHitTestResult.get();
+    }
+
     Vector<WebViewEvents> m_webViewEvents;
-    ScriptType m_scriptType;
+    WebKitScriptDialogType m_scriptDialogType;
     bool m_scriptDialogConfirmed;
     WindowProperties m_windowProperties;
     HashSet<WTF::String> m_windowPropertiesChanged;
+    GRefPtr<WebKitHitTestResult> m_mouseTargetHitTestResult;
+    unsigned int m_mouseTargetModifiers;
 };
 
 static void testWebViewCreateReadyClose(UIClientTest* test, gconstpointer)
@@ -319,19 +339,19 @@ static void testWebViewJavaScriptDialogs(UIClientTest* test, gconstpointer)
     static const char* jsConfirmFormat = "do { confirmed = confirm('%s'); } while (!confirmed); alert('confirmed');";
     static const char* jsPromptFormat = "alert(prompt('%s', 'default'));";
 
-    test->m_scriptType = UIClientTest::Alert;
+    test->m_scriptDialogType = WEBKIT_SCRIPT_DIALOG_ALERT;
     GOwnPtr<char> alertDialogMessage(g_strdup_printf(jsAlertFormat, kAlertDialogMessage));
     GOwnPtr<char> alertHTML(g_strdup_printf(htmlOnLoadFormat, alertDialogMessage.get()));
     test->loadHtml(alertHTML.get(), 0);
     test->waitUntilMainLoopFinishes();
 
-    test->m_scriptType = UIClientTest::Confirm;
+    test->m_scriptDialogType = WEBKIT_SCRIPT_DIALOG_CONFIRM;
     GOwnPtr<char> confirmDialogMessage(g_strdup_printf(jsConfirmFormat, kConfirmDialogMessage));
     GOwnPtr<char> confirmHTML(g_strdup_printf(htmlOnLoadFormat, confirmDialogMessage.get()));
     test->loadHtml(confirmHTML.get(), 0);
     test->waitUntilMainLoopFinishes();
 
-    test->m_scriptType = UIClientTest::Prompt;
+    test->m_scriptDialogType = WEBKIT_SCRIPT_DIALOG_PROMPT;
     GOwnPtr<char> promptDialogMessage(g_strdup_printf(jsPromptFormat, kPromptDialogMessage));
     GOwnPtr<char> promptHTML(g_strdup_printf(htmlOnLoadFormat, promptDialogMessage.get()));
     test->loadHtml(promptHTML.get(), 0);
@@ -361,11 +381,135 @@ static void testWebViewWindowProperties(UIClientTest* test, gconstpointer)
     g_assert_cmpint(events[2], ==, UIClientTest::Close);
 }
 
+static void testWebViewMouseTarget(UIClientTest* test, gconstpointer)
+{
+    test->showInWindowAndWaitUntilMapped();
+
+    const char* linksHoveredHTML =
+        "<html><body>"
+        " <a style='position:absolute; left:1; top:1' href='http://www.webkitgtk.org' title='WebKitGTK+ Title'>WebKitGTK+ Website</a>"
+        " <img style='position:absolute; left:1; top:10' src='0xdeadbeef' width=5 height=5></img>"
+        " <a style='position:absolute; left:1; top:20' href='http://www.webkitgtk.org/logo' title='WebKitGTK+ Logo'><img src='0xdeadbeef' width=5 height=5></img></a>"
+        " <video style='position:absolute; left:1; top:30' width=10 height=10 controls='controls'><source src='movie.ogg' type='video/ogg' /></video>"
+        "</body></html>";
+
+    test->loadHtml(linksHoveredHTML, "file:///");
+    test->waitUntilLoadFinished();
+
+    // Move over link.
+    WebKitHitTestResult* hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(1, 1);
+    g_assert(webkit_hit_test_result_context_is_link(hitTestResult));
+    g_assert(!webkit_hit_test_result_context_is_image(hitTestResult));
+    g_assert(!webkit_hit_test_result_context_is_media(hitTestResult));
+    g_assert_cmpstr(webkit_hit_test_result_get_link_uri(hitTestResult), ==, "http://www.webkitgtk.org/");
+    g_assert_cmpstr(webkit_hit_test_result_get_link_title(hitTestResult), ==, "WebKitGTK+ Title");
+    g_assert_cmpstr(webkit_hit_test_result_get_link_label(hitTestResult), ==, "WebKitGTK+ Website");
+    g_assert(!test->m_mouseTargetModifiers);
+
+    // Move out of the link.
+    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(0, 0);
+    g_assert(!webkit_hit_test_result_context_is_link(hitTestResult));
+    g_assert(!webkit_hit_test_result_context_is_image(hitTestResult));
+    g_assert(!webkit_hit_test_result_context_is_media(hitTestResult));
+    g_assert(!test->m_mouseTargetModifiers);
+
+    // Move over image with GDK_CONTROL_MASK.
+    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(1, 10, GDK_CONTROL_MASK);
+    g_assert(!webkit_hit_test_result_context_is_link(hitTestResult));
+    g_assert(webkit_hit_test_result_context_is_image(hitTestResult));
+    g_assert(!webkit_hit_test_result_context_is_media(hitTestResult));
+    g_assert_cmpstr(webkit_hit_test_result_get_image_uri(hitTestResult), ==, "file:///0xdeadbeef");
+    g_assert(test->m_mouseTargetModifiers & GDK_CONTROL_MASK);
+
+    // Move over image link.
+    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(1, 20);
+    g_assert(webkit_hit_test_result_context_is_link(hitTestResult));
+    g_assert(webkit_hit_test_result_context_is_image(hitTestResult));
+    g_assert(!webkit_hit_test_result_context_is_media(hitTestResult));
+    g_assert_cmpstr(webkit_hit_test_result_get_link_uri(hitTestResult), ==, "http://www.webkitgtk.org/logo");
+    g_assert_cmpstr(webkit_hit_test_result_get_image_uri(hitTestResult), ==, "file:///0xdeadbeef");
+    g_assert_cmpstr(webkit_hit_test_result_get_link_title(hitTestResult), ==, "WebKitGTK+ Logo");
+    g_assert(!webkit_hit_test_result_get_link_label(hitTestResult));
+    g_assert(!test->m_mouseTargetModifiers);
+
+    // Move over media.
+    hitTestResult = test->moveMouseAndWaitUntilMouseTargetChanged(1, 30);
+    g_assert(!webkit_hit_test_result_context_is_link(hitTestResult));
+    g_assert(!webkit_hit_test_result_context_is_image(hitTestResult));
+    g_assert(webkit_hit_test_result_context_is_media(hitTestResult));
+    g_assert_cmpstr(webkit_hit_test_result_get_media_uri(hitTestResult), ==, "file:///movie.ogg");
+    g_assert(!test->m_mouseTargetModifiers);
+}
+
 static void testWebViewZoomLevel(WebViewTest* test, gconstpointer)
 {
     g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->m_webView), ==, 1);
     webkit_web_view_set_zoom_level(test->m_webView, 2.5);
     g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->m_webView), ==, 2.5);
+
+    webkit_settings_set_zoom_text_only(webkit_web_view_get_settings(test->m_webView), TRUE);
+    // The zoom level shouldn't change when zoom-text-only setting changes.
+    g_assert_cmpfloat(webkit_web_view_get_zoom_level(test->m_webView), ==, 2.5);
+}
+
+static void testWebViewRunJavaScript(WebViewTest* test, gconstpointer)
+{
+    static const char* html = "<html><body><a id='WebKitLink' href='http://www.webkitgtk.org/' title='WebKitGTK+ Title'>WebKitGTK+ Website</a></body></html>";
+    test->loadHtml(html, 0);
+    test->waitUntilLoadFinished();
+
+    GOwnPtr<GError> error;
+    WebKitJavascriptResult* javascriptResult = test->runJavaScriptAndWaitUntilFinished("window.document.getElementById('WebKitLink').title;", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    GOwnPtr<char> valueString(WebViewTest::javascriptResultToCString(javascriptResult));
+    g_assert_cmpstr(valueString.get(), ==, "WebKitGTK+ Title");
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("window.document.getElementById('WebKitLink').href;", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    valueString.set(WebViewTest::javascriptResultToCString(javascriptResult));
+    g_assert_cmpstr(valueString.get(), ==, "http://www.webkitgtk.org/");
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("window.document.getElementById('WebKitLink').textContent", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    valueString.set(WebViewTest::javascriptResultToCString(javascriptResult));
+    g_assert_cmpstr(valueString.get(), ==, "WebKitGTK+ Website");
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("a = 25;", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    g_assert_cmpfloat(WebViewTest::javascriptResultToNumber(javascriptResult), ==, 25);
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("a = 2.5;", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    g_assert_cmpfloat(WebViewTest::javascriptResultToNumber(javascriptResult), ==, 2.5);
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("a = true", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    g_assert(WebViewTest::javascriptResultToBoolean(javascriptResult));
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("a = false", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    g_assert(!WebViewTest::javascriptResultToBoolean(javascriptResult));
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("a = null", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    g_assert(WebViewTest::javascriptResultIsNull(javascriptResult));
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("function Foo() { a = 25; } Foo();", &error.outPtr());
+    g_assert(javascriptResult);
+    g_assert(!error.get());
+    g_assert(WebViewTest::javascriptResultIsUndefined(javascriptResult));
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("foo();", &error.outPtr());
+    g_assert(!javascriptResult);
+    g_assert_error(error.get(), WEBKIT_JAVASCRIPT_ERROR, WEBKIT_JAVASCRIPT_ERROR_SCRIPT_FAILED);
 }
 
 void beforeAll()
@@ -377,7 +521,9 @@ void beforeAll()
     UIClientTest::add("WebKitWebView", "create-ready-close", testWebViewCreateReadyClose);
     UIClientTest::add("WebKitWebView", "javascript-dialogs", testWebViewJavaScriptDialogs);
     UIClientTest::add("WebKitWebView", "window-properties", testWebViewWindowProperties);
+    UIClientTest::add("WebKitWebView", "mouse-target", testWebViewMouseTarget);
     WebViewTest::add("WebKitWebView", "zoom-level", testWebViewZoomLevel);
+    WebViewTest::add("WebKitWebView", "run-javascript", testWebViewRunJavaScript);
 }
 
 void afterAll()

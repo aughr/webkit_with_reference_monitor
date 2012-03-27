@@ -32,7 +32,7 @@
 #define BytecodeGenerator_h
 
 #include "CodeBlock.h"
-#include "HashTraits.h"
+#include <wtf/HashTraits.h>
 #include "Instruction.h"
 #include "Label.h"
 #include "LabelScope.h"
@@ -48,6 +48,7 @@
 namespace JSC {
 
     class Identifier;
+    class Label;
     class ScopeChainNode;
 
     class CallArguments {
@@ -261,9 +262,6 @@ namespace JSC {
 
         // Returns the register storing "this"
         RegisterID* thisRegister() { return &m_thisRegister; }
-
-        bool isLocal(const Identifier&);
-        bool isLocalConstant(const Identifier&);
 
         // Returns the next available temporary register. Registers returned by
         // newTemporary require a modified form of reference counting: any
@@ -535,6 +533,8 @@ namespace JSC {
         ScopeChainNode* scopeChain() const { return m_scopeChain.get(); }
 
     private:
+        friend class Label;
+        
         void emitOpcode(OpcodeID);
         ValueProfile* emitProfiledOpcode(OpcodeID);
         void retrieveLastBinaryOp(int& dstIndex, int& src1Index, int& src2Index);
@@ -614,7 +614,7 @@ namespace JSC {
 
         RegisterID* emitInitLazyRegister(RegisterID*);
 
-        Vector<Instruction>& instructions() { return m_codeBlock->instructions(); }
+        Vector<Instruction>& instructions() { return m_instructions; }
         SymbolTable& symbolTable() { return *m_symbolTable; }
 
         bool shouldOptimizeLocals()
@@ -647,6 +647,8 @@ namespace JSC {
         void createArgumentsIfNecessary();
         void createActivationIfNecessary();
         RegisterID* createLazyRegisterIfNecessary(RegisterID*);
+        
+        Vector<Instruction> m_instructions;
 
         bool m_shouldEmitDebugHooks;
         bool m_shouldEmitProfileHooks;

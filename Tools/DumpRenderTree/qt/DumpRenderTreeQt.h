@@ -60,7 +60,6 @@ class DumpRenderTreeSupportQt;
 class EventSender;
 class TextInputController;
 class GCController;
-class PlainTextController;
 
 namespace WebCore {
 
@@ -106,6 +105,9 @@ public:
     void setRedirectOutputFileName(const QString& fileName) { m_redirectOutputFileName = fileName; }
     void setRedirectErrorFileName(const QString& fileName) { m_redirectErrorFileName = fileName; }
 
+    void setTimeout(int);
+    void setShouldTimeout(bool flag);
+
 public Q_SLOTS:
     void initJSObjects();
 
@@ -150,7 +152,6 @@ private:
     EventSender *m_eventSender;
     TextInputController *m_textInputController;
     GCController* m_gcController;
-    PlainTextController* m_plainTextController;
     NetworkAccessManager* m_networkAccessManager;
 
     QFile *m_stdin;

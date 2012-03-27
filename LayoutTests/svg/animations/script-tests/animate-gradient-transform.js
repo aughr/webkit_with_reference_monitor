@@ -1,4 +1,3 @@
-// FIXME: This test will become useful once we have basic animVal support. For now it's just testing the SVG animation test infrastructure
 description("Tests if gradientTransform of a gradient is animateable.");
 createSVGTestCase();
 
@@ -24,11 +23,12 @@ animate.setAttribute("attributeName", "gradientTransform");
 animate.setAttribute("type", "translate");
 animate.setAttribute("from", "0");
 animate.setAttribute("to", "200");
-animate.setAttribute("begin", "click");
+animate.setAttribute("begin", "rect.click");
 animate.setAttribute("dur", "4s");
 animate.setAttribute("fill", "freeze");
 
 var rect = createSVGElement("rect");
+rect.setAttribute("id", "rect");
 rect.setAttribute("fill", "url(#gradient)");
 rect.setAttribute("width", "200");
 rect.setAttribute("height", "200");
@@ -43,39 +43,49 @@ rootSVGElement.appendChild(rect);
 
 // Setup animation test
 function sample1() {
-    // FIXME: Add animVal support. Animates baseVal at the moment.
     // Check initial conditions
-    shouldBe("gradient.gradientTransform.baseVal.consolidate().matrix.e", "0");
-    shouldThrow("gradient.gradientTransform.animVal.consolidate().matrix.e");
+    shouldThrow("gradient.gradientTransform.animVal.consolidate()");
+    shouldBe("gradient.gradientTransform.animVal.numberOfItems", "1");
+    shouldBeCloseEnough("gradient.gradientTransform.animVal.getItem(0).matrix.e", "0");
+    shouldBe("gradient.gradientTransform.animVal.getItem(0).type", "SVGTransform.SVG_TRANSFORM_TRANSLATE");
+
+    shouldBe("gradient.gradientTransform.baseVal.numberOfItems", "1");
+    shouldBe("gradient.gradientTransform.baseVal.getItem(0).type", "SVGTransform.SVG_TRANSFORM_TRANSLATE");
+    shouldBe("gradient.gradientTransform.baseVal.getItem(0).matrix.e", "0");
 }
 
 function sample2() {
-    // FIXME: Add animVal support. Animates baseVal at the moment.
     // Check half-time conditions
-    shouldBe("gradient.gradientTransform.baseVal.consolidate().matrix.e", "100");
-    shouldThrow("gradient.gradientTransform.animVal.consolidate().matrix.e");
+    shouldBe("gradient.gradientTransform.animVal.numberOfItems", "1");
+    shouldBe("gradient.gradientTransform.animVal.getItem(0).type", "SVGTransform.SVG_TRANSFORM_TRANSLATE");
+    shouldBeCloseEnough("gradient.gradientTransform.animVal.getItem(0).matrix.e", "100");
+
+    shouldBe("gradient.gradientTransform.baseVal.numberOfItems", "1");
+    shouldBe("gradient.gradientTransform.baseVal.getItem(0).type", "SVGTransform.SVG_TRANSFORM_TRANSLATE");
+    shouldBe("gradient.gradientTransform.baseVal.getItem(0).matrix.e", "0");
 }
 
 function sample3() {
-    // FIXME: Add animVal support. Animates baseVal at the moment.
     // Check end conditions
-    shouldBe("gradient.gradientTransform.baseVal.consolidate().matrix.e", "200");
-    shouldThrow("gradient.gradientTransform.animVal.consolidate().matrix.e");
+    shouldBe("gradient.gradientTransform.animVal.numberOfItems", "1");
+    shouldBe("gradient.gradientTransform.animVal.getItem(0).type", "SVGTransform.SVG_TRANSFORM_TRANSLATE");
+    shouldBeCloseEnough("gradient.gradientTransform.animVal.getItem(0).matrix.e", "200");
+
+    shouldBe("gradient.gradientTransform.baseVal.numberOfItems", "1");
+    shouldBe("gradient.gradientTransform.baseVal.getItem(0).type", "SVGTransform.SVG_TRANSFORM_TRANSLATE");
+    shouldBe("gradient.gradientTransform.baseVal.getItem(0).matrix.e", "0");
 }
 
 function executeTest() {  
     const expectedValues = [
-        // [animationId, time, elementId, sampleCallback]
-        ["animation", 0.0,    "gradient", sample1],
-        ["animation", 2.0,    "gradient", sample2],
-        ["animation", 4.0,    "gradient", sample3],
+        // [animationId, time, sampleCallback]
+        ["animation", 0.0, sample1],
+        ["animation", 2.0, sample2],
+        ["animation", 3.999, sample3],
+        ["animation", 4.001, sample3]
     ];
 
-    animate.beginElement();
     runAnimationTest(expectedValues);
-  
 }
 
-// Begin test async
-window.setTimeout("triggerUpdate(15, 30)", 0);
 var successfullyParsed = true;

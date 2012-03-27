@@ -25,7 +25,6 @@
 #include "WebKitPrivate.h"
 #include "WebKitURIRequestPrivate.h"
 #include "WebURLRequest.h"
-#include <gdk/gdk.h>
 #include <glib/gi18n-lib.h>
 #include <wtf/gobject/GRefPtr.h>
 #include <wtf/text/CString.h>
@@ -39,7 +38,7 @@ using namespace WebKit;
  * @See_also: #WebKitPolicyDecision, #WebKitWebView
  *
  * WebKitNavigationPolicyDecision represents a policy decision for events associated with
- * navigations. If the value of WebKitNavigationPolicyDecision:mouse-button is not 0, then
+ * navigations. If the value of #WebKitNavigationPolicyDecision:mouse-button is not 0, then
  * the navigation was triggered by a mouse event.
  */
 
@@ -144,7 +143,7 @@ static void webkit_navigation_policy_decision_class_init(WebKitNavigationPolicyD
      *
      * If the navigation associated with this policy decision was originally
      * triggered by a mouse event, this property contains a bitmask of various
-     * GdkModifierType values describing the modifiers used for that click.
+     * #GdkModifierType values describing the modifiers used for that click.
      * If the navigation was not triggered by a mouse event or no modifiers
      * were active, the value of this property will be zero.
      */
@@ -249,7 +248,7 @@ WebKitURIRequest* webkit_navigation_policy_decision_get_request(WebKitNavigation
  *
  * Gets the value of the #WebKitNavigationPolicyDecision:frame-name property.
  *
- * Returns: The name of the new frame this navigation action targets or %NULL 
+ * Returns: The name of the new frame this navigation action targets or %NULL
  */
 const char* webkit_navigation_policy_decision_get_frame_name(WebKitNavigationPolicyDecision* decision)
 {
@@ -280,26 +279,12 @@ static unsigned wkEventMouseButtonToWebKitMouseButton(WKEventMouseButton wkButto
     return 0;
 }
 
-unsigned wkEventModifiersToUnsigned(WKEventModifiers wkModifiers)
-{
-    unsigned modifiers = 0;
-    if (wkModifiers & kWKEventModifiersShiftKey)
-        modifiers |= GDK_SHIFT_MASK;
-    if (wkModifiers & kWKEventModifiersControlKey)
-        modifiers |= GDK_CONTROL_MASK;
-    if (wkModifiers & kWKEventModifiersAltKey)
-        modifiers |= GDK_MOD1_MASK;
-    if (wkModifiers & kWKEventModifiersMetaKey)
-        modifiers |= GDK_META_MASK;
-    return modifiers;
-}
-
 WebKitNavigationPolicyDecision* webkitNavigationPolicyDecisionCreate(WKFrameNavigationType navigationType, WKEventMouseButton mouseButton, WKEventModifiers modifiers, WKURLRequestRef request, const char* frameName, WKFramePolicyListenerRef listener)
 {
     WebKitNavigationPolicyDecision* decision = WEBKIT_NAVIGATION_POLICY_DECISION(g_object_new(WEBKIT_TYPE_NAVIGATION_POLICY_DECISION, NULL));
     decision->priv->navigationType = static_cast<WebKitNavigationType>(navigationType);
     decision->priv->mouseButton = wkEventMouseButtonToWebKitMouseButton(mouseButton);
-    decision->priv->modifiers = wkEventModifiersToUnsigned(modifiers);
+    decision->priv->modifiers = wkEventModifiersToGdkModifiers(modifiers);
     decision->priv->request = adoptGRef(webkitURIRequestCreateForResourceRequest(toImpl(request)->resourceRequest()));
     decision->priv->frameName = frameName;
     webkitPolicyDecisionSetListener(WEBKIT_POLICY_DECISION(decision), listener);

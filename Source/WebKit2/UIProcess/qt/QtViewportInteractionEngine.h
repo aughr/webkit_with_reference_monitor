@@ -23,8 +23,8 @@
 #define QtViewportInteractionEngine_h
 
 #include "OwnPtr.h"
-#include <QScroller>
 #include "qwebkitglobal.h"
+#include <QTouchEvent>
 #include <QtCore/QObject>
 #include <QtCore/QRectF>
 #include <QtCore/QVariant>
@@ -33,6 +33,7 @@
 QT_BEGIN_NAMESPACE
 class QPointF;
 class QQuickItem;
+class QtFlickProvider;
 class QQuickWebPage;
 class QQuickWebView;
 class QWheelEvent;
@@ -46,7 +47,7 @@ class QtViewportInteractionEngine : public QObject {
     Q_OBJECT
 
 public:
-    QtViewportInteractionEngine(const QQuickWebView*, QQuickWebPage*);
+    QtViewportInteractionEngine(QQuickWebView*, QQuickWebPage*, QtFlickProvider*);
     ~QtViewportInteractionEngine();
 
     struct Constraints {
@@ -67,8 +68,6 @@ public:
         QSize layoutSize;
     };
 
-    bool event(QEvent*);
-
     void reset();
     void applyConstraints(const Constraints&);
 
@@ -77,15 +76,17 @@ public:
 
     void wheelEvent(QWheelEvent*);
     void pagePositionRequest(const QPoint& pos);
+    void touchBegin();
+    void touchEnd();
 
     bool scrollAnimationActive() const;
-    void interruptScrollAnimation();
+    void cancelScrollAnimation();
 
     bool panGestureActive() const;
-    void panGestureStarted(const QPointF&  viewportTouchPoint, qint64 eventTimestampMillis);
-    void panGestureRequestUpdate(const QPointF&  viewportTouchPoint, qint64 eventTimestampMillis);
+    void panGestureStarted(const QTouchEvent*);
+    void panGestureRequestUpdate(const QTouchEvent*);
     void panGestureCancelled();
-    void panGestureEnded(const QPointF&  viewportTouchPoint, qint64 eventTimestampMillis);
+    void panGestureEnded(const QTouchEvent*);
 
     bool scaleAnimationActive() const;
     void interruptScaleAnimation();
@@ -105,6 +106,8 @@ Q_SIGNALS:
     void contentSuspendRequested();
     void contentResumeRequested();
 
+    void contentViewportChanged(const QPointF& trajectory = QPointF());
+
     void viewportTrajectoryVectorChanged(const QPointF&);
     void visibleContentRectAndScaleChanged();
 
@@ -112,9 +115,13 @@ private Q_SLOTS:
     // Respond to changes of content that are not driven by us, like the page resizing itself.
     void itemSizeChanged();
 
-    void scrollStateChanged(QScroller::State);
+    void flickableMovingPositionUpdate();
+
     void scaleAnimationStateChanged(QAbstractAnimation::State, QAbstractAnimation::State);
     void scaleAnimationValueChanged(QVariant value) { setItemRectVisible(value.toRectF()); }
+
+    void flickableMoveStarted(); // Called when panning starts.
+    void flickableMoveEnded(); //   Called when panning (+ kinetic animation) ends.
 
 private:
     friend class ViewportUpdateDeferrer;
@@ -132,18 +139,18 @@ private:
 
     void scaleContent(const QPointF& centerInCSSCoordinates, qreal cssScale);
 
-    // As long as the object exists this function will always return the same QScroller instance.
-    QScroller* scroller() { return QScroller::scroller(this); }
-
-
-    const QQuickWebView* const m_viewport;
+    QQuickWebView* const m_viewport;
     QQuickWebPage* const m_content;
+
+    QtFlickProvider* const m_flickProvider;
 
     Constraints m_constraints;
 
     int m_suspendCount;
+    bool m_hasSuspendedContent;
     OwnPtr<ViewportUpdateDeferrer> m_scaleUpdateDeferrer;
     OwnPtr<ViewportUpdateDeferrer> m_scrollUpdateDeferrer;
+    OwnPtr<ViewportUpdateDeferrer> m_touchUpdateDeferrer;
 
     bool m_hadUserInteraction;
 
@@ -158,6 +165,7 @@ private:
 
     ScaleAnimation* m_scaleAnimation;
     QPointF m_lastPinchCenterInViewportCoordinates;
+    QPointF m_lastScrollPosition;
     qreal m_pinchStartScale;
 };
 

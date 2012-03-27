@@ -21,34 +21,30 @@ animate.setAttribute("to", ".1e1");
 rect.appendChild(animate);
 rootSVGElement.appendChild(rect);
 
-var computedStyle = rect.ownerDocument.defaultView.getComputedStyle(rect);
-
 // Setup animation test
 function sample1() {
     // Check initial/end conditions
-    shouldBe("computedStyle.getPropertyCSSValue('opacity').getFloatValue(CSSPrimitiveValue.CSS_NUMBER)", "0");
+    shouldBeCloseEnough("getComputedStyle(rect).getPropertyCSSValue('opacity').getFloatValue(CSSPrimitiveValue.CSS_NUMBER)", "0");
 }
 
 function sample2() {
-    shouldBe("computedStyle.getPropertyCSSValue('opacity').getFloatValue(CSSPrimitiveValue.CSS_NUMBER)", "0.5");
+    shouldBeCloseEnough("getComputedStyle(rect).getPropertyCSSValue('opacity').getFloatValue(CSSPrimitiveValue.CSS_NUMBER)", "0.5");
 }
 
 function sample3() {
-    shouldBeCloseEnough("computedStyle.getPropertyCSSValue('opacity').getFloatValue(CSSPrimitiveValue.CSS_NUMBER)", "1", 0.01);
+    shouldBeCloseEnough("getComputedStyle(rect).getPropertyCSSValue('opacity').getFloatValue(CSSPrimitiveValue.CSS_NUMBER)", "1");
 }
 
 function executeTest() {
     const expectedValues = [
-        // [animationId, time, elementId, sampleCallback]
-        ["animation", 0,      "rect", sample1],
-        ["animation", 2.0,    "rect", sample2],
-        ["animation", 3.9999, "rect", sample3],
-        ["animation", 4,      "rect", sample1]
+        // [animationId, time, sampleCallback]
+        ["animation", 0.0,   sample1],
+        ["animation", 2.0,   sample2],
+        ["animation", 3.999, sample3],
+        ["animation", 4.001, sample1]
     ];
 
     runAnimationTest(expectedValues);
 }
 
-// Begin test async
-window.setTimeout("triggerUpdate(50, 30)", 0);
 var successfullyParsed = true;

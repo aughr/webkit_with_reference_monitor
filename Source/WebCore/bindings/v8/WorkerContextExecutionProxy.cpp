@@ -44,6 +44,7 @@
 #include "V8DOMMap.h"
 #include "V8DedicatedWorkerContext.h"
 #include "V8Proxy.h"
+#include "V8RecursionScope.h"
 #include "V8SharedWorkerContext.h"
 #include "Worker.h"
 #include "WorkerContext.h"
@@ -81,7 +82,6 @@ static void v8MessageHandler(v8::Handle<v8::Message> message, v8::Handle<v8::Val
 
 WorkerContextExecutionProxy::WorkerContextExecutionProxy(WorkerContext* workerContext)
     : m_workerContext(workerContext)
-    , m_recursion(0)
 {
     initIsolate();
 }
@@ -168,8 +168,7 @@ bool WorkerContextExecutionProxy::initContextIfNeeded()
     // Wrap the object.
     V8DOMWrapper::setDOMWrapper(jsWorkerContext, contextType, m_workerContext);
 
-    V8DOMWrapper::setJSWrapperForDOMObject(m_workerContext, v8::Persistent<v8::Object>::New(jsWorkerContext));
-    m_workerContext->ref();
+    V8DOMWrapper::setJSWrapperForDOMObject(PassRefPtr<WorkerContext>(m_workerContext), v8::Persistent<v8::Object>::New(jsWorkerContext));
 
     // Insert the object instance as the prototype of the shadow object.
     v8::Handle<v8::Object> globalObject = v8::Handle<v8::Object>::Cast(m_context->Global()->GetPrototype());
@@ -234,7 +233,7 @@ v8::Local<v8::Value> WorkerContextExecutionProxy::runScript(v8::Handle<v8::Scrip
         return v8::Local<v8::Value>();
 
     // Compute the source string and prevent against infinite recursion.
-    if (m_recursion >= kMaxRecursionDepth) {
+    if (V8RecursionScope::recursionLevel() >= kMaxRecursionDepth) {
         v8::Local<v8::String> code = v8ExternalString("throw RangeError('Recursion too deep')");
         script = V8Proxy::compileScript(code, "", TextPosition::minimumPosition());
     }
@@ -248,9 +247,8 @@ v8::Local<v8::Value> WorkerContextExecutionProxy::runScript(v8::Handle<v8::Scrip
     // Run the script and keep track of the current recursion depth.
     v8::Local<v8::Value> result;
     {
-        m_recursion++;
+        V8RecursionScope recursionScope(m_workerContext);
         result = script->Run();
-        m_recursion--;
     }
 
     // Handle V8 internal error situation (Out-of-memory).

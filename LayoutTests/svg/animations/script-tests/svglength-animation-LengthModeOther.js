@@ -27,32 +27,30 @@ rootSVGElement.appendChild(circle);
 // Setup animation test
 function sample1() {
     // Check initial/end conditions
-    shouldBe("circle.r.animVal.value", "10");
+    shouldBeCloseEnough("circle.r.animVal.value", "10");
     shouldBe("circle.r.baseVal.value", "10");
 }
 
 function sample2() {
-    shouldBeCloseEnough("circle.r.animVal.value", "132.475", 0.01);
-    shouldBeCloseEnough("circle.r.baseVal.value", "132.475", 0.01);
+    shouldBeCloseEnough("circle.r.animVal.value", "132.5");
+    shouldBe("circle.r.baseVal.value", "10");
 }
 
 function sample3() {
-    shouldBeCloseEnough("circle.r.animVal.value", "254.9", 0.1);
-    shouldBeCloseEnough("circle.r.baseVal.value", "254.9", 0.1);
+    shouldBeCloseEnough("circle.r.animVal.value", "254.9");
+    shouldBe("circle.r.baseVal.value", "10");
 }
 
 function executeTest() {
     const expectedValues = [
-        // [animationId, time, elementId, sampleCallback]
-        ["animation", 0.0,    "circle", sample1],
-        ["animation", 2.0,    "circle", sample2],
-        ["animation", 3.9999, "circle", sample3],
-        ["animation", 4.0 ,   "circle", sample1]
+        // [animationId, time, sampleCallback]
+        ["animation", 0.0,   sample1],
+        ["animation", 2.0,   sample2],
+        ["animation", 3.999, sample3],
+        ["animation", 4.001, sample1]
     ];
 
     runAnimationTest(expectedValues);
 }
 
-// Begin test async
-window.setTimeout("triggerUpdate(50, 50)", 0);
 var successfullyParsed = true;

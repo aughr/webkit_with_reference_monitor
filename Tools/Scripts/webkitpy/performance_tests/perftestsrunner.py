@@ -62,7 +62,7 @@ class PerfTestsRunner(object):
             self._host = Host()
             self._port = self._host.port_factory.get(self._options.platform, self._options)
         self._host._initialize_scm()
-        self._printer = printing.Printer(self._port, self._options, regular_output, buildbot_output, configure_logging=False)
+        self._printer = printing.Printer(self._port, self._options, regular_output, buildbot_output)
         self._webkit_base_dir_len = len(self._port.webkit_base())
         self._base_path = self._port.perf_tests_dir()
         self._results = {}
@@ -79,6 +79,8 @@ class PerfTestsRunner(object):
                 help='Set the configuration to Release'),
             optparse.make_option("--platform",
                 help="Specify port/platform being tested (i.e. chromium-mac)"),
+            optparse.make_option("--chromium",
+                action="store_const", const='chromium', dest='platform', help='Alias for --platform=chromium'),
             optparse.make_option("--builder-name",
                 help=("The name of the builder shown on the waterfall running this script e.g. google-mac-2.")),
             optparse.make_option("--build-number",
@@ -89,12 +91,16 @@ class PerfTestsRunner(object):
                 help="Path to the directory under which build files are kept (should not include configuration)"),
             optparse.make_option("--time-out-ms", default=600 * 1000,
                 help="Set the timeout for each test"),
+            optparse.make_option("--pause-before-testing", dest="pause_before_testing", action="store_true", default=False,
+                help="Pause before running the tests to let user attach a performance monitor."),
             optparse.make_option("--output-json-path",
                 help="Filename of the JSON file that summaries the results"),
             optparse.make_option("--source-json-path",
                 help="Path to a JSON file to be merged into the JSON file when --output-json-path is present"),
             optparse.make_option("--test-results-server",
                 help="Upload the generated JSON file to the specified server when --output-json-path is present"),
+            optparse.make_option("--webkit-test-runner", "-2", action="store_true",
+                help="Use WebKitTestRunner rather than DumpRenderTree."),
             ]
 
         option_list = (perf_option_list + print_options)
@@ -215,6 +221,12 @@ class PerfTestsRunner(object):
         for test in tests:
             driver = port.create_driver(worker_number=1, no_timeout=True)
 
+            if self._options.pause_before_testing:
+                driver.start()
+                if not self._host.user.confirm("Ready to run test?"):
+                    driver.stop()
+                    return unexpected
+
             relative_test_path = self._host.filesystem.relpath(test, self._base_path)
             self._printer.write('Running %s (%d of %d)' % (relative_test_path, expected + unexpected + 1, len(tests)))
 
@@ -249,6 +261,7 @@ class PerfTestsRunner(object):
     _lines_to_ignore_in_parser_result = [
         re.compile(r'^Running \d+ times$'),
         re.compile(r'^Ignoring warm-up '),
+        re.compile(r'^Info:'),
         re.compile(r'^\d+(.\d+)?$'),
         # Following are for handle existing test like Dromaeo
         re.compile(re.escape("""main frame - has 1 onunload handler(s)""")),
@@ -271,11 +284,14 @@ class PerfTestsRunner(object):
         test_name = filesystem.splitext(test_name)[0]
         results = {}
         keys = ['avg', 'median', 'stdev', 'min', 'max']
-        score_regex = re.compile(r'^(' + r'|'.join(keys) + r')\s+([0-9\.]+)')
+        score_regex = re.compile(r'^(?P<key>' + r'|'.join(keys) + r')\s+(?P<value>[0-9\.]+)\s*(?P<unit>.*)')
+        unit = "ms"
         for line in re.split('\n', output.text):
             score = score_regex.match(line)
             if score:
-                results[score.group(1)] = float(score.group(2))
+                results[score.group('key')] = float(score.group('value'))
+                if score.group('unit'):
+                    unit = score.group('unit')
                 continue
 
             if not self._should_ignore_line_in_parser_test_result(line):
@@ -285,12 +301,14 @@ class PerfTestsRunner(object):
         if test_failed or set(keys) != set(results.keys()):
             return True
         self._results[filesystem.join(category, test_name).replace('\\', '/')] = results
-        self._buildbot_output.write('RESULT %s: %s= %s ms\n' % (category, test_name, results['avg']))
-        self._buildbot_output.write(', '.join(['%s= %s ms' % (key, results[key]) for key in keys[1:]]) + '\n')
+        self._buildbot_output.write('RESULT %s: %s= %s %s\n' % (category, test_name, results['avg'], unit))
+        self._buildbot_output.write(', '.join(['%s= %s %s' % (key, results[key], unit) for key in keys[1:]]) + '\n')
         return False
 
     def _run_single_test(self, test, driver, is_chromium_style):
         test_failed = False
+        start_time = time.time()
+
         output = driver.run_test(DriverInput(test, self._options.time_out_ms, None, False))
 
         if output.text == None:
@@ -313,5 +331,7 @@ class PerfTestsRunner(object):
 
         if test_failed:
             self._printer.write('FAILED')
+
+        self._printer.write("Finished: %f s" % (time.time() - start_time))
 
         return not test_failed

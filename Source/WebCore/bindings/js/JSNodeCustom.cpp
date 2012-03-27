@@ -116,7 +116,7 @@ static inline bool isReachableFromDOM(JSNode* jsNode, Node* node, SlotVisitor& v
         }
     #if ENABLE(VIDEO)
         else if (node->hasTagName(audioTag)) {
-            if (!static_cast<HTMLAudioElement*>(node)->paused())
+            if (!static_cast<HTMLAudioElement*>(node)->hasPendingActivity())
                 return true;
         }
     #endif
@@ -255,9 +255,6 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
             break;
         case Node::DOCUMENT_FRAGMENT_NODE:
             wrapper = CREATE_DOM_WRAPPER(exec, globalObject, DocumentFragment, node);
-            break;
-        case Node::SHADOW_ROOT_NODE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, Node, node);
             break;
         case Node::ENTITY_REFERENCE_NODE:
             wrapper = CREATE_DOM_WRAPPER(exec, globalObject, EntityReference, node);

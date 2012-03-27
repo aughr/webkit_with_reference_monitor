@@ -33,9 +33,7 @@ class UpdateInfo;
 class WebPage;
 
 class LayerTreeHostQt : public LayerTreeHost, WebCore::GraphicsLayerClient
-#if USE(TILED_BACKING_STORE)
-                      , public WebLayerTreeTileClient
-#endif
+                      , public WebGraphicsLayerClient
 {
 public:
     static PassRefPtr<LayerTreeHostQt> create(WebPage*);
@@ -65,18 +63,17 @@ public:
     virtual int64_t adoptImageBackingStore(WebCore::Image*);
     virtual void releaseImageBackingStore(int64_t);
 
-#if USE(TILED_BACKING_STORE)
     virtual void createTile(WebLayerID, int tileID, const UpdateInfo&);
     virtual void updateTile(WebLayerID, int tileID, const UpdateInfo&);
     virtual void removeTile(WebLayerID, int tileID);
+    virtual WebCore::IntRect visibleContentsRect() const;
     virtual void renderNextFrame();
     virtual void purgeBackingStores();
     virtual bool layerTreeTileUpdatesAllowed() const;
-    virtual void setVisibleContentRectAndScale(const WebCore::IntRect&, float scale);
-    virtual void setVisibleContentRectTrajectoryVector(const WebCore::FloatPoint&);
+    virtual void setVisibleContentsRect(const WebCore::IntRect&, float scale, const WebCore::FloatPoint&);
     virtual void didSyncCompositingStateForLayer(const WebLayerInfo&);
-    virtual void didDeleteLayer(WebLayerID);
-#endif
+    virtual void attachLayer(WebCore::WebGraphicsLayer*);
+    virtual void detachLayer(WebCore::WebGraphicsLayer*);
 
 protected:
     explicit LayerTreeHostQt(WebPage*);
@@ -96,7 +93,6 @@ private:
     void cancelPendingLayerFlush();
     void performScheduledLayerFlush();
     void sendLayersToUI();
-    void recreateBackingStoreIfNeeded();
 
     OwnPtr<WebCore::GraphicsLayer> m_rootLayer;
 
@@ -106,21 +102,23 @@ private:
     // The page overlay layer. Will be null if there's no page overlay.
     OwnPtr<WebCore::GraphicsLayer> m_pageOverlayLayer;
 
+    HashSet<WebCore::WebGraphicsLayer*> m_registeredLayers;
     HashMap<int64_t, int> m_directlyCompositedImageRefCounts;
 
     bool m_notifyAfterScheduledLayerFlush;
     bool m_isValid;
-#if USE(TILED_BACKING_STORE)
+
     bool m_waitingForUIProcess;
     bool m_isSuspended;
-#endif
+    WebCore::IntRect m_visibleContentsRect;
+    float m_contentsScale;
+
     LayerTreeContext m_layerTreeContext;
     bool m_shouldSyncFrame;
     bool m_shouldSyncRootLayer;
     void layerFlushTimerFired(WebCore::Timer<LayerTreeHostQt>*);
     WebCore::Timer<LayerTreeHostQt> m_layerFlushTimer;
     bool m_layerFlushSchedulingEnabled;
-    bool m_shouldRecreateBackingStore;
 };
 
 }

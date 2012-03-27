@@ -58,10 +58,6 @@ private:
     const PluginView* pluginView() const;
 
     void updateScrollbars();
-    void didAddHorizontalScrollbar(WebCore::Scrollbar*);
-    void willRemoveHorizontalScrollbar(WebCore::Scrollbar*);
-    void didAddVerticalScrollbar(WebCore::Scrollbar*);
-    void willRemoveVerticalScrollbar(WebCore::Scrollbar*);
     PassRefPtr<WebCore::Scrollbar> createScrollbar(WebCore::ScrollbarOrientation);
     void destroyScrollbar(WebCore::ScrollbarOrientation);
     void addArchiveResource();
@@ -140,7 +136,6 @@ private:
     virtual bool isOnActivePage() const;
     virtual bool shouldSuspendScrollAnimations() const { return false; } // If we return true, ScrollAnimatorMac will keep cycling a timer forever, waiting for a good time to animate.
     virtual void scrollbarStyleChanged(int newStyle, bool forceUpdate);
-    virtual void zoomAnimatorTransformChanged(float, float, float, ZoomAnimationState) { }
 
     // FIXME: Implement the other conversion functions; this one is enough to get scrollbar hit testing working.
     virtual WebCore::IntPoint convertFromContainingViewToScrollbar(const WebCore::Scrollbar*, const WebCore::IntPoint& parentPoint) const;

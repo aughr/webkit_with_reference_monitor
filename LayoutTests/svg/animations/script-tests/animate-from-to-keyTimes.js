@@ -1,3 +1,4 @@
+description("Tests discrete from-to-keyTimes animations");
 createSVGTestCase();
 
 // Setup test document
@@ -22,24 +23,25 @@ rootSVGElement.appendChild(rect);
 
 // Setup animation test
 function sample1() {
+    shouldBe("rect.x.animVal.value", "100");
     shouldBe("rect.x.baseVal.value", "100");
 }
 
 function sample2() {
-    shouldBe("rect.x.baseVal.value", "200");
+    shouldBe("rect.x.animVal.value", "200");
+    shouldBe("rect.x.baseVal.value", "100");
 }
 
 function executeTest() {
     const expectedValues = [
-        // [animationId, time, elementId, sampleCallback]
-        ["animation", 0.5,    "rect", sample1],
-        ["animation", 1.5,    "rect", sample2],
-        ["animation", 2.5,    "rect", sample2]
+        // [animationId, time, sampleCallback]
+        ["animation", 0.5, sample1],
+        ["animation", 1.5, sample2],
+        ["animation", 2.5, sample2]
     ];
 
     runAnimationTest(expectedValues);
 }
 
-// Begin test async
-window.setTimeout("triggerUpdate(150, 30)", 0);
+window.clickX = 150;
 var successfullyParsed = true;

@@ -28,6 +28,7 @@
 
 #if ENABLE(INSPECTOR)
 
+#include "WebFrame.h"
 #include "WebInspectorFrontendClient.h"
 #include "WebInspectorProxyMessages.h"
 #include "WebPage.h"
@@ -58,6 +59,9 @@ WebPage* WebInspector::createInspectorPage()
     if (!m_page)
         return 0;
 
+    ASSERT(!m_inspectorPage);
+    ASSERT(!m_frontendClient);
+
     uint64_t inspectorPageID = 0;
     WebPageCreationParameters parameters;
 
@@ -78,6 +82,12 @@ WebPage* WebInspector::createInspectorPage()
     m_frontendClient = frontendClient.get();
     m_inspectorPage->corePage()->inspectorController()->setInspectorFrontendClient(frontendClient.release());
     return m_inspectorPage;
+}
+
+void WebInspector::destroyInspectorPage()
+{
+    m_inspectorPage = 0;
+    m_frontendClient = 0;
 }
 
 // Called from WebInspectorFrontendClient
@@ -137,6 +147,24 @@ void WebInspector::showConsole()
     m_page->corePage()->inspectorController()->show();
     if (m_frontendClient)
         m_frontendClient->showConsole();
+}
+
+void WebInspector::showResources()
+{
+    m_page->corePage()->inspectorController()->show();
+    if (m_frontendClient)
+        m_frontendClient->showResources();
+}
+
+void WebInspector::showMainResourceForFrame(uint64_t frameID)
+{
+    WebFrame* frame = WebProcess::shared().webFrame(frameID);
+    if (!frame)
+        return;
+
+    m_page->corePage()->inspectorController()->show();
+    if (m_frontendClient)
+        m_frontendClient->showMainResourceForFrame(frame->coreFrame());
 }
 
 void WebInspector::startJavaScriptDebugging()
@@ -200,6 +228,12 @@ void WebInspector::stopPageProfiling()
     m_page->corePage()->inspectorController()->show();
     if (m_frontendClient)
         m_frontendClient->setTimelineProfilingEnabled(false);
+}
+
+void WebInspector::updateDockingAvailability()
+{
+    if (m_frontendClient)
+        m_frontendClient->setDockingUnavailable(!m_frontendClient->canAttachWindow());
 }
 
 } // namespace WebKit

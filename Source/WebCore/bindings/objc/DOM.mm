@@ -264,7 +264,7 @@ static NSArray *kit(const Vector<IntRect>& rects)
 - (NSString *)description
 {
     if (!_internal)
-        return [NSString stringWithFormat:@"<%@: null>", [[self class] description], self];
+        return [NSString stringWithFormat:@"<%@: null>", [[self class] description]];
 
     NSString *value = [self nodeValue];
     if (value)
@@ -327,8 +327,6 @@ Class kitClass(WebCore::Node* impl)
             // FIXME: Create an XPath objective C wrapper
             // See http://bugs.webkit.org/show_bug.cgi?id=8755
             return nil;
-        case WebCore::Node::SHADOW_ROOT_NODE:
-            return [DOMNode class];
     }
     ASSERT_NOT_REACHED();
     return nil;

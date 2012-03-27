@@ -77,6 +77,7 @@ public:
     virtual void sendMessageToBackend(const String& message);
 
     bool canAttachWindow();
+    void setDockingUnavailable(bool);
 
     static unsigned constrainedAttachedWindowHeight(unsigned preferredHeight, unsigned totalWindowHeight);
 
@@ -92,6 +93,10 @@ public:
     void stopProfilingJavaScript();
 
     void showConsole();
+
+    void showMainResourceForFrame(Frame*);
+    
+    void showResources();
 
 protected:
     virtual void setAttachedWindowHeight(unsigned) = 0;

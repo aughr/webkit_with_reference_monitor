@@ -131,11 +131,11 @@ void RegExpFunctionalTestCollector::outputOneTest(RegExp* regExp, UString s, int
     outputEscapedUString(s);
     fprintf(m_file, "\", %d, %d, (", startOffset, result);
     for (unsigned i = 0; i <= regExp->numSubpatterns(); i++) {
-        int subPatternBegin = ovector[i * 2];
-        int subPatternEnd = ovector[i * 2 + 1];
-        if (subPatternBegin == -1)
-            subPatternEnd = -1;
-        fprintf(m_file, "%d, %d", subPatternBegin, subPatternEnd);
+        int subpatternBegin = ovector[i * 2];
+        int subpatternEnd = ovector[i * 2 + 1];
+        if (subpatternBegin == -1)
+            subpatternEnd = -1;
+        fprintf(m_file, "%d, %d", subpatternBegin, subpatternEnd);
         if (i < regExp->numSubpatterns())
             fputs(", ", m_file);
     }
@@ -363,7 +363,33 @@ int RegExp::match(JSGlobalData& globalData, const UString& s, unsigned startOffs
 #endif
     } else
 #endif
-        result = Yarr::interpret(m_representation->m_regExpBytecode.get(), s, startOffset, s.length(), offsetVector);
+        result = Yarr::interpret(m_representation->m_regExpBytecode.get(), s, startOffset, s.length(), reinterpret_cast<unsigned*>(offsetVector));
+
+    // FIXME: The YARR engine should handle unsigned or size_t length matches.
+    // The YARR Interpreter is "unsigned" clean, while the YARR JIT hasn't been addressed.
+    // The offset vector handling needs to change as well.
+    // Right now we convert a match where the offsets overflowed into match failure.
+    // There are two places in WebCore that call the interpreter directly that need to
+    // have their offsets changed to int as well. They are platform/text/RegularExpression.cpp
+    // and inspector/ContentSearchUtils.cpp.
+    if (s.length() > INT_MAX) {
+        bool overflowed = false;
+
+        if (result < -1)
+            overflowed = true;
+
+        for (unsigned i = 0; i <= m_numSubpatterns; i++) {
+            if ((offsetVector[i*2] < -1) || ((offsetVector[i*2] >= 0) && (offsetVector[i*2+1] < -1))) {
+                overflowed = true;
+                offsetVector[i*2] = -1;
+                offsetVector[i*2+1] = -1;
+            }
+        }
+
+        if (overflowed)
+            result = -1;
+    }
+
     ASSERT(result >= -1);
 
 #if REGEXP_FUNC_TEST_DATA_GEN
@@ -413,24 +439,24 @@ void RegExp::matchCompareWithInterpreter(const UString& s, int startOffset, int*
             differences++;
 
     if (differences) {
-        fprintf(stderr, "RegExp Discrepency for /%s/\n    string input ", pattern().utf8().data());
+        dataLog("RegExp Discrepency for /%s/\n    string input ", pattern().utf8().data());
         unsigned segmentLen = s.length() - static_cast<unsigned>(startOffset);
 
-        fprintf(stderr, (segmentLen < 150) ? "\"%s\"\n" : "\"%148s...\"\n", s.utf8().data() + startOffset);
+        dataLog((segmentLen < 150) ? "\"%s\"\n" : "\"%148s...\"\n", s.utf8().data() + startOffset);
 
         if (jitResult != interpreterResult) {
-            fprintf(stderr, "    JIT result = %d, blah interpreted result = %d\n", jitResult, interpreterResult);
+            dataLog("    JIT result = %d, blah interpreted result = %d\n", jitResult, interpreterResult);
             differences--;
         } else {
-            fprintf(stderr, "    Correct result = %d\n", jitResult);
+            dataLog("    Correct result = %d\n", jitResult);
         }
 
         if (differences) {
             for (unsigned j = 2, i = 0; i < m_numSubpatterns; j +=2, i++) {
                 if (offsetVector[j] != interpreterOffsetVector[j])
-                    fprintf(stderr, "    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j, offsetVector[j], j, interpreterOffsetVector[j]);
+                    dataLog("    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j, offsetVector[j], j, interpreterOffsetVector[j]);
                 if ((offsetVector[j] >= 0) && (offsetVector[j+1] != interpreterOffsetVector[j+1]))
-                    fprintf(stderr, "    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j+1, offsetVector[j+1], j+1, interpreterOffsetVector[j+1]);
+                    dataLog("    JIT offset[%d] = %d, interpreted offset[%d] = %d\n", j+1, offsetVector[j+1], j+1, interpreterOffsetVector[j+1]);
             }
         }
     }

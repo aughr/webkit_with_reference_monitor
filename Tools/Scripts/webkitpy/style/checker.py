@@ -40,6 +40,7 @@ from checkers.common import CarriageReturnChecker
 from checkers.changelog import ChangeLogChecker
 from checkers.cpp import CppChecker
 from checkers.jsonchecker import JSONChecker
+from checkers.png import PNGChecker
 from checkers.python import PythonChecker
 from checkers.test_expectations import TestExpectationsChecker
 from checkers.text import TextChecker
@@ -237,6 +238,10 @@ _PATH_RULES_SPECIFIER = [
       # and __jit_debug_descriptor when integrating with gdb.
       "Source/JavaScriptCore/jit/GDBInterface.cpp"],
      ["-readability/naming"]),
+
+    ([# On some systems the trailing CR is causing parser failure.
+      "Source/JavaScriptCore/parser/Keywords.table"],
+     ["+whitespace/carriage_return"]),
 ]
 
 
@@ -271,6 +276,7 @@ _TEXT_FILE_EXTENSIONS = [
     'pro',
     'rb',
     'sh',
+    'table',
     'txt',
     'wm',
     'xhtml',
@@ -283,6 +289,8 @@ _XML_FILE_EXTENSIONS = [
     'vcproj',
     'vsprops',
     ]
+
+_PNG_FILE_EXTENSION = 'png'
 
 # Files to skip that are less obvious.
 #
@@ -307,6 +315,7 @@ _SKIPPED_FILES_WITHOUT_WARNING = [
 
 # Extensions of files which are allowed to contain carriage returns.
 _CARRIAGE_RETURN_ALLOWED_FILE_EXTENSIONS = [
+    'png',
     'vcproj',
     'vsprops',
     ]
@@ -325,6 +334,7 @@ def _all_categories():
     categories = categories.union(JSONChecker.categories)
     categories = categories.union(TestExpectationsChecker.categories)
     categories = categories.union(ChangeLogChecker.categories)
+    categories = categories.union(PNGChecker.categories)
 
     # FIXME: Consider adding all of the pep8 categories.  Since they
     #        are not too meaningful for documentation purposes, for
@@ -466,11 +476,12 @@ class FileType:
     CHANGELOG = 1
     CPP = 2
     JSON = 3
-    PYTHON = 4
-    TEXT = 5
-    WATCHLIST = 6
-    XML = 7
-    XCODEPROJ = 8
+    PNG = 4
+    PYTHON = 5
+    TEXT = 6
+    WATCHLIST = 7
+    XML = 8
+    XCODEPROJ = 9
 
 
 class CheckerDispatcher(object):
@@ -482,6 +493,9 @@ class CheckerDispatcher(object):
         return os.path.splitext(file_path)[1].lstrip(".")
 
     def _should_skip_file_path(self, file_path, skip_array_entry):
+        match = re.search("\s*png$", file_path)
+        if match:
+            return False
         if isinstance(skip_array_entry, str):
             if file_path.find(skip_array_entry) >= 0:
                 return True
@@ -545,6 +559,8 @@ class CheckerDispatcher(object):
             return FileType.WATCHLIST
         elif file_extension == _XCODEPROJ_FILE_EXTENSION:
             return FileType.XCODEPROJ
+        elif file_extension == _PNG_FILE_EXTENSION:
+            return FileType.PNG
         elif ((not file_extension and os.path.join("Tools", "Scripts") in file_path) or
               file_extension in _TEXT_FILE_EXTENSIONS):
             return FileType.TEXT
@@ -573,6 +589,8 @@ class CheckerDispatcher(object):
             checker = XMLChecker(file_path, handle_style_error)
         elif file_type == FileType.XCODEPROJ:
             checker = XcodeProjectFileChecker(file_path, handle_style_error)
+        elif file_type == FileType.PNG:
+            checker = PNGChecker(file_path, handle_style_error)
         elif file_type == FileType.TEXT:
             basename = os.path.basename(file_path)
             if basename == 'test_expectations.txt' or basename == 'drt_expectations.txt':

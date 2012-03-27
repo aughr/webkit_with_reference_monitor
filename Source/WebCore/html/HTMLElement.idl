@@ -22,13 +22,15 @@ module html {
 
     interface [
         JSGenerateToNativeObject,
-        JSCustomPushEventHandlerScope
+        JSCustomPushEventHandlerScope,
+        V8CustomToJSObject
     ] HTMLElement : Element {
                  // iht.com relies on id returning the empty string when no id is present. 
                  // Other browsers do this as well. So we don't convert null to JS null.
                  attribute [Reflect] DOMString id;
                  attribute [Reflect] DOMString title;
                  attribute [Reflect] DOMString lang;
+                 attribute boolean             translate;
                  attribute [Reflect] DOMString dir;
                  attribute [Reflect=class] DOMString className;
                  readonly attribute DOMTokenList classList;
@@ -49,14 +51,14 @@ module html {
                  attribute [TreatNullAs=NullString] DOMString outerText
                      setter raises(DOMException);
 
-        Element insertAdjacentElement(in [Optional=CallWithDefaultValue] DOMString where,
-                                      in [Optional=CallWithDefaultValue] Element element)
+        Element insertAdjacentElement(in [Optional=DefaultIsUndefined] DOMString where,
+                                      in [Optional=DefaultIsUndefined] Element element)
             raises(DOMException);
-        void insertAdjacentHTML(in [Optional=CallWithDefaultValue] DOMString where,
-                                in [Optional=CallWithDefaultValue] DOMString html)
+        void insertAdjacentHTML(in [Optional=DefaultIsUndefined] DOMString where,
+                                in [Optional=DefaultIsUndefined] DOMString html)
             raises(DOMException);
-        void insertAdjacentText(in [Optional=CallWithDefaultValue] DOMString where,
-                                in [Optional=CallWithDefaultValue] DOMString text)
+        void insertAdjacentText(in [Optional=DefaultIsUndefined] DOMString where,
+                                in [Optional=DefaultIsUndefined] DOMString text)
             raises(DOMException);
 
         readonly attribute HTMLCollection children;
@@ -67,6 +69,7 @@ module html {
 
                  attribute boolean spellcheck;
 
+#if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C // No Objective-C bindings yet.
                  attribute [Conditional=MICRODATA, Reflect] boolean itemScope;
         readonly attribute [Conditional=MICRODATA] DOMSettableTokenList itemType;
                  attribute [Conditional=MICRODATA, Reflect, URL] DOMString itemId;
@@ -76,6 +79,7 @@ module html {
 
 #if defined(ENABLE_MICRODATA) && ENABLE_MICRODATA
         readonly attribute [Conditional=MICRODATA] HTMLPropertiesCollection properties;
+#endif
 #endif
 
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
@@ -88,6 +92,8 @@ module html {
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
         readonly attribute DOMString titleDisplayString;
 #endif
+
+        void click();
     };
 
 }

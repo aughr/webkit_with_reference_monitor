@@ -57,7 +57,6 @@ namespace WebCore {
     class DOMWindow;
     class Frame;
     class Node;
-    class Page;
     class ScriptExecutionContext;
     class ScriptSourceCode;
     class SecurityOrigin;
@@ -162,7 +161,7 @@ namespace WebCore {
         v8::Local<v8::Value> callFunction(v8::Handle<v8::Function>, v8::Handle<v8::Object>, int argc, v8::Handle<v8::Value> argv[]);
 
         // call the function with the given receiver and arguments and report times to DevTools.
-        static v8::Local<v8::Value> instrumentedCallFunction(Page*, v8::Handle<v8::Function>, v8::Handle<v8::Object> receiver, int argc, v8::Handle<v8::Value> args[]);
+        static v8::Local<v8::Value> instrumentedCallFunction(Frame*, v8::Handle<v8::Function>, v8::Handle<v8::Object> receiver, int argc, v8::Handle<v8::Value> args[]);
 
         // Call the function as constructor with the given arguments.
         v8::Local<v8::Value> newInstance(v8::Handle<v8::Function>, int argc, v8::Handle<v8::Value> argv[]);
@@ -244,6 +243,7 @@ namespace WebCore {
 
         v8::Local<v8::Context> context();
         v8::Local<v8::Context> mainWorldContext();
+        bool matchesCurrentContext();
 
         // FIXME: This should eventually take DOMWrapperWorld argument!
         V8DOMWindowShell* windowShell() const { return m_windowShell.get(); }
@@ -352,11 +352,10 @@ namespace WebCore {
 
     template <class T> inline v8::Handle<v8::Object> toV8(PassRefPtr<T> object, v8::Local<v8::Object> holder, IndependentMode independent = DoNotMarkIndependent)
     {
-        object->ref();
         v8::Persistent<v8::Object> handle = v8::Persistent<v8::Object>::New(holder);
         if (independent == MarkIndependent)
             handle.MarkIndependent();
-        V8DOMWrapper::setJSWrapperForDOMObject(object.get(), handle);
+        V8DOMWrapper::setJSWrapperForDOMObject(object, handle);
         return holder;
     }
 

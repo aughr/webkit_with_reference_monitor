@@ -20,23 +20,42 @@ from google.appengine.ext.webapp import util
 
 import json
 
+from admin_handlers import AdminDashboardHandler
+from admin_handlers import IsAdminHandler
+from admin_handlers import MergeTestsHandler
+from controller import CachedDashboardHandler
+from controller import CachedManifestHandler
+from controller import CachedRunsHandler
+from controller import DashboardImageHandler
+from controller import DashboardUpdateHandler
+from controller import ManifestUpdateHandler
+from controller import RunsChartHandler
+from controller import RunsUpdateHandler
 from create_handler import CreateHandler
-from dashboard_handler import DashboardHandler
-from manifest_handler import ManifestHandler
 from report_handler import ReportHandler
 from report_handler import AdminReportHandler
-from runs_handler import RunsHandler
-from merge_tests_handler import MergeTestsHandler
+from report_process_handler import ReportProcessHandler
+from report_logs_handler import ReportLogsHandler
 
 routes = [
     ('/admin/report/?', AdminReportHandler),
-    ('/admin/merge-tests/?', MergeTestsHandler),
+    (r'/admin/merge-tests(?:/(.*))?', MergeTestsHandler),
+    ('/admin/report-logs/?', ReportLogsHandler),
     ('/admin/create/(.*)', CreateHandler),
-    ('/api/test/?', ManifestHandler),
+    (r'/admin/([A-Za-z\-]*)', AdminDashboardHandler),
+
+    ('/api/user/is-admin', IsAdminHandler),
+    ('/api/test/?', CachedManifestHandler),
+    ('/api/test/update', ManifestUpdateHandler),
     ('/api/test/report/?', ReportHandler),
-    ('/api/test/runs/?', RunsHandler),
-    ('/api/test/dashboard/?', DashboardHandler),
-]
+    ('/api/test/report/process', ReportProcessHandler),
+    ('/api/test/runs/?', CachedRunsHandler),
+    ('/api/test/runs/update', RunsUpdateHandler),
+    ('/api/test/runs/chart', RunsChartHandler),
+    ('/api/test/dashboard/?', CachedDashboardHandler),
+    ('/api/test/dashboard/update', DashboardUpdateHandler),
+
+    ('/images/dashboard/flot-(\d+)-(\d+)-(\d+)_(\d+).png', DashboardImageHandler)]
 
 
 def main():

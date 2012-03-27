@@ -1,3 +1,4 @@
+description("Test calcMode discrete with from-to animation on numbers. You should see a green 100x100 rect and only PASS messages");
 createSVGTestCase();
 
 // Setup test document
@@ -23,28 +24,32 @@ rootSVGElement.appendChild(rect);
 
 // Setup animation test
 function sample1() {
+    shouldBe("rect.x.animVal.value", "100");
     shouldBe("rect.x.baseVal.value", "100");
 }
 
 function sample2() {
-    shouldBe("rect.x.baseVal.value", "200");
+    shouldBe("rect.x.animVal.value", "200");
+    shouldBe("rect.x.baseVal.value", "100");
 }
 
 function sample3() {
-    shouldBe("rect.x.baseVal.value", "300");
+    shouldBe("rect.x.animVal.value", "300");
+    shouldBe("rect.x.baseVal.value", "100");
 }
 
 function executeTest() {
     const expectedValues = [
-        // [animationId, time, elementId, sampleCallback]
-        ["animation", 1.0,    "rect", sample1],
-        ["animation", 1.5,    "rect", sample2],
-        ["animation", 3.0,    "rect", sample3]
+        // [animationId, time, sampleCallback]
+        ["animation", 0.0, sample1],
+        ["animation", 1.499, sample1],
+        ["animation", 1.501, sample2],
+        ["animation", 2.999, sample2],
+        ["animation", 3.001, sample3]
     ];
 
     runAnimationTest(expectedValues);
 }
 
-// Begin test async
-window.setTimeout("triggerUpdate(150, 30)", 0);
+window.clickX = 150;
 var successfullyParsed = true;

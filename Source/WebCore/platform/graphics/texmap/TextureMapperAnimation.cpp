@@ -20,13 +20,23 @@
 #include "config.h"
 #include "TextureMapperAnimation.h"
 
-#include "CurrentTime.h"
 #include "UnitBezier.h"
+#include <wtf/CurrentTime.h>
 
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {
 
-static double normalizedAnimationValue(double runningTime, double duration, bool alternate)
+
+static bool shouldReverseAnimationValue(Animation::AnimationDirection direction, int loopCount)
+{
+    if (((direction == Animation::AnimationDirectionAlternate) && (loopCount & 1))
+        || ((direction == Animation::AnimationDirectionAlternateReverse) && !(loopCount & 1))
+        || direction == Animation::AnimationDirectionReverse)
+        return true;
+    return false;
+}
+
+static double normalizedAnimationValue(double runningTime, double duration, Animation::AnimationDirection direction)
 {
     if (!duration)
         return 0;
@@ -35,7 +45,8 @@ static double normalizedAnimationValue(double runningTime, double duration, bool
     const double lastFullLoop = duration * double(loopCount);
     const double remainder = runningTime - lastFullLoop;
     const double normalized = remainder / duration;
-    return (loopCount % 2 && alternate) ? (1 - normalized) : normalized;
+
+    return shouldReverseAnimationValue(direction, loopCount) ? 1 - normalized : normalized;
 }
 
 static float applyOpacityAnimation(float fromOpacity, float toOpacity, double progress)
@@ -112,7 +123,7 @@ static TransformationMatrix applyTransformAnimation(const TransformOperations* f
 
     // Animation to "-webkit-transform: none".
     if (!to->size()) {
-        TransformOperations blended(*to);
+        TransformOperations blended(*from);
         for (size_t i = 0; i < blended.operations().size(); ++i)
             blended.operations()[i]->blend(0, progress, true)->apply(matrix, boxSize);
         return matrix;
@@ -120,7 +131,7 @@ static TransformationMatrix applyTransformAnimation(const TransformOperations* f
 
     // Animation from "-webkit-transform: none".
     if (!from->size()) {
-        TransformOperations blended(*from);
+        TransformOperations blended(*to);
         for (size_t i = 0; i < blended.operations().size(); ++i)
             blended.operations()[i]->blend(0, 1. - progress, true)->apply(matrix, boxSize);
         return matrix;

@@ -142,7 +142,7 @@ RegisterID* ThisNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst
 
 bool ResolveNode::isPure(BytecodeGenerator& generator) const
 {
-    return generator.isLocal(m_ident);
+    return generator.resolve(m_ident).isStatic();
 }
 
 RegisterID* ResolveNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
@@ -255,7 +255,7 @@ RegisterID* PropertyListNode::emitBytecode(BytecodeGenerator& generator, Registe
             if (node->m_type == PropertyNode::Constant)
                 continue;
 
-            GetterSetterPair pair(node, 0);
+            GetterSetterPair pair(node, static_cast<PropertyNode*>(0));
             std::pair<GetterSetterMap::iterator, bool> result = map.add(node->name().impl(), pair);
             if (!result.second)
                 result.first->second.second = node;
@@ -792,7 +792,7 @@ RegisterID* PrefixResolveNode::emitBytecode(BytecodeGenerator& generator, Regist
 {
     ResolveResult resolveResult = generator.resolve(m_ident);
     if (RegisterID* local = resolveResult.local()) {
-        if (generator.isLocalConstant(m_ident)) {
+        if (resolveResult.isReadOnly()) {
             if (dst == generator.ignoredResult())
                 return 0;
             RefPtr<RegisterID> r0 = generator.emitLoad(generator.finalDestination(dst), (m_operator == OpPlusPlus) ? 1.0 : -1.0);
@@ -871,7 +871,15 @@ RegisterID* UnaryOpNode::emitBytecode(BytecodeGenerator& generator, RegisterID* 
     return generator.emitUnaryOp(opcodeID(), generator.finalDestination(dst), src);
 }
 
-
+// ------------------------------ BitwiseNotNode -----------------------------------
+ 
+RegisterID* BitwiseNotNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
+{
+    RefPtr<RegisterID> src2 = generator.emitLoad(generator.newTemporary(), jsNumber(-1));
+    RegisterID* src1 = generator.emitNode(m_expr);
+    return generator.emitBinaryOp(op_bitxor, generator.finalDestination(dst, src1), src1, src2.get(), OperandTypes(m_expr->resultDescriptor(), ResultType::numberTypeIsInt32()));
+}
+ 
 // ------------------------------ LogicalNotNode -----------------------------------
 
 void LogicalNotNode::emitBytecodeInConditionContext(BytecodeGenerator& generator, Label* trueTarget, Label* falseTarget, bool fallThroughMeansTrue)
@@ -2009,8 +2017,8 @@ RegisterID* TryNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 
 inline void ScopeNode::emitStatementsBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
-    if (m_data->m_statements)
-        m_data->m_statements->emitBytecode(generator, dst);
+    if (m_statements)
+        m_statements->emitBytecode(generator, dst);
 }
 
 // ------------------------------ ProgramNode -----------------------------

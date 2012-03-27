@@ -29,12 +29,14 @@ namespace WebCore {
 
 class HTMLParagraphElement : public HTMLElement {
 public:
+    static PassRefPtr<HTMLParagraphElement> create(Document*);
     static PassRefPtr<HTMLParagraphElement> create(const QualifiedName&, Document*);
 
 private:
     HTMLParagraphElement(const QualifiedName&, Document*);
 
-    virtual void parseAttribute(Attribute*) OVERRIDE;
+    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
+    virtual void collectStyleForAttribute(Attribute*, StylePropertySet*) OVERRIDE;
 };
 
 } // namespace WebCore

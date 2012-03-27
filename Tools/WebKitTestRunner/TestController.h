@@ -54,7 +54,8 @@ public:
     WKContextRef context() { return m_context.get(); }
 
     // Runs the run loop until `done` is true or the timeout elapses.
-    enum TimeoutDuration { ShortTimeout, LongTimeout };
+    enum TimeoutDuration { ShortTimeout, LongTimeout, NoTimeout };
+    bool useWaitToDumpWatchdogTimer() { return m_useWaitToDumpWatchdogTimer; }
     void runUntil(bool& done, TimeoutDuration);
     void notifyDone();
     
@@ -104,6 +105,7 @@ private:
     OwnPtr<TestInvocation> m_currentInvocation;
 
     bool m_dumpPixels;
+    bool m_skipPixelTestOption;
     bool m_verbose;
     bool m_printSeparators;
     bool m_usingServerMode;
@@ -126,6 +128,8 @@ private:
 
     double m_longTimeout;
     double m_shortTimeout;
+    double m_noTimeout;
+    bool m_useWaitToDumpWatchdogTimer;
 
     bool m_didPrintWebProcessCrashedMessage;
     bool m_shouldExitWhenWebProcessCrashes;

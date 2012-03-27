@@ -4,7 +4,7 @@
 <script src="../../fast/js/resources/js-test-pre.js"></script>
 <script src="../../fast/repaint/resources/repaint.js"></script>
 </head>
-<body style="margin: 0px" onload="runRepaintTest()">
+<body style="margin: 0px">
 
 <script type="text/javascript">
     function test1() {
@@ -23,12 +23,26 @@
         shouldBeEqualToString("document.defaultView.getComputedStyle(object1).width", "400px");
         shouldBeEqualToString("document.defaultView.getComputedStyle(object1).height", "200px");
 
-        setTimeout(function() {
-            var htmlDoc = object1.contentDocument;
-            var htmlWindow = htmlDoc.defaultView;
+        if (window.layoutTestController)
+            layoutTestController.waitUntilDone();
+        requestSizeChange();
+    }
+
+    function requestSizeChange() {
+        object1 = document.getElementsByTagName("object")[0];
+        var htmlDoc = object1.contentDocument;
+        if (!htmlDoc) {
+            setTimeout(requestSizeChange, 50);
+            return;
+        }
+
+        var htmlWindow = htmlDoc.defaultView;
+        // Wait until the embedded SVG (of the embedded HTML that we're loading), is loaded.
+        if (htmlWindow.canChangeSize) {
             htmlWindow.changeSize();
             test3();
-        }, 0);
+        } else
+            setTimeout(requestSizeChange, 50);
     }
 
     function test3() {
@@ -57,13 +71,11 @@
     }
 </script>
 
-<object style="border: 1px red solid; width: 400px; height: 200px;"  data="resources/nested-embedded-svg-size-changes-target.html"></object>
+<object style="border: 1px red solid; width: 400px; height: 200px;" onload="runRepaintTest()" data="resources/nested-embedded-svg-size-changes-target.html"></object>
 <p id="description"></p>
 <div id="console"></div>
 
 <script>
-    if (window.layoutTestController)
-        layoutTestController.waitUntilDone();
     description("This test checks that intrinsic size changes of an embedded SVG cause immediate updates of the object that embeds it.");
     test1();
 </script>

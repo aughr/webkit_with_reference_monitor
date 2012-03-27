@@ -268,6 +268,9 @@ class GlobalVariablesTest(unittest.TestCase):
         assertNoCheck("Source/JavaScriptCore/jit/GDBInterface.cpp",
                       "readability/naming")
 
+        # Javascript keywords.
+        assertCheck("Source/JavaScriptCore/parser/Keywords.table", "whitespace/carriage_return")
+
     def test_max_reports_per_category(self):
         """Check that _MAX_REPORTS_PER_CATEGORY is valid."""
         all_categories = self._all_categories()
@@ -587,7 +590,6 @@ class CheckerDispatcherDispatchTest(unittest.TestCase):
         paths = [
            "Makefile",
            "foo.asdf",  # Non-sensical file extension.
-           "foo.png",
            "foo.exe",
             ]
 

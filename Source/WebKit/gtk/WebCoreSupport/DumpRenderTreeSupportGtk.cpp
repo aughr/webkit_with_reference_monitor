@@ -26,6 +26,7 @@
 #include "AXObjectCache.h"
 #include "AccessibilityObject.h"
 #include "AnimationController.h"
+#include "CSSComputedStyleDeclaration.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
 #include "EditorClientGtk.h"
@@ -41,12 +42,12 @@
 #include "GeolocationPosition.h"
 #include "GraphicsContext.h"
 #include "HTMLInputElement.h"
+#include "JSCSSStyleDeclaration.h"
 #include "JSDOMWindow.h"
 #include "JSDocument.h"
 #include "JSElement.h"
 #include "JSLock.h"
 #include "JSNodeList.h"
-#include "JSRange.h"
 #include "JSValue.h"
 #include "NodeList.h"
 #include "PageGroup.h"
@@ -60,7 +61,7 @@
 #include "Settings.h"
 #include "TextIterator.h"
 #include "WebKitAccessibleWrapperAtk.h"
-#include "WebKitDOMRangePrivate.h"
+#include "WebKitMutationObserver.h"
 #include "WorkerThread.h"
 #include "webkitglobalsprivate.h"
 #include "webkitwebframe.h"
@@ -68,11 +69,6 @@
 #include "webkitwebview.h"
 #include "webkitwebviewprivate.h"
 #include <JavaScriptCore/APICast.h>
-
-#if ENABLE(SVG)
-#include "SVGDocumentExtensions.h"
-#include "SVGSMILElement.h"
-#endif
 
 using namespace JSC;
 using namespace WebCore;
@@ -117,36 +113,6 @@ void DumpRenderTreeSupportGtk::setSelectTrailingWhitespaceEnabled(bool enabled)
 bool DumpRenderTreeSupportGtk::selectTrailingWhitespaceEnabled()
 {
     return s_selectTrailingWhitespaceEnabled;
-}
-
-JSValueRef DumpRenderTreeSupportGtk::nodesFromRect(JSContextRef context, JSValueRef value, int x, int y, unsigned top, unsigned right, unsigned bottom, unsigned left, bool ignoreClipping)
-{
-    JSLock lock(SilenceAssertionsOnly);
-    ExecState* exec = toJS(context);
-    if (!value)
-        return JSValueMakeUndefined(context);
-    JSValue jsValue = toJS(exec, value);
-    if (!jsValue.inherits(&JSDocument::s_info))
-       return JSValueMakeUndefined(context);
-
-    JSDocument* jsDocument = static_cast<JSDocument*>(asObject(jsValue));
-    Document* document = jsDocument->impl();
-    RefPtr<NodeList> nodes = document->nodesFromRect(x, y, top, right, bottom, left, ignoreClipping);
-    return toRef(exec, toJS(exec, jsDocument->globalObject(), nodes.get()));
-}
-
-WebKitDOMRange* DumpRenderTreeSupportGtk::jsValueToDOMRange(JSContextRef context, JSValueRef value)
-{
-    if (!value)
-        return 0;
-
-    JSLock lock(SilenceAssertionsOnly);
-    ExecState* exec = toJS(context);
-
-    Range* range = toRange(toJS(exec, value));
-    if (!range)
-        return 0;
-    return kit(range);
 }
 
 /**
@@ -393,22 +359,6 @@ bool DumpRenderTreeSupportGtk::pauseTransition(WebKitWebFrame* frame, const char
     if (!coreElement || !coreElement->renderer())
         return false;
     return core(frame)->animation()->pauseTransitionAtTime(coreElement->renderer(), AtomicString(name), time);
-}
-
-bool DumpRenderTreeSupportGtk::pauseSVGAnimation(WebKitWebFrame* frame, const char* animationId, double time, const char* elementId)
-{
-    ASSERT(core(frame));
-#if ENABLE(SVG)
-    Document* document = core(frame)->document();
-    if (!document || !document->svgExtensions())
-        return false;
-    Element* coreElement = document->getElementById(AtomicString(animationId));
-    if (!coreElement || !SVGSMILElement::isSMILElement(coreElement))
-        return false;
-    return document->accessSVGExtensions()->sampleAnimationAtTime(elementId, static_cast<SVGSMILElement*>(coreElement), time);
-#else
-    return false;
-#endif
 }
 
 CString DumpRenderTreeSupportGtk::markerTextForListItem(WebKitWebFrame* frame, JSContextRef context, JSValueRef nodeObject)
@@ -734,13 +684,6 @@ unsigned int DumpRenderTreeSupportGtk::workerThreadCount()
 #endif
 }
 
-bool DumpRenderTreeSupportGtk::webkitWebFrameSelectionHasSpellingMarker(WebKitWebFrame *frame, gint from, gint length)
-{
-    g_return_val_if_fail(WEBKIT_IS_WEB_FRAME(frame), FALSE);
-
-    return core(frame)->editor()->selectionStartHasMarkerFor(DocumentMarker::Spelling, from, length);
-}
-
 bool DumpRenderTreeSupportGtk::findString(WebKitWebView* webView, const gchar* targetString, WebKitFindOptions findOptions)
 {
     return core(webView)->findString(String::fromUTF8(targetString), findOptions);
@@ -850,7 +793,7 @@ void DumpRenderTreeSupportGtk::scalePageBy(WebKitWebView* webView, float scaleFa
 
 void DumpRenderTreeSupportGtk::resetGeolocationClientMock(WebKitWebView* webView)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     GeolocationClientMock* mock = static_cast<GeolocationClientMock*>(core(webView)->geolocationController()->client());
     mock->reset();
 #endif
@@ -858,7 +801,7 @@ void DumpRenderTreeSupportGtk::resetGeolocationClientMock(WebKitWebView* webView
 
 void DumpRenderTreeSupportGtk::setMockGeolocationPermission(WebKitWebView* webView, bool allowed)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     GeolocationClientMock* mock = static_cast<GeolocationClientMock*>(core(webView)->geolocationController()->client());
     mock->setPermission(allowed);
 #endif
@@ -866,7 +809,7 @@ void DumpRenderTreeSupportGtk::setMockGeolocationPermission(WebKitWebView* webVi
 
 void DumpRenderTreeSupportGtk::setMockGeolocationPosition(WebKitWebView* webView, double latitude, double longitude, double accuracy)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     GeolocationClientMock* mock = static_cast<GeolocationClientMock*>(core(webView)->geolocationController()->client());
 
     double timestamp = g_get_real_time() / 1000000.0;
@@ -876,7 +819,7 @@ void DumpRenderTreeSupportGtk::setMockGeolocationPosition(WebKitWebView* webView
 
 void DumpRenderTreeSupportGtk::setMockGeolocationError(WebKitWebView* webView, int errorCode, const gchar* errorMessage)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     GeolocationClientMock* mock = static_cast<GeolocationClientMock*>(core(webView)->geolocationController()->client());
 
     GeolocationError::ErrorCode code;
@@ -896,11 +839,9 @@ void DumpRenderTreeSupportGtk::setMockGeolocationError(WebKitWebView* webView, i
 
 int DumpRenderTreeSupportGtk::numberOfPendingGeolocationPermissionRequests(WebKitWebView* webView)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     GeolocationClientMock* mock = static_cast<GeolocationClientMock*>(core(webView)->geolocationController()->client());
     return mock->numberOfPendingPermissionRequests();
-#else
-    return 0;
 #endif
 }
 
@@ -911,5 +852,56 @@ void DumpRenderTreeSupportGtk::setHixie76WebSocketProtocolEnabled(WebKitWebView*
 #else
     UNUSED_PARAM(webView);
     UNUSED_PARAM(enabled);
+#endif
+}
+
+void DumpRenderTreeSupportGtk::setPageCacheSupportsPlugins(WebKitWebView* webView, bool enabled)
+{
+    core(webView)->settings()->setPageCacheSupportsPlugins(enabled);
+}
+
+bool DumpRenderTreeSupportGtk::elementDoesAutoCompleteForElementWithId(WebKitWebFrame* frame, JSStringRef id)
+{
+    Frame* coreFrame = core(frame);
+    if (!coreFrame)
+        return false;
+
+    Document* document = coreFrame->document();
+    ASSERT(document);
+
+    size_t bufferSize = JSStringGetMaximumUTF8CStringSize(id);
+    GOwnPtr<gchar> idBuffer(static_cast<gchar*>(g_malloc(bufferSize)));
+    JSStringGetUTF8CString(id, idBuffer.get(), bufferSize);
+    Node* coreNode = document->getElementById(String::fromUTF8(idBuffer.get()));
+    if (!coreNode || !coreNode->renderer())
+        return false;
+
+    HTMLInputElement* inputElement = static_cast<HTMLInputElement*>(coreNode);
+    if (!inputElement)
+        return false;
+
+    return inputElement->isTextField() && !inputElement->isPasswordField() && inputElement->shouldAutocomplete();
+}
+
+JSValueRef DumpRenderTreeSupportGtk::computedStyleIncludingVisitedInfo(JSContextRef context, JSValueRef nodeObject)
+{
+    JSC::ExecState* exec = toJS(context);
+    if (!nodeObject)
+        return JSValueMakeUndefined(context);
+
+    JSValue jsValue = toJS(exec, nodeObject);
+    if (!jsValue.inherits(&JSElement::s_info))
+        return JSValueMakeUndefined(context);
+
+    JSElement* jsElement = static_cast<JSElement*>(asObject(jsValue));
+    Element* element = jsElement->impl();
+    RefPtr<CSSComputedStyleDeclaration> style = CSSComputedStyleDeclaration::create(element, true);
+    return toRef(exec, toJS(exec, jsElement->globalObject(), style.get()));
+}
+
+void DumpRenderTreeSupportGtk::deliverAllMutationsIfNecessary()
+{
+#if ENABLE(MUTATION_OBSERVERS)
+    WebKitMutationObserver::deliverAllMutations();
 #endif
 }

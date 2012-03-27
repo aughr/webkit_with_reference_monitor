@@ -78,10 +78,6 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
-#if ENABLE(SVG)
-#include "SVGDocumentExtensions.h"
-#include "SVGSMILElement.h"
-#endif
 #include "TextIterator.h"
 #include "ThirdPartyCookiesQt.h"
 #include "WebCoreTestSupport.h"
@@ -102,11 +98,14 @@
 #include "MediaPlayerPrivateQt.h"
 #endif
 
+#include <QAction>
+#include <QMenu>
+
 using namespace WebCore;
 
 QMap<int, QWebScriptWorld*> m_worldMap;
 
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
 GeolocationClientMock* toGeolocationClientMock(GeolocationClient* client)
 {
      ASSERT(QWebPagePrivate::drtRun);
@@ -370,31 +369,6 @@ bool DumpRenderTreeSupportQt::pauseTransitionOfProperty(QWebFrame *frame, const 
     return controller->pauseTransitionAtTime(coreNode->renderer(), propertyName, time);
 }
 
-// Pause a given SVG animation on the target node at a specific time.
-// This method is only intended to be used for testing the SVG animation system.
-bool DumpRenderTreeSupportQt::pauseSVGAnimation(QWebFrame *frame, const QString &animationId, double time, const QString &elementId)
-{
-#if !ENABLE(SVG)
-    return false;
-#else
-    Frame* coreFrame = QWebFramePrivate::core(frame);
-    if (!coreFrame)
-        return false;
-
-    Document* doc = coreFrame->document();
-    Q_ASSERT(doc);
-
-    if (!doc->svgExtensions())
-        return false;
-
-    Node* coreNode = doc->getElementById(animationId);
-    if (!coreNode || !SVGSMILElement::isSMILElement(coreNode))
-        return false;
-
-    return doc->accessSVGExtensions()->sampleAnimationAtTime(elementId, static_cast<SVGSMILElement*>(coreNode), time);
-#endif
-}
-
 // Returns the total number of currently running animations (includes both CSS transitions and CSS animations).
 int DumpRenderTreeSupportQt::numberOfActiveAnimations(QWebFrame *frame)
 {
@@ -635,7 +609,7 @@ QVariantMap DumpRenderTreeSupportQt::computedStyleIncludingVisitedInfo(const QWe
     if (!webElement)
         return res;
 
-    RefPtr<WebCore::CSSComputedStyleDeclaration> computedStyleDeclaration = computedStyle(webElement, true);
+    RefPtr<WebCore::CSSComputedStyleDeclaration> computedStyleDeclaration = CSSComputedStyleDeclaration::create(webElement, true);
     CSSStyleDeclaration* style = static_cast<WebCore::CSSStyleDeclaration*>(computedStyleDeclaration.get());
     for (unsigned i = 0; i < style->length(); i++) {
         QString name = style->item(i);
@@ -816,7 +790,7 @@ void DumpRenderTreeSupportQt::dumpSetAcceptsEditing(bool b)
 
 void DumpRenderTreeSupportQt::dumpNotification(bool b)
 {
-#if ENABLE(NOTIFICATIONS)
+#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     NotificationPresenterClientQt::dumpNotification = b;
 #endif
 }
@@ -857,14 +831,14 @@ void DumpRenderTreeSupportQt::setMockDeviceOrientation(QWebPage* page, bool canP
 {
 #if ENABLE(DEVICE_ORIENTATION)
     Page* corePage = QWebPagePrivate::core(page);
-    DeviceOrientationClientMock* mockClient = toDeviceOrientationClientMock(corePage->deviceOrientationController()->client());
+    DeviceOrientationClientMock* mockClient = toDeviceOrientationClientMock(DeviceOrientationController::from(corePage)->client());
     mockClient->setOrientation(DeviceOrientation::create(canProvideAlpha, alpha, canProvideBeta, beta, canProvideGamma, gamma));
 #endif
 }
 
 void DumpRenderTreeSupportQt::resetGeolocationMock(QWebPage* page)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     Page* corePage = QWebPagePrivate::core(page);
     GeolocationClientMock* mockClient = toGeolocationClientMock(corePage->geolocationController()->client());
     mockClient->reset();
@@ -873,7 +847,7 @@ void DumpRenderTreeSupportQt::resetGeolocationMock(QWebPage* page)
 
 void DumpRenderTreeSupportQt::setMockGeolocationPermission(QWebPage* page, bool allowed)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     Page* corePage = QWebPagePrivate::core(page);
     GeolocationClientMock* mockClient = toGeolocationClientMock(corePage->geolocationController()->client());
     mockClient->setPermission(allowed);
@@ -882,7 +856,7 @@ void DumpRenderTreeSupportQt::setMockGeolocationPermission(QWebPage* page, bool 
 
 void DumpRenderTreeSupportQt::setMockGeolocationPosition(QWebPage* page, double latitude, double longitude, double accuracy)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     Page* corePage = QWebPagePrivate::core(page);
     GeolocationClientMock* mockClient = toGeolocationClientMock(corePage->geolocationController()->client());
     mockClient->setPosition(GeolocationPosition::create(currentTime(), latitude, longitude, accuracy));
@@ -891,7 +865,7 @@ void DumpRenderTreeSupportQt::setMockGeolocationPosition(QWebPage* page, double 
 
 void DumpRenderTreeSupportQt::setMockGeolocationError(QWebPage* page, int errorCode, const QString& message)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     Page* corePage = QWebPagePrivate::core(page);
 
     GeolocationError::ErrorCode code = GeolocationError::PositionUnavailable;
@@ -911,7 +885,7 @@ void DumpRenderTreeSupportQt::setMockGeolocationError(QWebPage* page, int errorC
 
 int DumpRenderTreeSupportQt::numberOfPendingGeolocationPermissionRequests(QWebPage* page)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
+#if ENABLE(GEOLOCATION)
     Page* corePage = QWebPagePrivate::core(page);
     GeolocationClientMock* mockClient = toGeolocationClientMock(corePage->geolocationController()->client());
     return mockClient->numberOfPendingPermissionRequests();
@@ -1013,39 +987,9 @@ void DumpRenderTreeSupportQt::addUserStyleSheet(QWebPage* page, const QString& s
 
 void DumpRenderTreeSupportQt::simulateDesktopNotificationClick(const QString& title)
 {
-#if ENABLE(NOTIFICATIONS)
+#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     NotificationPresenterClientQt::notificationPresenter()->notificationClicked(title);
 #endif
-}
-
-QString DumpRenderTreeSupportQt::plainText(const QVariant& range)
-{
-    QMap<QString, QVariant> map = range.toMap();
-    QVariant startContainer  = map.value(QLatin1String("startContainer"));
-    map = startContainer.toMap();
-
-    return map.value(QLatin1String("innerText")).toString();
-}
-
-QVariantList DumpRenderTreeSupportQt::nodesFromRect(const QWebElement& document, int x, int y, unsigned top, unsigned right, unsigned bottom, unsigned left, bool ignoreClipping)
-{
-    QVariantList res;
-    WebCore::Element* webElement = document.m_element;
-    if (!webElement)
-        return res;
-
-    Document* doc = webElement->document();
-    if (!doc)
-        return res;
-    RefPtr<NodeList> nodes = doc->nodesFromRect(x, y, top, right, bottom, left, ignoreClipping);
-    for (unsigned i = 0; i < nodes->length(); i++) {
-        // QWebElement will be null if the Node is not an HTML Element
-        if (nodes->item(i)->isHTMLElement())
-            res << QVariant::fromValue(QWebElement(nodes->item(i)));
-        else
-            res << QVariant::fromValue(QDRTNode(nodes->item(i)));
-    }
-    return res;
 }
 
 void DumpRenderTreeSupportQt::setDefersLoading(QWebPage* page, bool flag)

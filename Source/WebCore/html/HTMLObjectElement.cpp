@@ -77,6 +77,21 @@ RenderWidget* HTMLObjectElement::renderWidgetForJSBindings()
     return renderPart(); // This will return 0 if the renderer is not a RenderPart.
 }
 
+bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
+{
+    if (name == borderAttr)
+        return true;
+    return HTMLPlugInImageElement::isPresentationAttribute(name);
+}
+
+void HTMLObjectElement::collectStyleForAttribute(Attribute* attr, StylePropertySet* style)
+{
+    if (attr->name() == borderAttr)
+        applyBorderAttributeToStyle(attr, style);
+    else
+        HTMLPlugInImageElement::collectStyleForAttribute(attr, style);
+}
+
 void HTMLObjectElement::parseAttribute(Attribute* attr)
 {
     if (attr->name() == formAttr)
@@ -108,8 +123,6 @@ void HTMLObjectElement::parseAttribute(Attribute* attr)
         setAttributeEventListener(eventNames().loadEvent, createAttributeEventListener(this, attr));
     else if (attr->name() == onbeforeloadAttr)
         setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, attr));
-    else if (attr->name() == borderAttr)
-        applyBorderAttribute(attr);
     else
         HTMLPlugInImageElement::parseAttribute(attr);
 }
@@ -207,7 +220,7 @@ bool HTMLObjectElement::hasFallbackContent() const
     for (Node* child = firstChild(); child; child = child->nextSibling()) {
         // Ignore whitespace-only text, and <param> tags, any other content is fallback content.
         if (child->isTextNode()) {
-            if (!static_cast<Text*>(child)->containsOnlyWhitespace())
+            if (!toText(child)->containsOnlyWhitespace())
                 return true;
         } else if (!child->hasTagName(paramTag))
             return true;
@@ -285,8 +298,14 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
     bool fallbackContent = hasFallbackContent();
     renderEmbeddedObject()->setHasFallbackContent(fallbackContent);
 
-    if (pluginCreationOption == CreateOnlyNonNetscapePlugins && wouldLoadAsNetscapePlugin(url, serviceType))
+    // FIXME: It's sadness that we have this special case here.
+    //        See http://trac.webkit.org/changeset/25128 and
+    //        plugins/netscape-plugin-setwindow-size.html
+    if (pluginCreationOption == CreateOnlyNonNetscapePlugins && wouldLoadAsNetscapePlugin(url, serviceType)) {
+        // Ensure updateWidget() is called again during layout to create the Netscape plug-in.
+        setNeedsWidgetUpdate(true);
         return;
+    }
 
     RefPtr<HTMLObjectElement> protect(this); // beforeload and plugin loading can make arbitrary DOM mutations.
     bool beforeLoadAllowedLoad = guardedDispatchBeforeLoadEvent(url);
@@ -294,7 +313,7 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
         return;
 
     SubframeLoader* loader = document()->frame()->loader()->subframeLoader();
-    bool success = beforeLoadAllowedLoad && hasValidClassId() && loader->requestObject(this, url, getAttribute(nameAttr), serviceType, paramNames, paramValues);
+    bool success = beforeLoadAllowedLoad && hasValidClassId() && loader->requestObject(this, url, getNameAttribute(), serviceType, paramNames, paramValues);
     if (!success && fallbackContent)
         renderFallbackContent();
 }
@@ -408,7 +427,7 @@ void HTMLObjectElement::updateDocNamedItem()
             if (isRecognizedTagName(element->tagQName()) && !element->hasTagName(paramTag))
                 isNamedItem = false;
         } else if (child->isTextNode()) {
-            if (!static_cast<Text*>(child)->containsOnlyWhitespace())
+            if (!toText(child)->containsOnlyWhitespace())
                 isNamedItem = false;
         } else
             isNamedItem = false;
@@ -417,10 +436,10 @@ void HTMLObjectElement::updateDocNamedItem()
     if (isNamedItem != wasNamedItem && document()->isHTMLDocument()) {
         HTMLDocument* document = static_cast<HTMLDocument*>(this->document());
         if (isNamedItem) {
-            document->addNamedItem(fastGetAttribute(nameAttr));
+            document->addNamedItem(getNameAttribute());
             document->addExtraNamedItem(getIdAttribute());
         } else {
-            document->removeNamedItem(fastGetAttribute(nameAttr));
+            document->removeNamedItem(getNameAttribute());
             document->removeExtraNamedItem(getIdAttribute());
         }
     }
@@ -434,7 +453,7 @@ bool HTMLObjectElement::containsJavaApplet() const
         
     for (Element* child = firstElementChild(); child; child = child->nextElementSibling()) {
         if (child->hasTagName(paramTag)
-                && equalIgnoringCase(child->getAttribute(nameAttr), "type")
+                && equalIgnoringCase(child->getNameAttribute(), "type")
                 && MIMETypeRegistry::isJavaAppletMIMEType(child->getAttribute(valueAttr).string()))
             return true;
         if (child->hasTagName(objectTag)
@@ -495,7 +514,7 @@ bool HTMLObjectElement::appendFormData(FormDataList& encoding, bool)
 
 const AtomicString& HTMLObjectElement::formControlName() const
 {
-    const AtomicString& name = fastGetAttribute(nameAttr);
+    const AtomicString& name = getNameAttribute();
     return name.isNull() ? emptyAtom : name;
 }
 

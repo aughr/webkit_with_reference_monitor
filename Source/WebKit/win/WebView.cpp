@@ -92,6 +92,8 @@
 #include <WebCore/FrameView.h>
 #include <WebCore/FrameWin.h>
 #include <WebCore/GDIObjectCounter.h>
+#include <WebCore/GeolocationController.h>
+#include <WebCore/GeolocationError.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/HTMLMediaElement.h>
 #include <WebCore/HTMLNames.h>
@@ -138,11 +140,6 @@
 #include <WebCore/WindowMessageBroadcaster.h>
 #include <WebCore/WindowsTouch.h>
 #include <wtf/MainThread.h>
-
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
-#include <WebCore/GeolocationController.h>
-#include <WebCore/GeolocationError.h>
-#endif
 
 #if USE(CG)
 #include <CoreGraphics/CGContext.h>
@@ -1349,7 +1346,7 @@ bool WebView::handleContextMenuEvent(WPARAM wParam, LPARAM lParam)
     if (!view)
         return false;
 
-    POINT point(view->contentsToWindow(contextMenuController->hitTestResult().point()));
+    POINT point(view->contentsToWindow(contextMenuController->hitTestResult().roundedPoint()));
 
     // Translate the point to screen coordinates
     if (!::ClientToScreen(m_viewWindow, &point))
@@ -2072,6 +2069,23 @@ void WebView::setIsBeingDestroyed()
     ::SetWindowLongPtrW(m_viewWindow, 0, 0);
 }
 
+void WebView::setShouldInvertColors(bool shouldInvertColors)
+{
+    if (m_shouldInvertColors == shouldInvertColors)
+        return;
+
+    m_shouldInvertColors = shouldInvertColors;
+
+#if USE(ACCELERATED_COMPOSITING)
+    if (m_layerTreeHost)
+        m_layerTreeHost->setShouldInvertColors(shouldInvertColors);
+#endif
+
+    RECT windowRect = {0};
+    frameRect(&windowRect);
+    repaint(windowRect, true, true);
+}
+
 bool WebView::registerWebViewWindowClass()
 {
     static bool haveRegisteredWindowClass = false;
@@ -2652,9 +2666,7 @@ HRESULT STDMETHODCALLTYPE WebView::initWithFrame(
     pageClients.editorClient = new WebEditorClient(this);
     pageClients.dragClient = new WebDragClient(this);
     pageClients.inspectorClient = m_inspectorClient;
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
     pageClients.geolocationClient = new WebGeolocationClient(this);
-#endif
     m_page = new Page(pageClients);
 
     BSTR localStoragePath;
@@ -4922,6 +4934,11 @@ HRESULT WebView::notifyPreferencesChanged(IWebNotification* notification)
         return hr;
     settings->setMediaPlaybackAllowsInline(enabled);
 
+    hr = prefsPrivate->shouldInvertColors(&enabled);
+    if (FAILED(hr))
+        return hr;
+    setShouldInvertColors(enabled);
+
     return S_OK;
 }
 
@@ -6463,6 +6480,8 @@ void WebView::setAcceleratedCompositing(bool accelerated)
         if (m_layerTreeHost) {
             m_isAcceleratedCompositing = true;
 
+            m_layerTreeHost->setShouldInvertColors(m_shouldInvertColors);
+
             m_layerTreeHost->setClient(this);
             ASSERT(m_viewWindow);
             m_layerTreeHost->setWindow(m_viewWindow);
@@ -6545,19 +6564,14 @@ HRESULT WebView::geolocationProvider(IWebGeolocationProvider** locationProvider)
 
 HRESULT WebView::geolocationDidChangePosition(IWebGeolocationPosition* position)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
     if (!m_page)
         return E_FAIL;
     m_page->geolocationController()->positionChanged(core(position));
     return S_OK;
-#else
-    return E_NOTIMPL;
-#endif
 }
 
 HRESULT WebView::geolocationDidFailWithError(IWebError* error)
 {
-#if ENABLE(CLIENT_BASED_GEOLOCATION)
     if (!m_page)
         return E_FAIL;
     if (!error)
@@ -6572,9 +6586,6 @@ HRESULT WebView::geolocationDidFailWithError(IWebError* error)
     RefPtr<GeolocationError> geolocationError = GeolocationError::create(GeolocationError::PositionUnavailable, descriptionString);
     m_page->geolocationController()->errorOccurred(geolocationError.get());
     return S_OK;
-#else
-    return E_NOTIMPL;
-#endif
 }
 
 HRESULT WebView::setDomainRelaxationForbiddenForURLScheme(BOOL forbidden, BSTR scheme)

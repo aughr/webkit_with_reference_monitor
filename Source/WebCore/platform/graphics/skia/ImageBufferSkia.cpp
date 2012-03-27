@@ -85,7 +85,7 @@ private:
 
 static SkCanvas* createAcceleratedCanvas(const IntSize& size, ImageBufferData* data, DeferralMode deferralMode)
 {
-    GraphicsContext3D* context3D = SharedGraphicsContext3D::get();
+    RefPtr<GraphicsContext3D> context3D = SharedGraphicsContext3D::get();
     if (!context3D)
         return 0;
     GrContext* gr = context3D->grContext();
@@ -94,23 +94,23 @@ static SkCanvas* createAcceleratedCanvas(const IntSize& size, ImageBufferData* d
     gr->resetContext();
     GrTextureDesc desc;
     desc.fFlags = kRenderTarget_GrTextureFlagBit;
-    desc.fAALevel = kNone_GrAALevel;
+    desc.fSampleCnt = 0;
     desc.fWidth = size.width();
     desc.fHeight = size.height();
-    desc.fConfig = kRGBA_8888_GrPixelConfig;
+    desc.fConfig = kSkia8888_PM_GrPixelConfig;
     SkAutoTUnref<GrTexture> texture(gr->createUncachedTexture(desc, 0, 0));
     if (!texture.get())
         return 0;
     SkCanvas* canvas;
     SkAutoTUnref<SkDevice> device(new SkGpuDevice(gr, texture.get()));
     if (deferralMode == Deferred) {
-        SkAutoTUnref<AcceleratedDeviceContext> deviceContext(new AcceleratedDeviceContext(context3D));
+        SkAutoTUnref<AcceleratedDeviceContext> deviceContext(new AcceleratedDeviceContext(context3D.get()));
         canvas = new SkDeferredCanvas(device.get(), deviceContext.get());
     } else
         canvas = new SkCanvas(device.get());
-    data->m_platformContext.setGraphicsContext3D(context3D);
+    data->m_platformContext.setAccelerated(true);
 #if USE(ACCELERATED_COMPOSITING)
-    data->m_platformLayer = Canvas2DLayerChromium::create(context3D, size);
+    data->m_platformLayer = Canvas2DLayerChromium::create(context3D.release(), size);
     data->m_platformLayer->setTextureId(texture.get()->getTextureHandle());
     data->m_platformLayer->setCanvas(canvas);
 #endif
@@ -167,11 +167,6 @@ ImageBuffer::~ImageBuffer()
 GraphicsContext* ImageBuffer::context() const
 {
     return m_context.get();
-}
-
-size_t ImageBuffer::dataSize() const
-{
-    return m_size.width() * m_size.height() * 4;
 }
 
 PassRefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior) const

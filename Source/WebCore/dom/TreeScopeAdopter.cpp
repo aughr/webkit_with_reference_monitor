@@ -28,12 +28,13 @@
 #include "Document.h"
 #include "NodeRareData.h"
 #include "ShadowRoot.h"
+#include "ShadowTree.h"
 
 namespace WebCore {
 
-static inline ShadowRoot* shadowRootFor(Node* node)
+static inline ShadowTree* shadowTreeFor(Node* node)
 {
-    return node->isElementNode() ? toElement(node)->shadowRoot() : 0;
+    return node->isElementNode() ? toElement(node)->shadowTree() : 0;
 }
 
 void TreeScopeAdopter::moveTreeToNewScope(Node* root) const
@@ -62,10 +63,10 @@ void TreeScopeAdopter::moveTreeToNewScope(Node* root) const
         if (willMoveToNewDocument)
             moveNodeToNewDocument(node, oldDocument, newDocument);
 
-        if (ShadowRoot* shadow = shadowRootFor(node)) {
-            shadow->setParentTreeScope(m_newScope);
+        if (ShadowTree* tree = shadowTreeFor(node)) {
+            tree->setParentTreeScope(m_newScope);
             if (willMoveToNewDocument)
-                moveTreeToNewDocument(shadow, oldDocument, newDocument);
+                moveShadowTreeToNewDocument(tree, oldDocument, newDocument);
         }
     }
 }
@@ -74,9 +75,15 @@ void TreeScopeAdopter::moveTreeToNewDocument(Node* root, Document* oldDocument, 
 {
     for (Node* node = root; node; node = node->traverseNextNode(root)) {
         moveNodeToNewDocument(node, oldDocument, newDocument);
-        if (ShadowRoot* shadow = shadowRootFor(node))
-            moveTreeToNewDocument(shadow, oldDocument, newDocument);
+        if (ShadowTree* tree = shadowTreeFor(node))
+            moveShadowTreeToNewDocument(tree, oldDocument, newDocument);
     }
+}
+
+inline void TreeScopeAdopter::moveShadowTreeToNewDocument(ShadowTree* tree, Document* oldDocument, Document* newDocument) const
+{
+    for (ShadowRoot* root = tree->youngestShadowRoot(); root; root = root->olderShadowRoot())
+        moveTreeToNewDocument(root, oldDocument, newDocument);
 }
 
 #ifndef NDEBUG
@@ -96,10 +103,8 @@ inline void TreeScopeAdopter::moveNodeToNewDocument(Node* node, Document* oldDoc
     ASSERT(!node->inDocument() || oldDocument != newDocument);
 
     newDocument->guardRef();
-    if (oldDocument) {
+    if (oldDocument)
         oldDocument->moveNodeIteratorsToNewDocument(node, newDocument);
-        oldDocument->guardDeref();
-    }
 
     node->setDocument(newDocument);
 
@@ -110,6 +115,9 @@ inline void TreeScopeAdopter::moveNodeToNewDocument(Node* node, Document* oldDoc
 
     node->didMoveToNewDocument(oldDocument);
     ASSERT(didMoveToNewDocumentWasCalled);
+    
+    if (oldDocument)
+        oldDocument->guardDeref();
 }
 
 }

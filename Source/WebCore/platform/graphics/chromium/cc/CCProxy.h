@@ -53,9 +53,14 @@ public:
     static void setImplThread(CCThread*);
     static CCThread* implThread();
 
+    // Returns 0 if the current thread is neither the main thread nor the impl thread.
+    static CCThread* currentThread();
+
     virtual ~CCProxy();
 
     virtual bool compositeAndReadback(void *pixels, const IntRect&) = 0;
+
+    virtual void startPageScaleAnimation(const IntSize& targetPosition, bool useAnchor, float scale, double durationSec) = 0;
 
     virtual void finishAllRendering() = 0;
 
@@ -68,6 +73,10 @@ public:
     // Attempts to initialize the layer renderer. Returns false if the context isn't usable for compositing.
     virtual bool initializeLayerRenderer() = 0;
 
+    // Attempts to recreate the context and layer renderer after a context lost. Returns false if the renderer couldn't be
+    // reinitialized.
+    virtual bool recreateContext() = 0;
+
     virtual int compositorIdentifier() const = 0;
 
     virtual const LayerRendererCapabilities& layerRendererCapabilities() const = 0;
@@ -77,12 +86,13 @@ public:
     virtual void setNeedsRedraw() = 0;
     virtual void setVisible(bool) = 0;
 
+    virtual bool commitRequested() const = 0;
+
     virtual void start() = 0; // Must be called before using the proxy.
     virtual void stop() = 0; // Must be called before deleting the proxy.
 
-    // Whether sub-regions of textures can be updated or if complete texture
-    // updates are required.
-    virtual bool partialTextureUpdateCapability() const = 0;
+    // Maximum number of sub-region texture updates supported for each commit.
+    virtual size_t maxPartialTextureUpdates() const = 0;
 
     // Debug hooks
 #ifndef NDEBUG
@@ -94,7 +104,7 @@ public:
     virtual GraphicsContext3D* context() = 0;
 
     // Testing hooks
-    virtual void loseCompositorContext(int numTimes) = 0;
+    virtual void loseContext() = 0;
 
 #ifndef NDEBUG
     static void setCurrentThreadIsImplThread(bool);

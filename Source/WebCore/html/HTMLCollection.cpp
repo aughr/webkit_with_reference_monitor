@@ -61,6 +61,7 @@ bool HTMLCollection::shouldIncludeChildren(CollectionType type)
     case MapAreas:
     case OtherCollection:
     case SelectOptions:
+    case SelectedOptions:
     case DataListOptions:
     case WindowNamedItems:
 #if ENABLE(MICRODATA)
@@ -114,6 +115,13 @@ inline bool HTMLCollection::isAcceptableElement(Element* element) const
         return element->hasLocalName(trTag);
     case SelectOptions:
         return element->hasLocalName(optionTag);
+    case SelectedOptions:
+        if (element->hasLocalName(optionTag)) {
+            HTMLOptionElement* option = static_cast<HTMLOptionElement*>(element);
+            if (option->selected())
+                return true;
+        }
+        return false;
     case DataListOptions:
         if (element->hasLocalName(optionTag)) {
             HTMLOptionElement* option = static_cast<HTMLOptionElement*>(element);
@@ -254,7 +262,7 @@ bool HTMLCollection::checkForNameMatch(Element* element, bool checkName, const A
     if (m_type == DocAll && !nameShouldBeVisibleInDocumentAll(e))
         return false;
 
-    return e->getAttribute(nameAttr) == name && e->getIdAttribute() != name;
+    return e->getNameAttribute() == name && e->getIdAttribute() != name;
 }
 
 Node* HTMLCollection::namedItem(const AtomicString& name) const
@@ -294,7 +302,7 @@ void HTMLCollection::updateNameCache() const
             continue;
         HTMLElement* e = toHTMLElement(element);
         const AtomicString& idAttrVal = e->getIdAttribute();
-        const AtomicString& nameAttrVal = e->getAttribute(nameAttr);
+        const AtomicString& nameAttrVal = e->getNameAttribute();
         if (!idAttrVal.isEmpty())
             append(m_cache.idCache, idAttrVal, e);
         if (!nameAttrVal.isEmpty() && idAttrVal != nameAttrVal && (m_type != DocAll || nameShouldBeVisibleInDocumentAll(e)))

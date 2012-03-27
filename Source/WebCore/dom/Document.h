@@ -36,6 +36,7 @@
 #include "DocumentEventQueue.h"
 #include "DocumentTiming.h"
 #include "IconURL.h"
+#include "InspectorCounters.h"
 #include "IntRect.h"
 #include "LayoutTypes.h"
 #include "PageVisibilityState.h"
@@ -350,7 +351,10 @@ public:
     virtual PassRefPtr<Element> createElementNS(const String& namespaceURI, const String& qualifiedName, ExceptionCode&);
     PassRefPtr<Element> createElement(const QualifiedName&, bool createdByParser);
 
+    bool cssRegionsEnabled() const;
     PassRefPtr<WebKitNamedFlow> webkitGetFlowByName(const String&);
+
+    bool regionBasedColumnsEnabled() const;
 
     /**
      * Retrieve all nodes that intersect a rect in the window's document, until it is fully enclosed by
@@ -617,6 +621,8 @@ public:
 
     virtual void disableEval();
 
+    bool canNavigate(Frame* targetFrame);
+
     CSSStyleSheet* pageUserSheet();
     void clearPageUserSheet();
     void updatePageUserSheet();
@@ -625,10 +631,10 @@ public:
     void clearPageGroupUserSheets();
     void updatePageGroupUserSheets();
 
+    const Vector<RefPtr<CSSStyleSheet> >* documentUserSheets() const { return m_userSheets.get(); }
     void addUserSheet(PassRefPtr<CSSStyleSheet> userSheet);
 
     CSSStyleSheet* elementSheet();
-    CSSStyleSheet* mappedElementSheet();
     
     virtual PassRefPtr<DocumentParser> createParser();
     DocumentParser* parser() const { return m_parser.get(); }
@@ -771,7 +777,8 @@ public:
         TRANSITIONEND_LISTENER               = 0x800,
         BEFORELOAD_LISTENER                  = 0x1000,
         TOUCH_LISTENER                       = 0x2000,
-        SCROLL_LISTENER                      = 0x4000
+        SCROLL_LISTENER                      = 0x4000,
+        REGIONLAYOUTUPDATE_LISTENER          = 0x8000
     };
 
     bool hasListenerType(ListenerType listenerType) const { return (m_listenerTypes & listenerType); }
@@ -1026,16 +1033,8 @@ public:
     bool processingLoadEvent() const { return m_processingLoadEvent; }
     bool loadEventFinished() const { return m_loadEventFinished; }
 
-#if ENABLE(SQL_DATABASE)
-    virtual bool allowDatabaseAccess() const;
-    virtual void databaseExceededQuota(const String& name);
-#endif
-
     virtual bool isContextThread() const;
     virtual bool isJSExecutionForbidden() const { return false; }
-
-    void setUsingGeolocation(bool f) { m_usingGeolocation = f; }
-    bool usingGeolocation() const { return m_usingGeolocation; };
 
     bool containsValidityStyleRules() const { return m_containsValidityStyleRules; }
     void setContainsValidityStyleRules() { m_containsValidityStyleRules = true; }
@@ -1084,6 +1083,11 @@ public:
     void removeFullScreenElementOfSubtree(Node*, bool amongChildrenOnly = false);
     bool isAnimatingFullScreen() const;
     void setAnimatingFullScreen(bool);
+
+    // W3C API
+    bool webkitFullscreenEnabled() const;
+    Element* webkitFullscreenElement() const { return !m_fullScreenElementStack.isEmpty() ? m_fullScreenElementStack.first().get() : 0; }
+    void webkitExitFullscreen();
 #endif
 
     // Used to allow element that loads data without going through a FrameLoader to delay the 'load' event.
@@ -1112,6 +1116,10 @@ public:
     unsigned wheelEventHandlerCount() const { return m_wheelEventHandlerCount; }
     void didAddWheelEventHandler();
     void didRemoveWheelEventHandler();
+
+    unsigned touchEventHandlerCount() const { return m_touchEventHandlerCount; }
+    void didAddTouchEventHandler();
+    void didRemoveTouchEventHandler();
 
     bool visualUpdatesAllowed() const;
 
@@ -1190,6 +1198,13 @@ private:
 
     HTMLCollection* cachedCollection(CollectionType);
 
+#if ENABLE(FULLSCREEN_API)
+    void clearFullscreenElementStack();
+    void popFullscreenElementStack();
+    void pushFullscreenElementStack(Element*);
+    void addDocumentToFullScreenChangeEventQueue(Document*);
+#endif
+
     int m_guardRefCount;
 
     OwnPtr<CSSStyleSelector> m_styleSelector;
@@ -1242,7 +1257,6 @@ private:
     bool m_hasNodesWithPlaceholderStyle;
 
     RefPtr<CSSStyleSheet> m_elemSheet;
-    RefPtr<CSSStyleSheet> m_mappedElementSheet;
     RefPtr<CSSStyleSheet> m_pageUserSheet;
     mutable OwnPtr<Vector<RefPtr<CSSStyleSheet> > > m_pageGroupUserSheets;
     OwnPtr<Vector<RefPtr<CSSStyleSheet> > > m_userSheets;
@@ -1411,8 +1425,6 @@ private:
     bool m_isViewSource;
     bool m_sawElementsInKnownNamespaces;
 
-    bool m_usingGeolocation;
-
     RefPtr<DocumentEventQueue> m_eventQueue;
 
     RefPtr<DocumentWeakReference> m_weakReference;
@@ -1424,10 +1436,11 @@ private:
 #if ENABLE(FULLSCREEN_API)
     bool m_areKeysEnabledInFullScreen;
     RefPtr<Element> m_fullScreenElement;
+    Deque<RefPtr<Element> > m_fullScreenElementStack;
     RenderFullScreen* m_fullScreenRenderer;
     Timer<Document> m_fullScreenChangeDelayTimer;
-    Deque<RefPtr<Element> > m_fullScreenChangeEventTargetQueue;
-    Deque<RefPtr<Element> > m_fullScreenErrorEventTargetQueue;
+    Deque<RefPtr<Node> > m_fullScreenChangeEventTargetQueue;
+    Deque<RefPtr<Node> > m_fullScreenErrorEventTargetQueue;
     bool m_isAnimatingFullScreen;
     LayoutRect m_savedPlaceholderFrameRect;
     RefPtr<RenderStyle> m_savedPlaceholderRenderStyle;
@@ -1449,17 +1462,14 @@ private:
     unsigned m_writeRecursionDepth;
     
     unsigned m_wheelEventHandlerCount;
+    unsigned m_touchEventHandlerCount;
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     RefPtr<ScriptedAnimationController> m_scriptedAnimationController;
 #endif
 
     Timer<Document> m_pendingTasksTimer;
-    Vector<OwnPtr<Task> > m_pendingTasks;
-    
-#ifndef NDEBUG
-    bool m_updatingStyleSelector;
-#endif
+    Vector<OwnPtr<Task> > m_pendingTasks;    
 };
 
 // Put these methods here, because they require the Document definition, but we really want to inline them.
@@ -1481,6 +1491,7 @@ inline Node::Node(Document* document, ConstructionType type)
 #if !defined(NDEBUG) || (defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS)
     trackForDebugging();
 #endif
+    InspectorCounters::incrementCounter(InspectorCounters::NodeCounter);
 }
 
 } // namespace WebCore

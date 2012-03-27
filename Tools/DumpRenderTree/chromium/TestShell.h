@@ -36,7 +36,6 @@
 #include "GamepadController.h"
 #include "LayoutTestController.h"
 #include "NotificationPresenter.h"
-#include "PlainTextController.h"
 #include "TestEventPrinter.h"
 #include "TextInputController.h"
 #include "WebPreferences.h"
@@ -163,6 +162,9 @@ public:
     // testing where we only want to have the output from the last load.
     void setDumpWhenFinished(bool dumpWhenFinished) { m_dumpWhenFinished = dumpWhenFinished; }
 
+    void setIsDisplayingModalDialog(bool isDisplayingModalDialog) { m_isDisplayingModalDialog = isDisplayingModalDialog; }
+    bool isDisplayingModalDialog() const { return m_isDisplayingModalDialog; }
+
     WebViewHost* createNewWindow(const WebKit::WebURL&);
     void closeWindow(WebViewHost*);
     void closeRemainingWindows();
@@ -212,7 +214,6 @@ private:
     OwnPtr<GamepadController> m_gamepadController;
     OwnPtr<EventSender> m_eventSender;
     OwnPtr<LayoutTestController> m_layoutTestController;
-    OwnPtr<PlainTextController> m_plainTextController;
     OwnPtr<TextInputController> m_textInputController;
     OwnPtr<NotificationPresenter> m_notificationPresenter;
     OwnPtr<WebViewHost> m_webViewHost;
@@ -234,6 +235,7 @@ private:
     bool m_stressDeopt;
     std::string m_javaScriptFlags;
     bool m_dumpWhenFinished;
+    bool m_isDisplayingModalDialog;
 
 
     // List of all windows in this process.

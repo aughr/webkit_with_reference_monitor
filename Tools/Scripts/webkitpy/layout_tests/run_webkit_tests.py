@@ -85,7 +85,7 @@ def lint(port, options, expectations_class):
 def run(port, options, args, regular_output=sys.stderr, buildbot_output=sys.stdout):
     warnings = _set_up_derived_options(port, options)
 
-    printer = printing.Printer(port, options, regular_output, buildbot_output, configure_logging=True)
+    printer = printing.Printer(port, options, regular_output, buildbot_output, logger=logging.getLogger())
 
     for warning in warnings:
         _log.warning(warning)
@@ -121,11 +121,8 @@ def run(port, options, args, regular_output=sys.stderr, buildbot_output=sys.stdo
         printer.print_update("Parsing expectations ...")
         manager.parse_expectations()
 
-        result_summary = manager.set_up_run()
-        if result_summary:
-            unexpected_result_count = manager.run(result_summary)
-            manager.clean_up_run()
-            _log.debug("Testing completed, Exit status: %d" % unexpected_result_count)
+        unexpected_result_count = manager.run()
+        _log.debug("Testing completed, Exit status: %d" % unexpected_result_count)
     finally:
         printer.cleanup()
 
@@ -137,13 +134,6 @@ def _set_up_derived_options(port, options):
     # We return a list of warnings to print after the printer is initialized.
     warnings = []
 
-    if options.worker_model is None:
-        options.worker_model = port.default_worker_model()
-
-    if options.worker_model == 'inline':
-        if options.child_processes and int(options.child_processes) > 1:
-            warnings.append("--worker-model=inline overrides --child-processes")
-        options.child_processes = "1"
     if not options.child_processes:
         options.child_processes = os.environ.get("WEBKIT_TEST_CHILD_PROCESSES",
                                                  str(port.default_child_processes()))
@@ -156,9 +146,9 @@ def _set_up_derived_options(port, options):
 
     if not options.time_out_ms:
         if options.configuration == "Debug":
-            options.time_out_ms = str(2 * Manager.DEFAULT_TEST_TIMEOUT_MS)
+            options.time_out_ms = str(2 * port.default_test_timeout_ms())
         else:
-            options.time_out_ms = str(Manager.DEFAULT_TEST_TIMEOUT_MS)
+            options.time_out_ms = str(port.default_test_timeout_ms())
 
     options.slow_time_out_ms = str(5 * int(options.time_out_ms))
 
@@ -174,6 +164,9 @@ def _set_up_derived_options(port, options):
     if not options.http and options.force:
         warnings.append("--no-http is ignored since --force is also provided")
         options.http = True
+
+    if options.skip_pixel_test_if_no_baseline and not options.pixel_tests:
+        warnings.append("--skip-pixel-test-if-no-baseline is only supported with -p (--pixel-tests)")
 
     if options.ignore_metrics and (options.new_baseline or options.reset_results):
         warnings.append("--ignore-metrics has no effect with --new-baselines or with --reset-results")
@@ -196,10 +189,12 @@ def parse_args(args=None):
 
     Returns a tuple of options, args from optparse"""
 
+    option_group_definitions = []
+
     # FIXME: All of these options should be stored closer to the code which
     # FIXME: actually uses them. configuration_options should move
     # FIXME: to WebKitPort and be shared across all scripts.
-    configuration_options = [
+    option_group_definitions.append(("Configuration Options", [
         optparse.make_option("-t", "--target", dest="configuration",
                              help="(DEPRECATED)"),
         # FIXME: --help should display which configuration is default.
@@ -215,12 +210,12 @@ def parse_args(args=None):
         optparse.make_option('--efl', action='store_const', const='efl', dest="platform", help='Alias for --platform=efl'),
         optparse.make_option('--gtk', action='store_const', const='gtk', dest="platform", help='Alias for --platform=gtk'),
         optparse.make_option('--qt', action='store_const', const='qt', dest="platform", help='Alias for --platform=qt'),
-    ]
+    ]))
 
-    print_options = printing.print_options()
+    option_group_definitions.append(("Printing Options", printing.print_options()))
 
     # FIXME: These options should move onto the ChromiumPort.
-    chromium_options = [
+    option_group_definitions.append(("Chromium-specific Options", [
         optparse.make_option("--startup-dialog", action="store_true",
             default=False, help="create a dialog on DumpRenderTree startup"),
         optparse.make_option("--gp-fault-error-box", action="store_true",
@@ -264,9 +259,11 @@ def parse_args(args=None):
         optparse.make_option("--per-tile-painting",
             action="store_true",
             help="Use per-tile painting of composited pages"),
-    ]
+        optparse.make_option("--adb-args", type="string",
+            help="Arguments parsed to Android adb, to select device, etc."),
+    ]))
 
-    webkit_options = [
+    option_group_definitions.append(("WebKit Options", [
         optparse.make_option("--gc-between-tests", action="store_true", default=False,
             help="Force garbage collection between each test"),
         optparse.make_option("--complex-text", action="store_true", default=False,
@@ -281,15 +278,15 @@ def parse_args(args=None):
             help="Use WebKitTestRunner rather than DumpRenderTree."),
         optparse.make_option("--root", action="store",
             help="Path to a pre-built root of WebKit (for running tests using a nightly build of WebKit)"),
-    ]
+    ]))
 
-    old_run_webkit_tests_compat = [
+    option_group_definitions.append(("ORWT Compatibility Options", [
         # FIXME: Remove this option once the bots don't refer to it.
         # results.html is smart enough to figure this out itself.
         _compat_shim_option("--use-remote-links-to-tests"),
-    ]
+    ]))
 
-    results_options = [
+    option_group_definitions.append(("Results Options", [
         optparse.make_option("-p", "--pixel-tests", action="store_true",
             dest="pixel_tests", help="Enable pixel-to-pixel PNG comparisons"),
         optparse.make_option("--no-pixel-tests", action="store_false",
@@ -314,6 +311,9 @@ def parse_args(args=None):
         optparse.make_option("--no-new-test-results", action="store_false",
             dest="new_test_results", default=True,
             help="Don't create new baselines when no expected results exist"),
+        optparse.make_option("--skip-pixel-test-if-no-baseline", action="store_true",
+            dest="skip_pixel_test_if_no_baseline", help="Do not generate and check pixel result in the case when "
+                 "no image baseline is available for the test."),
         optparse.make_option("--skip-failing-tests", action="store_true",
             default=False, help="Skip tests that are expected to fail. "
                  "Note: When using this option, you might miss new crashes "
@@ -348,9 +348,9 @@ def parse_args(args=None):
         optparse.make_option("--ignore-metrics", action="store_true", dest="ignore_metrics",
             default=False, help="Ignore rendering metrics related information from test "
             "output, only compare the structure of the rendertree."),
-    ]
+    ]))
 
-    test_options = [
+    option_group_definitions.append(("Testing Options", [
         optparse.make_option("--build", dest="build",
             action="store_true", default=True,
             help="Check to ensure the DumpRenderTree build is up-to-date "
@@ -369,6 +369,8 @@ def parse_args(args=None):
         # old-run-webkit-tests:
         # -i|--ignore-tests               Comma-separated list of directories
         #                                 or tests to ignore
+        optparse.make_option("-i", "--ignore-tests", action="append", default=[],
+            help="directories or test to ignore (may specify multiple times)"),
         optparse.make_option("--test-list", action="append",
             help="read list of tests to run from file", metavar="FILE"),
         # old-run-webkit-tests uses --skipped==[default|ignore|only]
@@ -398,9 +400,6 @@ def parse_args(args=None):
         optparse.make_option("--child-processes",
             help="Number of DumpRenderTrees to run in parallel."),
         # FIXME: Display default number of child processes that will run.
-        optparse.make_option("--worker-model", action="store",
-            default=None, help=("controls worker model. Valid values are "
-                                "'inline' and 'processes'.")),
         optparse.make_option("-f", "--experimental-fully-parallel",
             action="store_true",
             help="run all tests in parallel"),
@@ -424,16 +423,16 @@ def parse_args(args=None):
             help="Don't re-try any tests that produce unexpected results."),
         optparse.make_option("--max-locked-shards", type="int",
             help="Set the maximum number of locked shards"),
-    ]
+    ]))
 
-    misc_options = [
+    option_group_definitions.append(("Miscellaneous Options", [
         optparse.make_option("--lint-test-files", action="store_true",
         default=False, help=("Makes sure the test files parse for all "
                             "configurations. Does not run any tests.")),
-    ]
+    ]))
 
     # FIXME: Move these into json_results_generator.py
-    results_json_options = [
+    option_group_definitions.append(("Result JSON Options", [
         optparse.make_option("--master-name", help="The name of the buildbot master."),
         optparse.make_option("--builder-name", default="",
             help=("The name of the builder shown on the waterfall running "
@@ -446,19 +445,21 @@ def parse_args(args=None):
         optparse.make_option("--test-results-server", default="",
             help=("If specified, upload results json files to this appengine "
                   "server.")),
-    ]
+    ]))
 
-    option_list = (configuration_options + print_options +
-                   chromium_options + webkit_options + results_options + test_options +
-                   misc_options + results_json_options + old_run_webkit_tests_compat)
-    option_parser = optparse.OptionParser(option_list=option_list)
+    option_parser = optparse.OptionParser()
+
+    for group_name, group_options in option_group_definitions:
+        option_group = optparse.OptionGroup(option_parser, group_name)
+        option_group.add_options(group_options)
+        option_parser.add_option_group(option_group)
 
     return option_parser.parse_args(args)
 
 
 def main():
     options, args = parse_args()
-    if options.platform and options.platform.startswith('test'):
+    if options.platform and 'test' in options.platform:
         # It's a bit lame to import mocks into real code, but this allows the user
         # to run tests against the test platform interactively, which is useful for
         # debugging test failures.
@@ -468,6 +469,7 @@ def main():
         host = Host()
     host._initialize_scm()
     port = host.port_factory.get(options.platform, options)
+    logging.getLogger().setLevel(logging.DEBUG if options.verbose else logging.INFO)
     return run(port, options, args)
 
 

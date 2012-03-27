@@ -171,7 +171,8 @@ enum EBoxDirection { BNORMAL, BREVERSE };
 enum EFlexPack { PackStart, PackEnd, PackCenter, PackJustify, PackDistribute };
 enum EFlexAlign { AlignAuto, AlignStart, AlignEnd, AlignCenter, AlignStretch, AlignBaseline };
 enum EFlexDirection { FlowRow, FlowRowReverse, FlowColumn, FlowColumnReverse };
-enum EFlexWrap { FlexNoWrap, FlexWrap, FlexWrapReverse };
+enum EFlexLinePack { LinePackStart, LinePackEnd, LinePackCenter, LinePackJustify, LinePackDistribute, LinePackStretch };
+enum EFlexWrap { FlexWrapNone, FlexWrap, FlexWrapReverse };
 
 enum ETextSecurity {
     TSNONE, TSDISC, TSCIRCLE, TSSQUARE
@@ -454,7 +455,9 @@ enum RegionOverflow { AutoRegionOverflow, BreakRegionOverflow };
 
 enum ColumnAxis { HorizontalColumnAxis, VerticalColumnAxis, AutoColumnAxis };
 
-enum LineGridSnap { LineGridSnapNone, LineGridSnapBaseline, LineGridSnapContain };
+enum LineSnap { LineSnapNone, LineSnapBaseline, LineSnapContain };
+
+enum LineAlign { LineAlignNone, LineAlignEdges };
 
 enum WrapFlow { WrapFlowAuto, WrapFlowBoth, WrapFlowLeft, WrapFlowRight, WrapFlowMaximum, WrapFlowClear };
 

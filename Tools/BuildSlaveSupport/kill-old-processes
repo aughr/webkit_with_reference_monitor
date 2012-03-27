@@ -55,8 +55,15 @@ def main():
     ]
 
     tasksToKillMac = [
+        "cc1plus",
+        "cc1objplus",
+        "clang",
+        "clang++",
+        "gcc-4.2",
+        "i686-apple-darwin10-gcc-4.2.1"
         "jsc",
         "make",
+        "pboard", # FIXME: https://bugs.webkit.org/show_bug.cgi?id=81012
         "per5.12",
         "perl",
         "Problem Reporter",
@@ -71,6 +78,7 @@ def main():
         "WebKitTestRunner Web Content",
         "WebKitTestRunner",
         "WebProcess",
+        "xcodebuild",
     ]
 
     if sys.platform == 'darwin':

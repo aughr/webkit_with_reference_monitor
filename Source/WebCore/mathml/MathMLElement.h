@@ -42,9 +42,16 @@ protected:
 
 private:    
     virtual bool isMathMLElement() const { return true; }
-    virtual void parseAttribute(Attribute*) OVERRIDE;
+    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
+    virtual void collectStyleForAttribute(Attribute*, StylePropertySet*) OVERRIDE;
 };
-    
+
+inline MathMLElement* toMathMLElement(Element* element)
+{
+    ASSERT(!element || element->isMathMLElement());
+    return static_cast<MathMLElement*>(element);
+}
+
 }
 
 #endif // ENABLE(MATHML)

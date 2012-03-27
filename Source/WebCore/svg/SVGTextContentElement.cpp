@@ -228,6 +228,27 @@ bool SVGTextContentElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
 }
 
+bool SVGTextContentElement::isPresentationAttribute(const QualifiedName& name) const
+{
+    if (name.matches(XMLNames::spaceAttr))
+        return true;
+    return SVGStyledElement::isPresentationAttribute(name);
+}
+
+void SVGTextContentElement::collectStyleForAttribute(Attribute* attr, StylePropertySet* style)
+{
+    if (!isSupportedAttribute(attr->name()))
+        SVGStyledElement::collectStyleForAttribute(attr, style);
+    else if (attr->name().matches(XMLNames::spaceAttr)) {
+        DEFINE_STATIC_LOCAL(const AtomicString, preserveString, ("preserve"));
+
+        if (attr->value() == preserveString)
+            addPropertyToAttributeStyle(style, CSSPropertyWhiteSpace, CSSValuePre);
+        else
+            addPropertyToAttributeStyle(style, CSSPropertyWhiteSpace, CSSValueNowrap);
+    }
+}
+
 void SVGTextContentElement::parseAttribute(Attribute* attr)
 {
     SVGParsingError parseError = NoError;
@@ -243,14 +264,6 @@ void SVGTextContentElement::parseAttribute(Attribute* attr)
     } else if (SVGTests::parseAttribute(attr)
                || SVGExternalResourcesRequired::parseAttribute(attr)) {
     } else if (SVGLangSpace::parseAttribute(attr)) {
-        if (attr->name().matches(XMLNames::spaceAttr)) {
-            DEFINE_STATIC_LOCAL(const AtomicString, preserveString, ("preserve"));
-
-            if (attr->value() == preserveString)
-                addCSSProperty(CSSPropertyWhiteSpace, CSSValuePre);
-            else
-                addCSSProperty(CSSPropertyWhiteSpace, CSSValueNowrap);
-        }
     } else
         ASSERT_NOT_REACHED();
 
@@ -316,9 +329,9 @@ void SVGTextContentElement::childrenChanged(bool changedByParser, Node* beforeCh
         return;
 
     // Invalidate the TextPosition cache in SVGTextLayoutAttributesBuilder as it may now point
-    // to no-longer existing SVGTextPositioningElements and thus needs to be rebuild.
+    // to no-longer existing SVGTextPositioningElements and thus needs to be rebuilt.
     if (RenderSVGText* textRenderer = RenderSVGText::locateRenderSVGTextAncestor(renderer()))
-        textRenderer->textDOMChanged();
+        textRenderer->invalidateTextPositioningElements();
 }
 
 }

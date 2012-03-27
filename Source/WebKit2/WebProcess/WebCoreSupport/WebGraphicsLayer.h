@@ -37,31 +37,35 @@
 #include <WebCore/RunLoop.h>
 #include <wtf/text/StringHash.h>
 
-#if USE(ACCELERATED_COMPOSITING)
+#if USE(UI_SIDE_COMPOSITING)
+namespace WebCore {
+class WebGraphicsLayer;
+}
 
 namespace WebKit {
 
-class WebLayerTreeTileClient {
+class WebGraphicsLayerClient {
 public:
     // TiledBackingStoreRemoteTileClient
     virtual void createTile(WebLayerID, int tileID, const UpdateInfo&) = 0;
     virtual void updateTile(WebLayerID, int tileID, const UpdateInfo&) = 0;
     virtual void removeTile(WebLayerID, int tileID) = 0;
+
+    virtual WebCore::IntRect visibleContentsRect() const = 0;
     virtual bool layerTreeTileUpdatesAllowed() const = 0;
     virtual int64_t adoptImageBackingStore(WebCore::Image*) = 0;
     virtual void releaseImageBackingStore(int64_t) = 0;
     virtual void didSyncCompositingStateForLayer(const WebLayerInfo&) = 0;
-    virtual void didDeleteLayer(WebLayerID) = 0;
+    virtual void attachLayer(WebCore::WebGraphicsLayer*) = 0;
+    virtual void detachLayer(WebCore::WebGraphicsLayer*) = 0;
 };
 }
 
 namespace WebCore {
 
 class WebGraphicsLayer : public WebCore::GraphicsLayer
-#if USE(TILED_BACKING_STORE)
                        , public TiledBackingStoreClient
                        , public WebKit::TiledBackingStoreRemoteTileClient
-#endif
 {
 public:
     WebGraphicsLayer(GraphicsLayerClient*);
@@ -96,7 +100,7 @@ public:
     void setNeedsDisplay();
     void setNeedsDisplayInRect(const FloatRect&);
     void setContentsNeedsDisplay();
-    void setVisibleContentRectAndScale(const IntRect&, float scale);
+    void setContentsScale(float);
     void setVisibleContentRectTrajectoryVector(const FloatPoint&);
     virtual void syncCompositingState(const FloatRect&);
     virtual void syncCompositingStateForThisLayerOnly();
@@ -129,14 +133,12 @@ public:
     virtual void updateTile(int tileID, const WebKit::UpdateInfo&);
     virtual void removeTile(int tileID);
 
-    void setLayerTreeTileClient(WebKit::WebLayerTreeTileClient*);
-    WebKit::WebLayerTreeTileClient* layerTreeTileClient() const;
+    void setWebGraphicsLayerClient(WebKit::WebGraphicsLayerClient*);
 
+    void adjustVisibleRect();
     bool isReadyForTileBufferSwap() const;
-    void updateTileBuffersRecursively();
     void updateContentBuffers();
     void purgeBackingStores();
-    void recreateBackingStoreIfNeeded();
 #endif
 
 private:
@@ -144,7 +146,6 @@ private:
     RefPtr<Image> m_image;
     GraphicsLayer* m_maskTarget;
     FloatRect m_needsDisplayRect;
-    IntRect m_pageVisibleRect;
     LayerTransform m_layerTransform;
     bool m_needsDisplay : 1;
     bool m_modified : 1;
@@ -154,6 +155,7 @@ private:
 
     void notifyChange();
     void notifyChangeRecursively();
+    void createBackingStore();
     HashSet<String> m_transformAnimations;
 
     bool selfOrAncestorHasActiveTransformAnimations() const;
@@ -161,7 +163,7 @@ private:
 #if USE(TILED_BACKING_STORE)
     void computeTransformedVisibleRect();
 
-    WebKit::WebLayerTreeTileClient* m_layerTreeTileClient;
+    WebKit::WebGraphicsLayerClient* m_webGraphicsLayerClient;
     OwnPtr<WebCore::TiledBackingStore> m_mainBackingStore;
     OwnPtr<WebCore::TiledBackingStore> m_previousBackingStore;
     float m_contentsScale;

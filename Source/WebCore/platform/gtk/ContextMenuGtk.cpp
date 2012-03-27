@@ -20,7 +20,7 @@
 #include "config.h"
 #include "ContextMenu.h"
 
-#include "GOwnPtr.h"
+#include <wtf/gobject/GOwnPtr.h>
 #include <gtk/gtk.h>
 
 namespace WebCore {
@@ -73,6 +73,14 @@ PlatformMenuDescription ContextMenu::releasePlatformDescription()
     m_platformDescription = 0;
 
     return description;
+}
+
+unsigned ContextMenu::itemCount() const
+{
+    ASSERT(m_platformDescription);
+
+    GOwnPtr<GList> children(gtk_container_get_children(GTK_CONTAINER(m_platformDescription)));
+    return g_list_length(children.get());
 }
 
 Vector<ContextMenuItem> contextMenuItemVector(const PlatformMenuDescription menu)

@@ -241,13 +241,9 @@ void FrameLoaderClientEfl::frameLoaderDestroyed()
 
 void FrameLoaderClientEfl::dispatchDidReceiveResponse(DocumentLoader* loader, unsigned long, const ResourceResponse& response)
 {
-#if USE(SOUP)
     // Update our knowledge of request soup flags - some are only set
     // after the request is done.
     loader->request().setSoupMessageFlags(response.soupMessageFlags());
-#else
-    UNUSED_PARAM(loader);
-#endif
 
     m_response = response;
 }
@@ -331,30 +327,6 @@ PassRefPtr<Frame> FrameLoaderClientEfl::createFrame(const KURL& url, const Strin
     ASSERT(m_view);
 
     return ewk_view_frame_create(m_view, m_frame, name, ownerElement, url, referrer);
-}
-
-void FrameLoaderClientEfl::didTransferChildFrameToNewDocument(Page*)
-{
-    ASSERT(m_frame);
-
-    Frame* currentFrame = EWKPrivate::coreFrame(m_frame);
-    Evas_Object* currentView = ewk_frame_view_get(m_frame);
-    Frame* parentFrame = currentFrame->tree()->parent();
-
-    FrameLoaderClientEfl* client = static_cast<FrameLoaderClientEfl*>(parentFrame->loader()->client());
-    Evas_Object* clientFrame = client ? client->webFrame() : 0;
-    Evas_Object* clientView = ewk_frame_view_get(clientFrame);
-
-    if (currentView != clientView) {
-        ewk_frame_view_set(m_frame, clientView);
-        m_view = clientView;
-    }
-
-    ASSERT(ewk_view_core_page_get(ewk_frame_view_get(m_frame)) == currentFrame->page());
-}
-
-void FrameLoaderClientEfl::transferLoadingResourceFromPage(ResourceLoader*, const ResourceRequest&, Page*)
-{
 }
 
 void FrameLoaderClientEfl::redirectDataToPlugin(Widget* pluginWidget)
@@ -951,7 +923,7 @@ void FrameLoaderClientEfl::dispatchDidBecomeFrameset(bool)
 
 PassRefPtr<FrameNetworkingContext> FrameLoaderClientEfl::createNetworkingContext()
 {
-    return FrameNetworkingContextEfl::create(EWKPrivate::coreFrame(m_frame));
+    return FrameNetworkingContextEfl::create(EWKPrivate::coreFrame(m_frame), m_frame);
 }
 
 }

@@ -28,8 +28,9 @@
 
 /**
  * @constructor
+ * @param {boolean=} nonFocusable
  */
-function TreeOutline(listNode)
+function TreeOutline(listNode, nonFocusable)
 {
     /**
      * @type {Array.<TreeElement>}
@@ -37,6 +38,7 @@ function TreeOutline(listNode)
     this.children = [];
     this.selectedTreeElement = null;
     this._childrenListNode = listNode;
+    this.childrenListElement = this._childrenListNode;
     this._childrenListNode.removeChildren();
     this.expandTreeElementsWhenArrowing = false;
     this.root = true;
@@ -48,12 +50,20 @@ function TreeOutline(listNode)
     this.searchable = false;
     this.searchInputElement = null;
 
-    this._childrenListNode.tabIndex = 0;
+    this.setFocusable(!nonFocusable);
     this._childrenListNode.addEventListener("keydown", this._treeKeyDown.bind(this), true);
     this._childrenListNode.addEventListener("keypress", this._treeKeyPress.bind(this), true);
     
     this._treeElementsMap = new Map();
     this._expandedStateMap = new Map();
+}
+
+TreeOutline.prototype.setFocusable = function(focusable)
+{
+    if (focusable)
+        this._childrenListNode.setAttribute("tabIndex", 0);
+    else
+        this._childrenListNode.removeAttribute("tabIndex");
 }
 
 TreeOutline.prototype.appendChild = function(child)
@@ -326,7 +336,7 @@ TreeOutline.prototype.treeElementFromPoint = function(x, y)
 
 TreeOutline.prototype._treeKeyPress = function(event)
 {
-    if (!this.searchable)
+    if (!this.searchable || WebInspector.isBeingEdited(this._childrenListNode))
         return;
     
     var searchText = String.fromCharCode(event.charCode);
@@ -335,8 +345,7 @@ TreeOutline.prototype._treeKeyPress = function(event)
         return;
 
     this._startSearch(searchText);
-    event.preventDefault();
-    event.stopPropagation();
+    event.consume();
 }
 
 TreeOutline.prototype._treeKeyDown = function(event)
@@ -407,10 +416,8 @@ TreeOutline.prototype._treeKeyDown = function(event)
         nextSelectedElement.select(false, true);
     }
 
-    if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
+    if (handled)
+        event.consume();
 }
 
 TreeOutline.prototype.expand = function()
@@ -530,10 +537,9 @@ TreeOutline.prototype._searchInputKeyDown = function(event)
     if (nextSelectedElement)
         this._showSearchMatchElement(nextSelectedElement);
         
-    if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
-    } else
+    if (handled)
+        event.consume();
+    else
        window.setTimeout(this._boundSearchTextChanged, 0); 
 }
 
@@ -850,7 +856,7 @@ TreeElement.treeElementToggled = function(event)
         else
             element.treeElement.expand();
     }
-    event.stopPropagation();
+    event.consume();
 }
 
 TreeElement.treeElementDoubleClicked = function(event)
@@ -859,9 +865,11 @@ TreeElement.treeElementDoubleClicked = function(event)
     if (!element || !element.treeElement)
         return;
 
-    if (element.treeElement.ondblclick)
-        element.treeElement.ondblclick.call(element.treeElement, event);
-    else if (element.treeElement.hasChildren && !element.treeElement.expanded)
+    if (element.treeElement.ondblclick) {
+        var handled = element.treeElement.ondblclick.call(element.treeElement, event);
+        if (handled)
+            return;
+    } else if (element.treeElement.hasChildren && !element.treeElement.expanded)
         element.treeElement.expand();
 }
 
@@ -997,11 +1005,8 @@ TreeElement.prototype.revealed = function()
 
 TreeElement.prototype.selectOnMouseDown = function(event)
 {
-    if (this.select(false, true)) {
-        event.stopPropagation();
-        event.preventDefault();
-        event.handled = true;
-    }
+    if (this.select(false, true))
+        event.consume();
 }
 
 /**

@@ -21,15 +21,24 @@
 #include "config.h"
 #include "WebViewTest.h"
 
+#include <JavaScriptCore/JSRetainPtr.h>
+#include <WebCore/GOwnPtrGtk.h>
+
 WebViewTest::WebViewTest()
     : m_webView(WEBKIT_WEB_VIEW(g_object_ref_sink(webkit_web_view_new())))
     , m_mainLoop(g_main_loop_new(0, TRUE))
+    , m_parentWindow(0)
+    , m_javascriptResult(0)
 {
     assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_webView));
 }
 
 WebViewTest::~WebViewTest()
 {
+    if (m_parentWindow)
+        gtk_widget_destroy(m_parentWindow);
+    if (m_javascriptResult)
+        webkit_javascript_result_unref(m_javascriptResult);
     g_object_unref(m_webView);
     g_main_loop_unref(m_mainLoop);
 }
@@ -69,15 +78,7 @@ void WebViewTest::loadRequest(WebKitURIRequest* request)
 
 void WebViewTest::replaceContent(const char* html, const char* contentURI, const char* baseURI)
 {
-    // FIXME: The active uri should be the contentURI,
-    // but WebPageProxy doesn't return the unreachableURL
-    // when the page has been loaded with AlternateHTML()
-    // See https://bugs.webkit.org/show_bug.cgi?id=75465.
-#if 0
     m_activeURI = contentURI;
-#else
-    m_activeURI = "about:blank";
-#endif
     webkit_web_view_replace_content(m_webView, html, contentURI, baseURI);
 }
 
@@ -130,3 +131,151 @@ void WebViewTest::waitUntilLoadFinished()
     g_signal_connect(m_webView, "load-changed", G_CALLBACK(loadChanged), this);
     g_main_loop_run(m_mainLoop);
 }
+
+static void titleChanged(WebKitWebView* webView, GParamSpec*, WebViewTest* test)
+{
+    if (!test->m_expectedTitle.isNull() && test->m_expectedTitle != webkit_web_view_get_title(webView))
+        return;
+
+    g_signal_handlers_disconnect_by_func(webView, reinterpret_cast<void*>(titleChanged), test);
+    g_main_loop_quit(test->m_mainLoop);
+}
+
+void WebViewTest::waitUntilTitleChangedTo(const char* expectedTitle)
+{
+    m_expectedTitle = expectedTitle;
+    g_signal_connect(m_webView, "notify::title", G_CALLBACK(titleChanged), this);
+    g_main_loop_run(m_mainLoop);
+    m_expectedTitle = CString();
+}
+
+void WebViewTest::waitUntilTitleChanged()
+{
+    waitUntilTitleChangedTo(0);
+}
+
+static gboolean parentWindowMapped(GtkWidget* widget, GdkEvent*, WebViewTest* test)
+{
+    g_signal_handlers_disconnect_by_func(widget, reinterpret_cast<void*>(parentWindowMapped), test);
+    g_main_loop_quit(test->m_mainLoop);
+
+    return FALSE;
+}
+
+void WebViewTest::showInWindowAndWaitUntilMapped()
+{
+    g_assert(!m_parentWindow);
+    m_parentWindow = gtk_window_new(GTK_WINDOW_POPUP);
+    gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(m_webView));
+    gtk_widget_show(GTK_WIDGET(m_webView));
+
+    g_signal_connect(m_parentWindow, "map-event", G_CALLBACK(parentWindowMapped), this);
+    gtk_widget_show(m_parentWindow);
+    g_main_loop_run(m_mainLoop);
+}
+
+void WebViewTest::mouseMoveTo(int x, int y, unsigned int mouseModifiers)
+{
+    g_assert(m_parentWindow);
+    GtkWidget* viewWidget = GTK_WIDGET(m_webView);
+    g_assert(gtk_widget_get_realized(viewWidget));
+
+    GOwnPtr<GdkEvent> event(gdk_event_new(GDK_MOTION_NOTIFY));
+    event->motion.x = x;
+    event->motion.y = y;
+
+    event->motion.time = GDK_CURRENT_TIME;
+    event->motion.window = gtk_widget_get_window(viewWidget);
+    g_object_ref(event->motion.window);
+    event->button.device = gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(viewWidget)));
+    event->motion.state = mouseModifiers;
+    event->motion.axes = 0;
+
+    int xRoot, yRoot;
+    gdk_window_get_root_coords(gtk_widget_get_window(viewWidget), x, y, &xRoot, &yRoot);
+    event->motion.x_root = xRoot;
+    event->motion.y_root = yRoot;
+    gtk_main_do_event(event.get());
+}
+
+static void runJavaScriptReadyCallback(GObject*, GAsyncResult* result, WebViewTest* test)
+{
+    test->m_javascriptResult = webkit_web_view_run_javascript_finish(test->m_webView, result, test->m_javascriptError);
+    g_main_loop_quit(test->m_mainLoop);
+}
+
+WebKitJavascriptResult* WebViewTest::runJavaScriptAndWaitUntilFinished(const char* javascript, GError** error)
+{
+    if (m_javascriptResult)
+        webkit_javascript_result_unref(m_javascriptResult);
+    m_javascriptResult = 0;
+    m_javascriptError = error;
+    webkit_web_view_run_javascript(m_webView, javascript, reinterpret_cast<GAsyncReadyCallback>(runJavaScriptReadyCallback), this);
+    g_main_loop_run(m_mainLoop);
+
+    return m_javascriptResult;
+}
+
+static char* jsValueToCString(JSGlobalContextRef context, JSValueRef value)
+{
+    g_assert(value);
+    g_assert(JSValueIsString(context, value));
+
+    JSRetainPtr<JSStringRef> stringValue(Adopt, JSValueToStringCopy(context, value, 0));
+    g_assert(stringValue);
+
+    size_t cStringLength = JSStringGetMaximumUTF8CStringSize(stringValue.get());
+    char* cString = static_cast<char*>(g_malloc(cStringLength));
+    JSStringGetUTF8CString(stringValue.get(), cString, cStringLength);
+    return cString;
+}
+
+char* WebViewTest::javascriptResultToCString(WebKitJavascriptResult* javascriptResult)
+{
+    JSGlobalContextRef context = webkit_javascript_result_get_global_context(javascriptResult);
+    g_assert(context);
+    return jsValueToCString(context, webkit_javascript_result_get_value(javascriptResult));
+}
+
+double WebViewTest::javascriptResultToNumber(WebKitJavascriptResult* javascriptResult)
+{
+    JSGlobalContextRef context = webkit_javascript_result_get_global_context(javascriptResult);
+    g_assert(context);
+    JSValueRef value = webkit_javascript_result_get_value(javascriptResult);
+    g_assert(value);
+    g_assert(JSValueIsNumber(context, value));
+
+    return JSValueToNumber(context, value, 0);
+}
+
+bool WebViewTest::javascriptResultToBoolean(WebKitJavascriptResult* javascriptResult)
+{
+    JSGlobalContextRef context = webkit_javascript_result_get_global_context(javascriptResult);
+    g_assert(context);
+    JSValueRef value = webkit_javascript_result_get_value(javascriptResult);
+    g_assert(value);
+    g_assert(JSValueIsBoolean(context, value));
+
+    return JSValueToBoolean(context, value);
+}
+
+bool WebViewTest::javascriptResultIsNull(WebKitJavascriptResult* javascriptResult)
+{
+    JSGlobalContextRef context = webkit_javascript_result_get_global_context(javascriptResult);
+    g_assert(context);
+    JSValueRef value = webkit_javascript_result_get_value(javascriptResult);
+    g_assert(value);
+
+    return JSValueIsNull(context, value);
+}
+
+bool WebViewTest::javascriptResultIsUndefined(WebKitJavascriptResult* javascriptResult)
+{
+    JSGlobalContextRef context = webkit_javascript_result_get_global_context(javascriptResult);
+    g_assert(context);
+    JSValueRef value = webkit_javascript_result_get_value(javascriptResult);
+    g_assert(value);
+
+    return JSValueIsUndefined(context, value);
+}
+

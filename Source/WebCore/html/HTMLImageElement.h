@@ -72,8 +72,9 @@ public:
 
     bool complete() const;
 
-    bool haveFiredLoadEvent() const { return m_imageLoader.haveFiredLoadEvent(); }
-    bool hasPendingActivity() const { return !m_imageLoader.haveFiredLoadEvent(); }
+    // FIXME: Why do we have two names for the same thing?
+    bool hasPendingLoadEvent() const { return m_imageLoader.hasPendingLoadEvent(); }
+    bool hasPendingActivity() const { return m_imageLoader.hasPendingLoadEvent(); }
 
     virtual bool canContainRangeEndPoint() const { return false; }
 
@@ -84,6 +85,8 @@ protected:
 
 private:
     virtual void parseAttribute(Attribute*) OVERRIDE;
+    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
+    virtual void collectStyleForAttribute(Attribute*, StylePropertySet*) OVERRIDE;
 
     virtual void attach();
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);

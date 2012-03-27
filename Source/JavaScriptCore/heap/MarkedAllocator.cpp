@@ -48,16 +48,10 @@ void* MarkedAllocator::allocateSlowCase()
     
     AllocationEffort allocationEffort;
     
-    if ((
-#if ENABLE(GGC)
-         nurseryWaterMark() < m_heap->m_minBytesPerCycle
-#else
-         m_heap->waterMark() < m_heap->highWaterMark()
-#endif
-         ) || !m_heap->m_isSafeToCollect)
-        allocationEffort = AllocationMustSucceed;
-    else
+    if (m_heap->shouldCollect())
         allocationEffort = AllocationCanFail;
+    else
+        allocationEffort = AllocationMustSucceed;
     
     MarkedBlock* block = allocateBlock(allocationEffort);
     if (block) {
@@ -97,11 +91,11 @@ MarkedBlock* MarkedAllocator::allocateBlock(AllocationEffort allocationEffort)
             block = 0;
     }
     if (block)
-        block = MarkedBlock::recycle(block, m_heap, m_cellSize);
+        block = MarkedBlock::recycle(block, m_heap, m_cellSize, m_cellsNeedDestruction);
     else if (allocationEffort == AllocationCanFail)
         return 0;
     else
-        block = MarkedBlock::create(m_heap, m_cellSize);
+        block = MarkedBlock::create(m_heap, m_cellSize, m_cellsNeedDestruction);
     
     m_markedSpace->didAddBlock(block);
     

@@ -201,10 +201,8 @@ void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
 
     ETextTransform oldTransform = oldStyle ? oldStyle->textTransform() : TTNONE;
     ETextSecurity oldSecurity = oldStyle ? oldStyle->textSecurity() : TSNONE;
-    if (needsResetText || oldTransform != newStyle->textTransform() || oldSecurity != newStyle->textSecurity()) {
-        if (RefPtr<StringImpl> textToTransform = originalText())
-            setText(textToTransform.release(), true);
-    }
+    if (needsResetText || oldTransform != newStyle->textTransform() || oldSecurity != newStyle->textSecurity()) 
+        transformText();
 }
 
 void RenderText::removeAndDestroyTextBoxes()
@@ -300,19 +298,19 @@ void RenderText::deleteTextBoxes()
 PassRefPtr<StringImpl> RenderText::originalText() const
 {
     Node* e = node();
-    return (e && e->isTextNode()) ? static_cast<Text*>(e)->dataImpl() : 0;
+    return (e && e->isTextNode()) ? toText(e)->dataImpl() : 0;
 }
 
-void RenderText::absoluteRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderText::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
     for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox())
-        rects.append(enclosingLayoutRect(FloatRect(accumulatedOffset + box->topLeft(), box->size())));
+        rects.append(enclosingIntRect(FloatRect(accumulatedOffset + box->topLeft(), box->size())));
 }
 
 static FloatRect localQuadForTextBox(InlineTextBox* box, unsigned start, unsigned end, bool useSelectionHeight)
 {
     unsigned realEnd = min(box->end() + 1, end);
-    IntRect r = box->localSelectionRect(start, realEnd);
+    LayoutRect r = box->localSelectionRect(start, realEnd);
     if (r.height()) {
         if (!useSelectionHeight) {
             // Change the height and y position (or width and x for vertical text)
@@ -330,7 +328,7 @@ static FloatRect localQuadForTextBox(InlineTextBox* box, unsigned start, unsigne
     return FloatRect();
 }
 
-void RenderText::absoluteRectsForRange(Vector<LayoutRect>& rects, unsigned start, unsigned end, bool useSelectionHeight, bool* wasFixed)
+void RenderText::absoluteRectsForRange(Vector<IntRect>& rects, unsigned start, unsigned end, bool useSelectionHeight, bool* wasFixed)
 {
     // Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
     // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this 
@@ -347,8 +345,7 @@ void RenderText::absoluteRectsForRange(Vector<LayoutRect>& rects, unsigned start
         if (start <= box->start() && box->end() < end) {
             FloatRect r = box->calculateBoundaries();
             if (useSelectionHeight) {
-                // FIXME: localSelectionRect should switch to return FloatRect soon with the subpixellayout branch.
-                IntRect selectionRect = box->localSelectionRect(start, end);
+                LayoutRect selectionRect = box->localSelectionRect(start, end);
                 if (box->isHorizontal()) {
                     r.setHeight(selectionRect.height());
                     r.setY(selectionRect.y());
@@ -431,8 +428,7 @@ void RenderText::absoluteQuadsForRange(Vector<FloatQuad>& quads, unsigned start,
         if (start <= box->start() && box->end() < end) {
             FloatRect r = box->calculateBoundaries();
             if (useSelectionHeight) {
-                // FIXME: localSelectionRect should switch to return FloatRect soon with the subpixellayout branch.
-                IntRect selectionRect = box->localSelectionRect(start, end);
+                LayoutRect selectionRect = box->localSelectionRect(start, end);
                 if (box->isHorizontal()) {
                     r.setHeight(selectionRect.height());
                     r.setY(selectionRect.y());
@@ -479,8 +475,11 @@ static bool lineDirectionPointFitsInBox(int pointLineDirection, InlineTextBox* b
 
     // the x coordinate is equal to the left edge of this box
     // the affinity must be downstream so the position doesn't jump back to the previous line
-    if (pointLineDirection == box->logicalLeft())
+    // except when box is the first box in the line
+    if (pointLineDirection <= box->logicalLeft()) {
+        shouldAffinityBeDownstream = !box->prevLeafChild() ? UpstreamIfPositionIsNotAtStart : AlwaysDownstream;
         return true;
+    }
 
     // and the x coordinate is to the left of the right edge of this box
     // check to see if position goes in this box
@@ -491,10 +490,10 @@ static bool lineDirectionPointFitsInBox(int pointLineDirection, InlineTextBox* b
 
     // box is first on line
     // and the x coordinate is to the left of the first text box left edge
-    if (!box->prevOnLine() && pointLineDirection < box->logicalLeft())
+    if (!box->prevLeafChildIgnoringLineBreak() && pointLineDirection < box->logicalLeft())
         return true;
 
-    if (!box->nextOnLine()) {
+    if (!box->nextLeafChildIgnoringLineBreak()) {
         // box is last on line
         // and the x coordinate is to the right of the last text box right edge
         // generate VisiblePosition, use UPSTREAM affinity if possible
@@ -535,7 +534,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
     if (positionIsAtStartOfBox == box->isLeftToRightDirection()) {
         // offset is on the left edge
 
-        const InlineBox* prevBox = box->prevLeafChild();
+        const InlineBox* prevBox = box->prevLeafChildIgnoringLineBreak();
         if ((prevBox && prevBox->bidiLevel() == box->bidiLevel())
             || box->renderer()->containingBlock()->style()->direction() == box->direction()) // FIXME: left on 12CBA
             return createVisiblePositionForBox(box, box->caretLeftmostOffset(), shouldAffinityBeDownstream);
@@ -545,7 +544,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
             const InlineBox* leftmostBox;
             do {
                 leftmostBox = prevBox;
-                prevBox = leftmostBox->prevLeafChild();
+                prevBox = leftmostBox->prevLeafChildIgnoringLineBreak();
             } while (prevBox && prevBox->bidiLevel() > box->bidiLevel());
             return createVisiblePositionForBox(leftmostBox, leftmostBox->caretRightmostOffset(), shouldAffinityBeDownstream);
         }
@@ -556,7 +555,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
             const InlineBox* nextBox = box;
             do {
                 rightmostBox = nextBox;
-                nextBox = rightmostBox->nextLeafChild();
+                nextBox = rightmostBox->nextLeafChildIgnoringLineBreak();
             } while (nextBox && nextBox->bidiLevel() >= box->bidiLevel());
             return createVisiblePositionForBox(rightmostBox,
                 box->isLeftToRightDirection() ? rightmostBox->caretMaxOffset() : rightmostBox->caretMinOffset(), shouldAffinityBeDownstream);
@@ -565,7 +564,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
         return createVisiblePositionForBox(box, box->caretRightmostOffset(), shouldAffinityBeDownstream);
     }
 
-    const InlineBox* nextBox = box->nextLeafChild();
+    const InlineBox* nextBox = box->nextLeafChildIgnoringLineBreak();
     if ((nextBox && nextBox->bidiLevel() == box->bidiLevel())
         || box->renderer()->containingBlock()->style()->direction() == box->direction())
         return createVisiblePositionForBox(box, box->caretRightmostOffset(), shouldAffinityBeDownstream);
@@ -576,7 +575,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
         const InlineBox* rightmostBox;
         do {
             rightmostBox = nextBox;
-            nextBox = rightmostBox->nextLeafChild();
+            nextBox = rightmostBox->nextLeafChildIgnoringLineBreak();
         } while (nextBox && nextBox->bidiLevel() > box->bidiLevel());
         return createVisiblePositionForBox(rightmostBox, rightmostBox->caretLeftmostOffset(), shouldAffinityBeDownstream);
     }
@@ -587,7 +586,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
         const InlineBox* prevBox = box;
         do {
             leftmostBox = prevBox;
-            prevBox = leftmostBox->prevLeafChild();
+            prevBox = leftmostBox->prevLeafChildIgnoringLineBreak();
         } while (prevBox && prevBox->bidiLevel() >= box->bidiLevel());
         return createVisiblePositionForBox(leftmostBox,
             box->isLeftToRightDirection() ? leftmostBox->caretMinOffset() : leftmostBox->caretMaxOffset(), shouldAffinityBeDownstream);
@@ -601,28 +600,14 @@ VisiblePosition RenderText::positionForPoint(const LayoutPoint& point)
     if (!firstTextBox() || textLength() == 0)
         return createVisiblePosition(0, DOWNSTREAM);
 
-    // Get the offset for the position, since this will take rtl text into account.
-    int offset;
-
     LayoutUnit pointLineDirection = firstTextBox()->isHorizontal() ? point.x() : point.y();
     LayoutUnit pointBlockDirection = firstTextBox()->isHorizontal() ? point.y() : point.x();
-    
-    // FIXME: We should be able to roll these special cases into the general cases in the loop below.
-    if (firstTextBox() && pointBlockDirection <  firstTextBox()->root()->selectionBottom() && pointLineDirection < firstTextBox()->logicalLeft()) {
-        // at the y coordinate of the first line or above
-        // and the x coordinate is to the left of the first text box left edge
-        offset = firstTextBox()->offsetForPosition(pointLineDirection);
-        return createVisiblePositionAfterAdjustingOffsetForBiDi(firstTextBox(), offset, UpstreamIfPositionIsNotAtStart);
-    }
-    if (lastTextBox() && pointBlockDirection >= lastTextBox()->root()->selectionTop() && pointLineDirection >= lastTextBox()->logicalRight()) {
-        // at the y coordinate of the last line or below
-        // and the x coordinate is to the right of the last text box right edge
-        offset = lastTextBox()->offsetForPosition(pointLineDirection);
-        return createVisiblePositionAfterAdjustingOffsetForBiDi(lastTextBox(), offset, AlwaysUpstream);
-    }
 
-    InlineTextBox* lastBoxAbove = 0;
+    InlineTextBox* lastBox = 0;
     for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox()) {
+        if (box->isLineBreak() && !box->prevLeafChild() && box->nextLeafChild() && !box->nextLeafChild()->isLineBreak())
+            box = box->nextTextBox();
+
         RootInlineBox* rootBox = box->root();
         if (pointBlockDirection >= rootBox->selectionTop() || pointBlockDirection >= rootBox->lineTop()) {
             LayoutUnit bottom = rootBox->selectionBottom();
@@ -631,15 +616,19 @@ VisiblePosition RenderText::positionForPoint(const LayoutPoint& point)
 
             if (pointBlockDirection < bottom) {
                 ShouldAffinityBeDownstream shouldAffinityBeDownstream;
-                offset = box->offsetForPosition(pointLineDirection);
                 if (lineDirectionPointFitsInBox(pointLineDirection, box, shouldAffinityBeDownstream))
-                    return createVisiblePositionAfterAdjustingOffsetForBiDi(box, offset, shouldAffinityBeDownstream);
+                    return createVisiblePositionAfterAdjustingOffsetForBiDi(box, box->offsetForPosition(pointLineDirection), shouldAffinityBeDownstream);
             }
-            lastBoxAbove = box;
         }
+        lastBox = box;
     }
 
-    return createVisiblePosition(lastBoxAbove ? lastBoxAbove->start() + lastBoxAbove->len() : 0, DOWNSTREAM);
+    if (lastBox) {
+        ShouldAffinityBeDownstream shouldAffinityBeDownstream;
+        lineDirectionPointFitsInBox(pointLineDirection, lastBox, shouldAffinityBeDownstream);
+        return createVisiblePositionAfterAdjustingOffsetForBiDi(lastBox, lastBox->offsetForPosition(pointLineDirection) + lastBox->start(), shouldAffinityBeDownstream);
+    }
+    return createVisiblePosition(0, DOWNSTREAM);
 }
 
 LayoutRect RenderText::localCaretRect(InlineBox* inlineBox, int caretOffset, LayoutUnit* extraWidthToEndOfLine)
@@ -1134,39 +1123,41 @@ float RenderText::firstRunY() const
     
 void RenderText::setSelectionState(SelectionState state)
 {
-    InlineTextBox* box;
-
     RenderObject::setSelectionState(state);
-    if (state == SelectionStart || state == SelectionEnd || state == SelectionBoth) {
-        int startPos, endPos;
-        selectionStartEnd(startPos, endPos);
-        if (selectionState() == SelectionStart) {
-            endPos = textLength();
 
-            // to handle selection from end of text to end of line
-            if (startPos != 0 && startPos == endPos)
-                startPos = endPos - 1;
-        } else if (selectionState() == SelectionEnd)
-            startPos = 0;
+    if (canUpdateSelectionOnRootLineBoxes()) {
+        if (state == SelectionStart || state == SelectionEnd || state == SelectionBoth) {
+            int startPos, endPos;
+            selectionStartEnd(startPos, endPos);
+            if (selectionState() == SelectionStart) {
+                endPos = textLength();
 
-        for (box = firstTextBox(); box; box = box->nextTextBox()) {
-            if (box->isSelected(startPos, endPos)) {
-                RootInlineBox* line = box->root();
-                if (line)
-                    line->setHasSelectedChildren(true);
+                // to handle selection from end of text to end of line
+                if (startPos && startPos == endPos)
+                    startPos = endPos - 1;
+            } else if (selectionState() == SelectionEnd)
+                startPos = 0;
+
+            for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox()) {
+                if (box->isSelected(startPos, endPos)) {
+                    RootInlineBox* root = box->root();
+                    if (root)
+                        root->setHasSelectedChildren(true);
+                }
             }
-        }
-    } else {
-        for (box = firstTextBox(); box; box = box->nextTextBox()) {
-            RootInlineBox* line = box->root();
-            if (line)
-                line->setHasSelectedChildren(state == SelectionInside);
+        } else {
+            for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox()) {
+                RootInlineBox* root = box->root();
+                if (root)
+                    root->setHasSelectedChildren(state == SelectionInside);
+            }
         }
     }
 
-    // The returned value can be null in case of an orphaned tree.
-    if (RenderBlock* cb = containingBlock())
-        cb->setSelectionState(state);
+    // The containing block can be null in case of an orphaned tree.
+    RenderBlock* containingBlock = this->containingBlock();
+    if (containingBlock && !containingBlock->isRenderView())
+        containingBlock->setSelectionState(state);
 }
 
 void RenderText::setTextWithOffset(PassRefPtr<StringImpl> text, unsigned offset, unsigned len, bool force)
@@ -1243,6 +1234,12 @@ void RenderText::setTextWithOffset(PassRefPtr<StringImpl> text, unsigned offset,
 
     m_linesDirty = dirtiedLines;
     setText(text, force);
+}
+
+void RenderText::transformText()
+{
+    if (RefPtr<StringImpl> textToTransform = originalText())
+        setText(textToTransform.release(), true);
 }
 
 static inline bool isInlineFlowOrEmptyText(const RenderObject* o)
@@ -1475,9 +1472,9 @@ float RenderText::width(unsigned from, unsigned len, const Font& f, float xPos, 
     return w;
 }
 
-LayoutRect RenderText::linesBoundingBox() const
+IntRect RenderText::linesBoundingBox() const
 {
-    LayoutRect result;
+    IntRect result;
     
     ASSERT(!firstTextBox() == !lastTextBox());  // Either both are null or both exist.
     if (firstTextBox() && lastTextBox()) {
@@ -1554,7 +1551,7 @@ LayoutRect RenderText::selectionRectForRepaint(RenderBoxModelObject* repaintCont
 
     // Now calculate startPos and endPos for painting selection.
     // We include a selection while endPos > 0
-    LayoutUnit startPos, endPos;
+    int startPos, endPos;
     if (selectionState() == SelectionInside) {
         // We are fully selected.
         startPos = 0;

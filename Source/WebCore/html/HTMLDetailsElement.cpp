@@ -28,8 +28,10 @@
 #include "HTMLSummaryElement.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
-#include "RenderDetails.h"
+#include "NodeRenderingContext.h"
+#include "RenderBlock.h"
 #include "ShadowRoot.h"
+#include "ShadowTree.h"
 #include "Text.h"
 
 namespace WebCore {
@@ -48,7 +50,7 @@ public:
 
 private:
     DetailsContentElement(Document* document)
-        : HTMLContentElement(HTMLNames::divTag, document)
+        : HTMLContentElement(HTMLNames::webkitShadowContentTag, document)
     {
     }
 };
@@ -70,7 +72,7 @@ public:
 
 private:
     DetailsSummaryElement(Document* document)
-        : HTMLContentElement(HTMLNames::divTag, document)
+        : HTMLContentElement(HTMLNames::webkitShadowContentTag, document)
     {
         setSelect(summaryQuerySelector());
     }
@@ -103,14 +105,16 @@ HTMLDetailsElement::HTMLDetailsElement(const QualifiedName& tagName, Document* d
 
 RenderObject* HTMLDetailsElement::createRenderer(RenderArena* arena, RenderStyle*)
 {
-    return new (arena) RenderDetails(this);
+    return new (arena) RenderBlock(this);
 }
 
 void HTMLDetailsElement::createShadowSubtree()
 {
-    ASSERT(!shadowRoot());
-    ensureShadowRoot()->appendChild(DetailsSummaryElement::create(document()), ASSERT_NO_EXCEPTION, true);
-    ensureShadowRoot()->appendChild(DetailsContentElement::create(document()), ASSERT_NO_EXCEPTION, true);
+    ASSERT(!hasShadowRoot());
+
+    RefPtr<ShadowRoot> root = ShadowRoot::create(this, ShadowRoot::CreatingUserAgentShadowRoot);
+    root->appendChild(DetailsSummaryElement::create(document()), ASSERT_NO_EXCEPTION, true);
+    root->appendChild(DetailsContentElement::create(document()), ASSERT_NO_EXCEPTION, true);
 }
 
 Element* HTMLDetailsElement::findMainSummary() const
@@ -120,7 +124,7 @@ Element* HTMLDetailsElement::findMainSummary() const
             return toElement(child);
     }
 
-    return static_cast<DetailsSummaryElement*>(shadowRoot()->firstChild())->fallbackSummary();
+    return static_cast<DetailsSummaryElement*>(shadowTree()->oldestShadowRoot()->firstChild())->fallbackSummary();
 }
 
 void HTMLDetailsElement::parseAttribute(Attribute* attr)
@@ -134,15 +138,18 @@ void HTMLDetailsElement::parseAttribute(Attribute* attr)
         HTMLElement::parseAttribute(attr);
 }
 
-bool HTMLDetailsElement::childShouldCreateRenderer(Node* child) const
+bool HTMLDetailsElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
 {
-    if (m_isOpen)
-        return true;
-
-    if (!child->hasTagName(summaryTag))
+    if (!childContext.isOnEncapsulationBoundary())
         return false;
 
-    return child == findMainSummary();
+    if (m_isOpen)
+        return HTMLElement::childShouldCreateRenderer(childContext);
+
+    if (!childContext.node()->hasTagName(summaryTag))
+        return false;
+
+    return childContext.node() == findMainSummary() && HTMLElement::childShouldCreateRenderer(childContext);
 }
 
 void HTMLDetailsElement::toggleOpen()

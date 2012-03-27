@@ -184,12 +184,17 @@ InjectedScript.prototype = {
 
         for (var i = 0; i < descriptors.length; ++i) {
             var descriptor = descriptors[i];
-            if (descriptor.get)
+            if ("get" in descriptor)
                 descriptor.get = this._wrapObject(descriptor.get, objectGroupName);
-            if (descriptor.set)
+            if ("set" in descriptor)
                 descriptor.set = this._wrapObject(descriptor.set, objectGroupName);
             if ("value" in descriptor)
                 descriptor.value = this._wrapObject(descriptor.value, objectGroupName);
+            if (!("configurable" in descriptor))
+                descriptor.configurable = false;
+            if (!("enumerable" in descriptor))
+                descriptor.enumerable = false;
+            
         }
         return descriptors;
     },
@@ -417,9 +422,9 @@ InjectedScript.prototype = {
 
         // FireBug's array detection.
         try {
-            if (isFinite(obj.length) && typeof obj.splice === "function")
+            if (typeof obj.splice === "function" && isFinite(obj.length))
                 return "array";
-            if (isFinite(obj.length) && typeof obj.callee === "function") // arguments.
+            if (Object.prototype.toString.call(obj) === "[object Arguments]" && isFinite(obj.length)) // arguments.
                 return "array";
         } catch (e) {
         }
@@ -566,13 +571,13 @@ function CommandLineAPI(commandLineAPIImpl, callFrame)
         if (member in inspectedWindow || inScopeVariables(member))
             continue;
 
-        this.__defineGetter__("$" + i, bind(commandLineAPIImpl, commandLineAPIImpl._inspectedNode, i));
+        this.__defineGetter__("$" + i, bind(commandLineAPIImpl, commandLineAPIImpl._inspectedObject, i));
     }
 }
 
 CommandLineAPI.members_ = [
     "$", "$$", "$x", "dir", "dirxml", "keys", "values", "profile", "profileEnd",
-    "monitorEvents", "unmonitorEvents", "inspect", "copy", "clear"
+    "monitorEvents", "unmonitorEvents", "inspect", "copy", "clear", "getEventListeners"
 ];
 
 function CommandLineAPIImpl()
@@ -680,9 +685,14 @@ CommandLineAPIImpl.prototype = {
         InjectedScriptHost.clearConsoleMessages();
     },
 
-    _inspectedNode: function(num)
+    getEventListeners: function(node)
     {
-        return InjectedScriptHost.inspectedNode(num);
+        return InjectedScriptHost.getEventListeners(node);
+    },
+
+    _inspectedObject: function(num)
+    {
+        return InjectedScriptHost.inspectedObject(num);
     },
 
     _normalizeEventTypes: function(types)

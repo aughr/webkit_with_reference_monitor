@@ -77,6 +77,11 @@ bool History::stateChanged() const
     return m_lastStateObjectRequested != stateInternal();
 }
 
+bool History::isSameAsCurrentState(SerializedScriptValue* state) const
+{
+    return state == stateInternal();
+}
+
 void History::back()
 {
     go(-1);
@@ -111,11 +116,11 @@ void History::go(ScriptExecutionContext* context, int distance)
         return;
 
     ASSERT(isMainThread());
-    Frame* activeFrame = static_cast<Document*>(context)->frame();
-    if (!activeFrame)
+    Document* activeDocument = static_cast<Document*>(context);
+    if (!activeDocument)
         return;
 
-    if (!activeFrame->loader()->shouldAllowNavigation(m_frame))
+    if (!activeDocument->canNavigate(m_frame))
         return;
 
     m_frame->navigationScheduler()->scheduleHistoryNavigation(distance);

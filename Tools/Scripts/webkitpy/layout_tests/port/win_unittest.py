@@ -85,13 +85,21 @@ class WinPortTest(port_testcase.PortTestCase):
     def test_compare_text(self):
         expected = "EDITING DELEGATE: webViewDidChangeSelection:WebViewDidChangeSelectionNotification\nfoo\nEDITING DELEGATE: webViewDidChangeSelection:WebViewDidChangeSelectionNotification\n"
         port = self.make_port()
-        self.assertFalse(port.compare_text(expected, "foo\n"))
-        self.assertTrue(port.compare_text(expected, "foo"))
-        self.assertTrue(port.compare_text(expected, "bar"))
+        self.assertFalse(port.do_text_results_differ(expected, "foo\n"))
+        self.assertTrue(port.do_text_results_differ(expected, "foo"))
+        self.assertTrue(port.do_text_results_differ(expected, "bar"))
 
         # This hack doesn't exist in WK2.
         port._options = MockOptions(webkit_test_runner=True)
-        self.assertTrue(port.compare_text(expected, "foo\n"))
+        self.assertTrue(port.do_text_results_differ(expected, "foo\n"))
 
     def test_operating_system(self):
         self.assertEqual('win', self.make_port().operating_system())
+
+    def test_runtime_feature_list(self):
+        port = self.make_port()
+        port._executive.run_command = lambda command, cwd=None, error_handler=None: "Nonsense"
+        # runtime_features_list returns None when its results are meaningless (it couldn't run DRT or parse the output, etc.)
+        self.assertEquals(port._runtime_feature_list(), None)
+        port._executive.run_command = lambda command, cwd=None, error_handler=None: "SupportedFeatures:foo bar"
+        self.assertEquals(port._runtime_feature_list(), ['foo', 'bar'])

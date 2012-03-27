@@ -30,7 +30,7 @@ import logging
 import re
 import sys
 
-from webkitpy.common.system.executive import ScriptError
+from webkitpy.common.system.executive import ScriptError, Executive
 from webkitpy.common.system.path import abspath_to_uri
 from webkitpy.layout_tests.port.apple import ApplePort
 
@@ -45,10 +45,10 @@ class WinPort(ApplePort):
     # and the order of fallback between them.  Matches ORWT.
     VERSION_FALLBACK_ORDER = ["win-xp", "win-vista", "win-7sp0", "win"]
 
-    def compare_text(self, expected_text, actual_text):
+    def do_text_results_differ(self, expected_text, actual_text):
         # Sanity was restored in WK2, so we don't need this hack there.
         if self.get_option('webkit_test_runner'):
-            return ApplePort.compare_text(self, expected_text, actual_text)
+            return ApplePort.do_text_results_differ(self, expected_text, actual_text)
 
         # This is a hack (which dates back to ORWT).
         # Windows does not have an EDITING DELEGATE, so we strip any EDITING DELEGATE
@@ -80,3 +80,17 @@ class WinPort(ApplePort):
     # FIXME: webkitperl/httpd.pm installs /usr/lib/apache/libphp4.dll on cycwin automatically
     # as part of running old-run-webkit-tests.  That's bad design, but we may need some similar hack.
     # We might use setup_environ_for_server for such a hack (or modify apache_http_server.py).
+
+    def _runtime_feature_list(self):
+        supported_features_command = [self._path_to_driver(), '--print-supported-features']
+        try:
+            output = self._executive.run_command(supported_features_command, error_handler=Executive.ignore_error)
+        except OSError, e:
+            _log.warn("Exception running driver: %s, %s.  Driver must be built before calling WebKitPort.test_expectations()." % (supported_features_command, e))
+            return None
+
+        # Note: win/DumpRenderTree.cpp does not print a leading space before the features_string.
+        match_object = re.match("SupportedFeatures:\s*(?P<features_string>.*)\s*", output)
+        if not match_object:
+            return None
+        return match_object.group('features_string').split(' ')
