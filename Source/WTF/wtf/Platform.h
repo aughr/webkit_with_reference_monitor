@@ -930,7 +930,8 @@
     && (OS(DARWIN) || !COMPILER(GCC) || GCC_VERSION_AT_LEAST(4, 1, 0)) \
     && !OS(WINCE) \
     && !OS(QNX)
-#define ENABLE_JIT 1
+//#define ENABLE_JIT 1
+#define ENABLE_JIT 0
 #endif
 
 /* On some of the platforms where we have a JIT, we want to also have the 
