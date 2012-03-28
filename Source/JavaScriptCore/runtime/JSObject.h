@@ -849,6 +849,24 @@ inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue 
     }
     asCell()->methodTable()->putByIndex(asCell(), exec, propertyName, value, shouldThrow);
 }
+    
+inline JSValue JSValue::taint(ExecState* exec) {
+    JSObject *object = toObject(exec);
+    object->taint();
+    return JSValue(object);
+}
+
+inline bool JSValue::isTainted() const {
+    return isCell() && asCell()->isTainted();
+}
+
+inline EncodedJSValue JSValue::encode(JSValue value, ExecState* exec, bool taint) {
+    if (taint) {
+        return encode(value.taint(exec));
+    } else {
+        return encode(value);
+    }
+}
 
 // --- JSValue inlines ----------------------------
 

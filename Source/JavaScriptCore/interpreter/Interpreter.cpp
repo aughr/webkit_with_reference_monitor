@@ -2356,6 +2356,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(src1.asInt32() + src2.asInt32());
         else {
             JSValue result = jsAdd(callFrame, src1, src2);
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2375,6 +2377,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
                 callFrame->uncheckedR(dst) = jsNumber(src1.asInt32() * src2.asInt32());
         else {
             JSValue result = jsNumber(src1.toNumber(callFrame) * src2.toNumber(callFrame));
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2394,6 +2398,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         JSValue divisor = callFrame->r(vPC[3].u.operand).jsValue();
 
         JSValue result = jsNumber(dividend.toNumber(callFrame) / divisor.toNumber(callFrame));
+        if (dividend.isTainted() || divisor.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = result;
 
@@ -2424,6 +2430,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         double d1 = dividend.toNumber(callFrame);
         double d2 = divisor.toNumber(callFrame);
         JSValue result = jsNumber(fmod(d1, d2));
+        if (dividend.isTainted() || divisor.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = result;
         vPC += OPCODE_LENGTH(op_mod);
@@ -2443,6 +2451,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(src1.asInt32() - src2.asInt32());
         else {
             JSValue result = jsNumber(src1.toNumber(callFrame) - src2.toNumber(callFrame));
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -3748,6 +3758,8 @@ skip_id_custom_self:
         }
 
         CHECK_FOR_EXCEPTION();
+        if (baseValue.isTainted())
+            result = result.taint(callFrame);
         callFrame->uncheckedR(dst) = result;
         vPC += OPCODE_LENGTH(op_get_by_val);
         NEXT_INSTRUCTION();

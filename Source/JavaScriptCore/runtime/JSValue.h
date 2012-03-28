@@ -125,6 +125,7 @@ namespace JSC {
 
     public:
         static EncodedJSValue encode(JSValue);
+        static EncodedJSValue encode(JSValue, ExecState*, bool taint);
         static JSValue decode(EncodedJSValue);
 
         enum JSNullTag { JSNull };
@@ -237,6 +238,9 @@ namespace JSC {
         bool isCell() const;
         JSCell* asCell() const;
         JS_EXPORT_PRIVATE bool isValidCallee();
+        
+        JSValue taint(ExecState*);
+        bool isTainted() const;
 
         char* description();
 

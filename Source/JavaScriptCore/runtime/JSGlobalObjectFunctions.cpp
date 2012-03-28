@@ -575,9 +575,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsNaN(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL globalFuncTaint(ExecState* exec)
 {
     JSValue argument = exec->argument(0);
-    if (argument.isCell())
-        argument.asCell()->taint();
-    return JSValue::encode(argument);
+    return JSValue::encode(argument, exec, true);
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncIsTainted(ExecState* exec)
