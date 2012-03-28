@@ -230,7 +230,7 @@ void RenderFlexibleBox::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-void RenderFlexibleBox::layoutBlock(bool relayoutChildren, int, BlockLayoutPass)
+void RenderFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit, BlockLayoutPass)
 {
     ASSERT(needsLayout());
 
@@ -247,7 +247,7 @@ void RenderFlexibleBox::layoutBlock(bool relayoutChildren, int, BlockLayoutPass)
     }
     computeInitialRegionRangeForBlock();
 
-    IntSize previousSize = size();
+    LayoutSize previousSize = size();
 
     setLogicalHeight(0);
     computeLogicalWidth();
@@ -586,7 +586,7 @@ LayoutUnit RenderFlexibleBox::preferredMainAxisContentExtentForChild(RenderBox* 
         LayoutUnit mainAxisExtent = hasOrthogonalFlow(child) ? child->logicalHeight() : child->maxPreferredLogicalWidth();
         return mainAxisExtent - mainAxisBorderAndPaddingExtentForChild(child);
     }
-    return minimumValueForLength(mainAxisLength, mainAxisContentExtent());
+    return minimumValueForLength(mainAxisLength, mainAxisContentExtent(), view());
 }
 
 LayoutUnit RenderFlexibleBox::computeAvailableFreeSpace(LayoutUnit preferredMainAxisExtent)
@@ -660,6 +660,7 @@ LayoutUnit RenderFlexibleBox::marginBoxAscentForChild(RenderBox* child)
 void RenderFlexibleBox::computeMainAxisPreferredSizes(bool relayoutChildren, FlexOrderHashSet& flexOrderValues)
 {
     LayoutUnit flexboxAvailableContentExtent = mainAxisContentExtent();
+    RenderView* renderView = view();
     for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox()) {
         flexOrderValues.add(child->style()->flexOrder());
 
@@ -677,11 +678,11 @@ void RenderFlexibleBox::computeMainAxisPreferredSizes(bool relayoutChildren, Fle
         // of 0 and because if we're not auto sizing, we don't do a layout that
         // computes the start/end margins.
         if (isHorizontalFlow()) {
-            child->setMarginLeft(minimumValueForLength(child->style()->marginLeft(), flexboxAvailableContentExtent));
-            child->setMarginRight(minimumValueForLength(child->style()->marginRight(), flexboxAvailableContentExtent));
+            child->setMarginLeft(minimumValueForLength(child->style()->marginLeft(), flexboxAvailableContentExtent, renderView));
+            child->setMarginRight(minimumValueForLength(child->style()->marginRight(), flexboxAvailableContentExtent, renderView));
         } else {
-            child->setMarginTop(minimumValueForLength(child->style()->marginTop(), flexboxAvailableContentExtent));
-            child->setMarginBottom(minimumValueForLength(child->style()->marginBottom(), flexboxAvailableContentExtent));
+            child->setMarginTop(minimumValueForLength(child->style()->marginTop(), flexboxAvailableContentExtent, renderView));
+            child->setMarginBottom(minimumValueForLength(child->style()->marginBottom(), flexboxAvailableContentExtent, renderView));
         }
     }
 }
@@ -704,12 +705,13 @@ LayoutUnit RenderFlexibleBox::adjustChildSizeForMinAndMax(RenderBox* child, Layo
 {
     Length max = isHorizontalFlow() ? child->style()->maxWidth() : child->style()->maxHeight();
     Length min = isHorizontalFlow() ? child->style()->minWidth() : child->style()->minHeight();
+    RenderView* renderView = view();
     // FIXME: valueForLength isn't quite right in quirks mode: percentage heights should check parents until a value is found.
     // https://bugs.webkit.org/show_bug.cgi?id=81809
-    if (max.isSpecified() && childSize > valueForLength(max, flexboxAvailableContentExtent))
-        childSize = valueForLength(max, flexboxAvailableContentExtent);
-    if (min.isSpecified() && childSize < valueForLength(min, flexboxAvailableContentExtent))
-        childSize = valueForLength(min, flexboxAvailableContentExtent);
+    if (max.isSpecified() && childSize > valueForLength(max, flexboxAvailableContentExtent, renderView))
+        childSize = valueForLength(max, flexboxAvailableContentExtent, renderView);
+    if (min.isSpecified() && childSize < valueForLength(min, flexboxAvailableContentExtent, renderView))
+        childSize = valueForLength(min, flexboxAvailableContentExtent, renderView);
     return childSize;
 }
 
@@ -765,9 +767,9 @@ void RenderFlexibleBox::freezeViolations(const WTF::Vector<Violation>& violation
 bool RenderFlexibleBox::resolveFlexibleLengths(FlexSign flexSign, const OrderedFlexItemList& children, LayoutUnit& availableFreeSpace, float& totalPositiveFlexibility, float& totalNegativeFlexibility, InflexibleFlexItemSize& inflexibleItems, WTF::Vector<LayoutUnit>& childSizes)
 {
     childSizes.clear();
-
     LayoutUnit flexboxAvailableContentExtent = mainAxisContentExtent();
     LayoutUnit totalViolation = 0;
+    LayoutUnit usedFreeSpace = 0;
     WTF::Vector<Violation> minViolations;
     WTF::Vector<Violation> maxViolations;
     for (size_t i = 0; i < children.size(); ++i) {
@@ -780,7 +782,8 @@ bool RenderFlexibleBox::resolveFlexibleLengths(FlexSign flexSign, const OrderedF
         if (inflexibleItems.contains(child))
             childSizes.append(inflexibleItems.get(child));
         else {
-            LayoutUnit childSize = preferredMainAxisContentExtentForChild(child);
+            LayoutUnit preferredChildSize = preferredMainAxisContentExtentForChild(child);
+            LayoutUnit childSize = preferredChildSize;
             if (availableFreeSpace > 0 && totalPositiveFlexibility > 0 && flexSign == PositiveFlexibility)
                 childSize += lroundf(availableFreeSpace * positiveFlexForChild(child) / totalPositiveFlexibility);
             else if (availableFreeSpace < 0 && totalNegativeFlexibility > 0  && flexSign == NegativeFlexibility)
@@ -788,6 +791,7 @@ bool RenderFlexibleBox::resolveFlexibleLengths(FlexSign flexSign, const OrderedF
 
             LayoutUnit adjustedChildSize = adjustChildSizeForMinAndMax(child, childSize, flexboxAvailableContentExtent);
             childSizes.append(adjustedChildSize);
+            usedFreeSpace += adjustedChildSize - preferredChildSize;
 
             LayoutUnit violation = adjustedChildSize - childSize;
             if (violation > 0)
@@ -800,20 +804,22 @@ bool RenderFlexibleBox::resolveFlexibleLengths(FlexSign flexSign, const OrderedF
 
     if (totalViolation)
         freezeViolations(totalViolation < 0 ? maxViolations : minViolations, availableFreeSpace, totalPositiveFlexibility, totalNegativeFlexibility, inflexibleItems);
+    else
+        availableFreeSpace -= usedFreeSpace;
+
     return !totalViolation;
 }
 
 static LayoutUnit initialPackingOffset(LayoutUnit availableFreeSpace, EFlexPack flexPack, size_t numberOfChildren)
 {
-    if (availableFreeSpace > 0) {
-        if (flexPack == PackEnd)
-            return availableFreeSpace;
-        if (flexPack == PackCenter)
-            return availableFreeSpace / 2;
-        if (flexPack == PackDistribute && numberOfChildren)
+    if (flexPack == PackEnd)
+        return availableFreeSpace;
+    if (flexPack == PackCenter)
+        return availableFreeSpace / 2;
+    if (flexPack == PackDistribute) {
+        if (availableFreeSpace > 0 && numberOfChildren)
             return availableFreeSpace / (2 * numberOfChildren);
-    } else if (availableFreeSpace < 0) {
-        if (flexPack == PackCenter || flexPack == PackDistribute)
+        if (availableFreeSpace < 0)
             return availableFreeSpace / 2;
     }
     return 0;

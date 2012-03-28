@@ -26,6 +26,7 @@
 
 #include "CSSMediaRule.h"
 #include "CSSParser.h"
+#include "CSSParserMode.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
 #include "CSSSelector.h"
@@ -99,7 +100,7 @@ static int cssyylex(YYSTYPE* yylval, void* parser)
 
 %}
 
-%expect 55
+%expect 58
 
 %nonassoc LOWEST_PREC
 
@@ -188,6 +189,9 @@ static int cssyylex(YYSTYPE* yylval, void* parser)
 %token <number> PERCENTAGE
 %token <number> FLOATTOKEN
 %token <number> INTEGER
+%token <number> VW
+%token <number> VH
+%token <number> VMIN
 
 %token <string> URI
 %token <string> FUNCTION
@@ -375,9 +379,9 @@ closing_brace:
 charset:
   CHARSET_SYM maybe_space STRING maybe_space ';' {
      CSSParser* p = static_cast<CSSParser*>(parser);
-     $$ = static_cast<CSSParser*>(parser)->createCharsetRule($3);
-     if ($$ && p->m_styleSheet)
-         p->m_styleSheet->append($$);
+     if (p->m_styleSheet)
+         p->m_styleSheet->parserSetEncodingFromCharsetRule($3);
+     $$ = 0;
   }
   | CHARSET_SYM error invalid_block {
   }
@@ -397,7 +401,7 @@ rule_list:
  | rule_list rule maybe_sgml {
      CSSParser* p = static_cast<CSSParser*>(parser);
      if ($2 && p->m_styleSheet)
-         p->m_styleSheet->append($2);
+         p->m_styleSheet->parserAppendRule($2);
  }
  ;
 
@@ -1022,7 +1026,7 @@ specifier:
         CSSParser* p = static_cast<CSSParser*>(parser);
         $$ = p->createFloatingSelector();
         $$->setMatch(CSSSelector::Id);
-        if (!p->m_strict)
+        if (p->m_cssParserMode == CSSQuirksMode || p->m_cssParserMode == SVGAttributeMode)
             $1.lower();
         $$->setValue($1);
     }
@@ -1033,7 +1037,7 @@ specifier:
             CSSParser* p = static_cast<CSSParser*>(parser);
             $$ = p->createFloatingSelector();
             $$->setMatch(CSSSelector::Id);
-            if (!p->m_strict)
+            if (p->m_cssParserMode == CSSQuirksMode || p->m_cssParserMode == SVGAttributeMode)
                 $1.lower();
             $$->setValue($1);
         }
@@ -1048,7 +1052,7 @@ class:
         CSSParser* p = static_cast<CSSParser*>(parser);
         $$ = p->createFloatingSelector();
         $$->setMatch(CSSSelector::Class);
-        if (!p->m_strict)
+        if (p->m_cssParserMode == CSSQuirksMode || p->m_cssParserMode == SVGAttributeMode)
             $2.lower();
         $$->setValue($2);
     }
@@ -1472,6 +1476,9 @@ unary_term:
       if (Document* doc = p->findDocument())
           doc->setUsesRemUnits(true);
   }
+  | VW maybe_space { $$.id = 0; $$.fValue = $1; $$.unit = CSSPrimitiveValue::CSS_VW; }
+  | VH maybe_space { $$.id = 0; $$.fValue = $1; $$.unit = CSSPrimitiveValue::CSS_VH; }
+  | VMIN maybe_space { $$.id = 0; $$.fValue = $1; $$.unit = CSSPrimitiveValue::CSS_VMIN; }
   ;
 
 function:

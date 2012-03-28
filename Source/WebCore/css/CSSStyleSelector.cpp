@@ -2224,10 +2224,10 @@ bool CSSStyleSelector::checkRegionSelector(CSSSelector* regionSelector, Element*
 bool CSSStyleSelector::determineStylesheetSelectorScopes(CSSStyleSheet* stylesheet, HashSet<AtomicStringImpl*>& idScopes, HashSet<AtomicStringImpl*>& classScopes)
 {
     ASSERT(!stylesheet->isLoading());
-    
-    size_t size = stylesheet->length();
-    for (size_t i = 0; i < size; i++) {
-        CSSRule* rule = stylesheet->item(i);
+
+    const Vector<RefPtr<CSSRule> >& rules = stylesheet->ruleVector();
+    for (unsigned i = 0; i < rules.size(); i++) {
+        CSSRule* rule = rules[i].get();
         if (rule->isStyleRule()) {
             StyleRule* styleRule = static_cast<CSSStyleRule*>(rule)->styleRule();
             if (!SelectorChecker::determineSelectorScopes(styleRule->selectorList(), idScopes, classScopes))
@@ -2454,10 +2454,9 @@ void RuleSet::addRulesFromSheet(CSSStyleSheet* sheet, const MediaQueryEvaluator&
     if (sheet->mediaQueries() && !medium.eval(sheet->mediaQueries(), styleSelector))
         return; // the style sheet doesn't apply
 
-    int len = sheet->length();
-
-    for (int i = 0; i < len; i++) {
-        CSSRule* rule = sheet->item(i);
+    const Vector<RefPtr<CSSRule> >& rules = sheet->ruleVector();
+    for (unsigned i = 0; i < rules.size(); ++i) {
+        CSSRule* rule = rules[i].get();
         if (rule->isStyleRule())
             addStyleRule(static_cast<CSSStyleRule*>(rule)->styleRule(), !scope);
         else if (rule->isPageRule())
@@ -2549,12 +2548,12 @@ void RuleSet::shrinkToFit()
 
 Length CSSStyleSelector::convertToIntLength(CSSPrimitiveValue* primitiveValue, RenderStyle* style, RenderStyle* rootStyle, double multiplier)
 {
-    return primitiveValue ? primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | FractionConversion>(style, rootStyle, multiplier) : Length(Undefined);
+    return primitiveValue ? primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | FractionConversion | ViewportRelativeConversion>(style, rootStyle, multiplier) : Length(Undefined);
 }
 
 Length CSSStyleSelector::convertToFloatLength(CSSPrimitiveValue* primitiveValue, RenderStyle* style, RenderStyle* rootStyle, double multiplier)
 {
-    return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | FractionConversion>(style, rootStyle, multiplier) : Length(Undefined);
+    return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | FractionConversion | ViewportRelativeConversion>(style, rootStyle, multiplier) : Length(Undefined);
 }
 
 template <bool applyFirst>
@@ -2939,7 +2938,7 @@ bool CSSStyleSelector::useSVGZoomRules()
 
 static bool createGridTrackBreadth(CSSPrimitiveValue* primitiveValue, CSSStyleSelector* selector, Length& length)
 {
-    Length workingLength = primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | AutoConversion>(selector->style(), selector->rootElementStyle(), selector->style()->effectiveZoom());
+    Length workingLength = primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | ViewportRelativeConversion | AutoConversion>(selector->style(), selector->rootElementStyle(), selector->style()->effectiveZoom());
     if (workingLength.isUndefined())
         return false;
 
@@ -4283,6 +4282,8 @@ void CSSStyleSelector::mapFillXPosition(CSSPropertyID, FillLayer* layer, CSSValu
         l = Length(primitiveValue->getDoubleValue(), Percent);
     else if (primitiveValue->isCalculatedPercentageWithLength())
         l = Length(primitiveValue->cssCalcValue()->toCalcValue(style(), m_rootElementStyle, zoomFactor));
+    else if (primitiveValue->isViewportRelativeLength())
+        l = primitiveValue->viewportRelativeLength();
     else
         return;
     layer->setXPosition(l);
@@ -4308,6 +4309,8 @@ void CSSStyleSelector::mapFillYPosition(CSSPropertyID, FillLayer* layer, CSSValu
         l = Length(primitiveValue->getDoubleValue(), Percent);
     else if (primitiveValue->isCalculatedPercentageWithLength())
         l = Length(primitiveValue->cssCalcValue()->toCalcValue(style(), m_rootElementStyle, zoomFactor));
+    else if (primitiveValue->isViewportRelativeLength())
+        l = primitiveValue->viewportRelativeLength();
     else
         return;
     layer->setYPosition(l);

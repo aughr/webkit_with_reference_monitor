@@ -1,3 +1,128 @@
+2012-03-27  Dirk Pranke  <dpranke@chromium.org>
+
+        new-run-webkit-tests: suppress debug output from run-safari on results file
+        https://bugs.webkit.org/show_bug.cgi?id=82400
+
+        Reviewed by Ryosuke Niwa.
+
+        Send the run-safari output to /dev/null rather than the console.
+
+        * Scripts/webkitpy/layout_tests/port/mac.py:
+        (MacPort.show_results_html_file):
+
+2012-03-27  Simon Fraser  <simon.fraser@apple.com>
+
+        Improve error reporting in run-javascriptcore-tests
+        https://bugs.webkit.org/show_bug.cgi?id=82379
+
+        Reviewed by Jessie Berlin.
+        
+        When the script dies, have it print out the reason for dying.
+
+        * Scripts/run-javascriptcore-tests:
+
+2012-03-27  Eric Seidel  <eric@webkit.org>
+
+        Add Dave Barton to the Contributors list so I can more easily CC him on bugs
+        https://bugs.webkit.org/show_bug.cgi?id=82373
+
+        Reviewed by Ryosuke Niwa.
+
+        Dave's committer-status in in-progress, so until then
+        list him as a Contributor so at least I can more easily CC him on bugs.
+
+        * Scripts/webkitpy/common/config/committers.py:
+
+2012-03-26  Raphael Kubo da Costa  <rakuco@FreeBSD.org>
+
+        [jhbuild] Prepend jhbuildrc's directory to sys.path instead of appending.
+        https://bugs.webkit.org/show_bug.cgi?id=82252
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Appending the directory containing common.py may be problematic if
+        another path in sys.path also contains either a common.py or a
+        common/ module, so prepend to select our version instead. This is
+        the case with fail2ban, which has a common/ directory which may
+        end up being in Python's default path.
+
+        * efl/jhbuildrc:
+        * gtk/jhbuildrc:
+
+2012-03-27  Dirk Pranke  <dpranke@chromium.org>
+
+        test-webkitpy: prepare for better test run output
+        https://bugs.webkit.org/show_bug.cgi?id=82290
+
+        Reviewed by Adam Barth.
+
+        This code basically re-implements the output of the TextTestRunner default
+        runner code from unittest, although the implementation is quite
+        different, in preparation for changing the test output to be
+        metered and possibly running in parallel.
+
+        The output is almost identical to before, except that instead of
+        logging "test_regular (webkitpy.main.RunnerTest) passed" we log
+        "webkitpy.main.RunnerTest.test_regular passed". It has always
+        annoyed me that they invert the names to be harder to read and
+        so that you can't copy & paste back to the input for
+        test-webkitpy.
+
+        This patch is provided to add a skeleton for unit tests and for
+        comparison to an upcoming patch that will actually add new
+        functionality.
+
+        * Scripts/webkitpy/test/main.py:
+        (Tester.__init__):
+        (Tester._configure_logging):
+        (Tester._run_tests):
+        * Scripts/webkitpy/test/runner.py: Added.
+        (TestRunner):
+        (TestRunner.__init__):
+        (TestRunner.test_name):
+        (TestRunner.all_test_names):
+        (TestRunner.run):
+        (TestRunner.write_result):
+        (TestRunner.write_summary):
+        * Scripts/webkitpy/test/runner_unittest.py: Added.
+        (FakeModuleSuite):
+        (FakeModuleSuite.__init__):
+        (FakeModuleSuite.__str__):
+        (FakeModuleSuite.run):
+        (FakeTopSuite):
+        (FakeTopSuite.__init__):
+        (FakeLoader):
+        (FakeLoader.__init__):
+        (FakeLoader.top_suite):
+        (FakeLoader.loadTestsFromName):
+        (RunnerTest):
+        (RunnerTest.test_regular):
+        (RunnerTest.test_verbose):
+
+2012-03-27  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] Build gnutls without p11-kit support
+        https://bugs.webkit.org/show_bug.cgi?id=82212
+
+        Reviewed by Martin Robinson.
+
+        * gtk/jhbuild.modules: pass --without-p11-kit to gnutls'
+        configure, to avoid requiring that dependency, which is not used
+        by libsoup and WebKit anyway
+
+2012-03-27  Csaba Osztrogonác  <ossy@webkit.org>
+
+        [Qt] Make debug build work on 32 bit
+        https://bugs.webkit.org/show_bug.cgi?id=82331
+
+        Use --no-keep-memory option of ld not to cache the symbol tables of input files in
+        memory to avoid memory exhaustion during the linking phase for x86-debug builds.
+
+        Reviewed by Tor Arne Vestbø.
+
+        * qmake/mkspecs/features/unix/default_post.prf:
+        * qmake/mkspecs/features/unix/default_pre.prf:
+
 2012-03-23  Balazs Ankes  <bank@inf.u-szeged.hu>
 
         Add png checking to check-webkit-style

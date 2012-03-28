@@ -916,6 +916,9 @@ void FrameView::layout(bool allowSubtree)
     if (m_inLayout)
         return;
 
+    // Protect the view from being deleted during layout (in recalcStyle)
+    RefPtr<FrameView> protector(this);
+
     bool inChildFrameLayoutWithFrameFlattening = isInChildFrameWithFrameFlattening();
 
     if (inChildFrameLayoutWithFrameFlattening) {
@@ -935,9 +938,6 @@ void FrameView::layout(bool allowSubtree)
     m_layoutTimer.stop();
     m_delayedLayout = false;
     m_setNeedsLayoutWasDeferred = false;
-
-    // Protect the view from being deleted during layout (in recalcStyle)
-    RefPtr<FrameView> protector(this);
 
     if (!m_frame) {
         // FIXME: Do we need to set m_size.width here?
@@ -3385,6 +3385,11 @@ void FrameView::addScrollableArea(ScrollableArea* scrollableArea)
     if (!m_scrollableAreas)
         m_scrollableAreas = adoptPtr(new ScrollableAreaSet);
     m_scrollableAreas->add(scrollableArea);
+
+    if (Page* page = m_frame->page()) {
+        if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator())
+            scrollingCoordinator->frameViewScrollableAreasDidChange(this);
+    }
 }
 
 void FrameView::removeScrollableArea(ScrollableArea* scrollableArea)
@@ -3392,6 +3397,11 @@ void FrameView::removeScrollableArea(ScrollableArea* scrollableArea)
     if (!m_scrollableAreas)
         return;
     m_scrollableAreas->remove(scrollableArea);
+
+    if (Page* page = m_frame->page()) {
+        if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator())
+            scrollingCoordinator->frameViewScrollableAreasDidChange(this);
+    }
 }
 
 bool FrameView::containsScrollableArea(ScrollableArea* scrollableArea) const
