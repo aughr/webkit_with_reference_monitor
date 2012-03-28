@@ -86,7 +86,7 @@ const HashFlags8BitBuffer = 64
 
 # Allocation constants
 if JSVALUE64
-    const JSFinalObjectSizeClassIndex = 1
+    const JSFinalObjectSizeClassIndex = 2
 else
     const JSFinalObjectSizeClassIndex = 3
 end

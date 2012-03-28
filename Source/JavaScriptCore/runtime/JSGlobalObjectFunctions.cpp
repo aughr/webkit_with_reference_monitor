@@ -572,34 +572,23 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsNaN(ExecState* exec)
     return JSValue::encode(jsBoolean(isnan(exec->argument(0).toNumber(exec))));
 }
 
-void taint(void *to_taint) {
-    printf("to_taint: %x\n", to_taint);
-}
-
 EncodedJSValue JSC_HOST_CALL globalFuncTaint(ExecState* exec)
 {
-    EncodedJSValue argument = JSValue::encode(exec->argument(0));
-    taint(&argument);
-    return argument;
-}
-
-bool isTainted(void *addr) {
-    return false;
+    JSValue argument = exec->argument(0);
+    if (argument.isCell())
+        argument.asCell()->taint();
+    return JSValue::encode(argument);
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncIsTainted(ExecState* exec)
 {
     JSValue argument = exec->argument(0);
-    EncodedJSValue encodedArgument = JSValue::encode(argument);
-    bool taintResult = isTainted(&argument) || isTainted(&encodedArgument);
-    if (!taintResult && argument.isString()) {
-        UString string = argument.getString(exec);
-        const UChar *chars = string.characters();
-        for (unsigned int i = 0; i < string.length(); i++) {
-            taintResult = taintResult || isTainted((void *)&chars[i]);
-        }
+    if (argument.isCell()) {
+        bool result = argument.asCell()->isTainted();
+        return JSValue::encode(jsBoolean(result));
+    } else {
+        return JSValue::encode(jsBoolean(false));
     }
-    return JSValue::encode(jsBoolean(taintResult));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncIsFinite(ExecState* exec)

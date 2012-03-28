@@ -97,7 +97,7 @@ void Data::performAssertions(JSGlobalData& globalData)
     ASSERT(ImplementsHasInstance == 2);
     ASSERT(ImplementsDefaultHasInstance == 8);
 #if USE(JSVALUE64)
-    ASSERT(&globalData.heap.allocatorForObjectWithoutDestructor(sizeof(JSFinalObject)) - &globalData.heap.firstAllocatorWithoutDestructors() == 1);
+    ASSERT(&globalData.heap.allocatorForObjectWithoutDestructor(sizeof(JSFinalObject)) - &globalData.heap.firstAllocatorWithoutDestructors() == 2);
 #else
     ASSERT(&globalData.heap.allocatorForObjectWithoutDestructor(sizeof(JSFinalObject)) - &globalData.heap.firstAllocatorWithoutDestructors() == 3);
 #endif

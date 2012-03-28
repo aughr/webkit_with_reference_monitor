@@ -79,6 +79,8 @@ namespace JSC {
         bool isGetterSetter() const;
         bool inherits(const ClassInfo*) const;
         bool isAPIValueWrapper() const;
+        bool isTainted() const;
+        void taint();
 
         Structure* structure() const;
         void setStructure(JSGlobalData&, Structure*);
@@ -167,6 +169,7 @@ namespace JSC {
         friend class LLIntOffsetsExtractor;
         
         const ClassInfo* m_classInfo;
+        bool m_isTainted;
         WriteBarrier<Structure> m_structure;
     };
 
@@ -182,6 +185,7 @@ namespace JSC {
 #else
         UNUSED_PARAM(globalData);
 #endif
+        m_isTainted = false;
         ASSERT(m_structure);
     }
 
@@ -198,6 +202,14 @@ namespace JSC {
     inline void JSCell::visitChildren(JSCell* cell, SlotVisitor& visitor)
     {
         visitor.append(&cell->m_structure);
+    }
+    
+    inline bool JSCell::isTainted() const {
+        return m_isTainted;
+    }
+    
+    inline void JSCell::taint() {
+        m_isTainted = true;
     }
 
     // --- JSValue inlines ----------------------------
