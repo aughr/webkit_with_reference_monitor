@@ -1,3 +1,218 @@
+2012-03-28  Csaba Osztrogonác  <ossy@webkit.org>
+
+        [Qt] Couple of tests have different results on 64 bit and/or in debug mode compared to 32 bit and/or release mode
+        https://bugs.webkit.org/show_bug.cgi?id=52810
+
+        Reviewed by Simon Hausmann.
+
+        Use SSE2 floating point math on 32 bit instead of the default
+        387 to make layout test result same on 32 and on 64 bit builds.
+
+        * qmake/mkspecs/features/unix/default_post.prf:
+
+2012-03-28  Sergio Villar Senin  <svillar@igalia.com>
+
+        [Soup] DNS prefetching spams resolver, shoots self in the foot
+        https://bugs.webkit.org/show_bug.cgi?id=41630
+
+        Reviewed by Martin Robinson.
+
+        Bump libsoup and glib dependencies.
+
+        * efl/jhbuild.modules:
+        * gtk/jhbuild.modules:
+
+2012-03-28  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] Disable introspection for jhbuild modules
+        https://bugs.webkit.org/show_bug.cgi?id=82395
+
+        Reviewed by Philippe Normand.
+
+        * efl/jhbuild.modules: add --disable-introspection to all modules
+        that support it
+        * gtk/jhbuild.modules: ditto.
+
+2012-03-28  Csaba Osztrogonác  <ossy@webkit.org>
+
+        [Qt] Unreviewed, fix API tests after adding full platforms. (r111658)
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (BuildAndTestFactory.__init__):
+
+2012-03-28  Csaba Osztrogonác  <ossy@webkit.org>
+
+        [Qt] Unreviewed typo fix after r112383.
+
+        * Scripts/run-qtwebkit-tests:
+        (Main.check_crash_occurences):
+
+2012-03-28  Ádám Kallai  <kadam@inf.u-szeged.hu>
+
+        [Qt] run-qtwebkit-tests should report crashes
+        https://bugs.webkit.org/show_bug.cgi?id=76905
+
+        Added checking of crashing tests. Now final summary includes the total number of crashing tests too.
+        Made unit test for this modification by János Badics <jbadics@inf.u-szeged.hu>.
+
+        Reviewed by Csaba Osztrogonác.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (RunQtAPITests.commandComplete):
+        (RunQtAPITests.evaluateCommand):
+        * BuildSlaveSupport/build.webkit.org-config/mastercfg_unittest.py:
+        (RunQtAPITestsTest):
+        (test_failure):
+        (test_crash):
+        * Scripts/run-qtwebkit-tests:
+        (Main.announce_results_html):
+        (Main):
+        (Main.check_crash_occurences):
+        (Main.convert_to_stdout):
+        (Main.convert_to_html):
+
+2012-03-28  Kwonjin Jeong  <gram@company100.net>
+
+        Add support for Intel compiler on Linux QT port.
+        https://bugs.webkit.org/show_bug.cgi?id=81077
+
+        Reviewed by Tor Arne Vestbø.
+
+        * qmake/mkspecs/features/default_post.prf:
+        Don't hide symbols when building with Intel compiler.
+        The symbols are needed when building QtWebKit tests.
+
+        * qmake/mkspecs/features/unix/icc.prf:
+        Added to ignore icc-specific warnings.
+        This feature is used with command-line arguments for build-webkit script.
+
+2012-03-28  Philippe Normand  <pnormand@igalia.com>
+
+        Unreviewed, trivial update-webkit-libs-jhbuild system call fix.
+
+        * Scripts/update-webkitgtk-libs: This script is written in
+        Perl. Not Python. So use perl vocabulary to refer to command line arguments.
+
+2012-03-28  Ryosuke Niwa  <rniwa@webkit.org>
+
+        kill-old-processes doesn't do anything on linux
+        https://bugs.webkit.org/show_bug.cgi?id=82388
+
+        Reviewed by Tony Chang.
+
+        Kill cc1plus, ld, etc... on linux. Also ps aux + grep to kill old run-webkit-tests processes.
+        This should help stabilizing Chromium linux bots.
+
+        * BuildSlaveSupport/kill-old-processes:
+
+2012-03-28  Philippe Normand  <pnormand@igalia.com>
+
+        [GTK] jhbuild wrongly tricked into clean-up
+        https://bugs.webkit.org/show_bug.cgi?id=82216
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Save jhbuild{rc,.modules}.md5sum in Dependencies instead of the
+        build tree. Also when checking if the jhbuild configuration
+        changed use absolute md5sum paths.
+
+        * Scripts/webkitdirs.pm:
+        (runAutogenForAutotoolsProjectIfNecessary):
+        (jhbuildConfigurationChanged):
+        (buildAutotoolsProject):
+
+2012-03-28  Csaba Osztrogonác  <ossy@webkit.org>
+
+        kill-old-processes doesn't do anything on linux
+        https://bugs.webkit.org/show_bug.cgi?id=82388
+
+        One more attempt to disable kill-old-processes on the Qt bots not to kill each others.
+
+        The platform in Factory comes from config.json, accordingly platform is fullplatform,
+        for example: qt-4.8, qt-5.0-wk2. We have to check only the prefix of platform.
+
+        Reviewed by Ryosuke Niwa.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (Factory.__init__):
+
+2012-03-28  Hao Zheng  <zhenghao@chromium.org>
+
+        Make Chromium port for Android use hardware gpu path default.
+        https://bugs.webkit.org/show_bug.cgi?id=82033
+
+        Reviewed by Dirk Pranke.
+
+        Skip canvas tests, which are run in virtual gpu test suites.
+
+        * Scripts/webkitpy/layout_tests/port/chromium_android.py:
+        (ChromiumAndroidPort.__init__):
+        (ChromiumAndroidPort.skipped_tests):
+
+2012-03-27  Csaba Osztrogonác  <ossy@webkit.org>
+
+        kill-old-processes doesn't do anything on linux
+        https://bugs.webkit.org/show_bug.cgi?id=82388
+
+        Disable kill-old-processes on the Qt bots not to kill each others.
+
+        Reviewed by Ryosuke Niwa.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (Factory.__init__):
+
+2012-03-27  Hao Zheng  <zhenghao@chromium.org>
+
+        Handle DRT crash caused by Android OOM.
+        https://bugs.webkit.org/show_bug.cgi?id=82310
+
+        Reviewed by Tony Chang.
+
+        When Android is OOM, it sends a SIGKILL (137) signal to DRT. DRT
+        is stopped silently and regarded as crashed. Re-run the test for
+        such crash.
+
+        Add some debug log to NRWT.
+
+        * Scripts/webkitpy/layout_tests/port/chromium.py:
+        (ChromiumDriver.run_test):
+        * Scripts/webkitpy/layout_tests/port/chromium_android.py:
+        (ChromiumAndroidPort.__init__):
+        (ChromiumAndroidPort.get_last_stacktrace):
+        (ChromiumAndroidDriver.__init__):
+        (ChromiumAndroidDriver._start):
+        (ChromiumAndroidDriver.run_test):
+        (ChromiumAndroidDriver._get_drt_return_value):
+
+2012-03-27  Ojan Vafai  <ojan@chromium.org>
+
+        Fix expected results for some unittest failures.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/TestFailures/scripts/ui/failures_unittests.js:
+
+2012-03-27  Adrienne Walker  <enne@google.com>
+
+        [chromium] Fix --enabled-threaded-compositing flag in DRT
+        https://bugs.webkit.org/show_bug.cgi?id=82405
+
+        Reviewed by James Robinson.
+
+        --enable-threaded-compositing wasn't working because there was no way
+        to set the value before it was used in the TestShell constructor.
+
+        To avoid adding yet another boolean parameter to TestShell's
+        constructor, add an explicit initialize function that can operate on
+        any boolean settings that are set post-constructor.
+
+        * DumpRenderTree/chromium/DumpRenderTree.cpp:
+        (main):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::TestShell):
+        (TestShell::initialize):
+        * DumpRenderTree/chromium/TestShell.h:
+        (TestShell):
+        (TestShell::setTestShellMode):
+
 2012-03-27  Dirk Pranke  <dpranke@chromium.org>
 
         new-run-webkit-tests: suppress debug output from run-safari on results file

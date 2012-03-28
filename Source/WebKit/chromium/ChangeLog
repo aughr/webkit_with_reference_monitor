@@ -1,3 +1,144 @@
+2012-03-27  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Transfer wheel fling via WebCompositorInputHandlerClient
+        https://bugs.webkit.org/show_bug.cgi?id=81740
+
+        Reviewed by Adrienne Walker.
+
+        Adds a path for transfering an active wheel fling animation out to the embedder from the compositor and back in
+        to a WebViewImpl via the embedder. This is used when we start a wheel fling animation on the compositor thread
+        but then hit a condition that we can't handle from the compositor, such as registered wheel event listeners or a
+        scrollable area we can't handle.
+
+        New tests added to WebCompositorInputHandlerTest for the transfering logic.
+
+        * public/WebActiveWheelFlingParameters.h: Copied from Source/WebKit/chromium/public/WebCompositorInputHandlerClient.h.
+        (WebKit):
+        (WebActiveWheelFlingParameters):
+        (WebKit::WebActiveWheelFlingParameters::WebActiveWheelFlingParameters):
+        * public/WebCompositorInputHandlerClient.h:
+        (WebKit):
+        (WebCompositorInputHandlerClient):
+        (WebKit::WebCompositorInputHandlerClient::transferActiveWheelFlingAnimation):
+        * public/WebView.h:
+        (WebKit):
+        (WebView):
+        * src/WebCompositorInputHandlerImpl.cpp:
+        (WebKit::WebCompositorInputHandlerImpl::handleGestureFling):
+        (WebKit::WebCompositorInputHandlerImpl::animate):
+        (WebKit::WebCompositorInputHandlerImpl::cancelCurrentFling):
+        (WebKit::WebCompositorInputHandlerImpl::scrollBy):
+        * src/WebCompositorInputHandlerImpl.h:
+        (WebCore):
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::transferActiveWheelFlingAnimation):
+        (WebKit):
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/WebCompositorInputHandlerImplTest.cpp:
+        (WebKit::MockWebCompositorInputHandlerClient::MockWebCompositorInputHandlerClient):
+        (MockWebCompositorInputHandlerClient):
+        (WebKit::TEST):
+        (WebKit::WebCompositorInputHandlerImplTest::WebCompositorInputHandlerImplTest):
+        (WebKit::WebCompositorInputHandlerImplTest::~WebCompositorInputHandlerImplTest):
+        (WebCompositorInputHandlerImplTest):
+        (WebKit::TEST_F):
+        (WebKit):
+
+2012-03-27  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Send wheel events to main thread even if we think nothing is scrollable
+        https://bugs.webkit.org/show_bug.cgi?id=82408
+
+        Reviewed by Adrienne Walker.
+
+        * src/WebCompositorInputHandlerImpl.cpp:
+        (WebKit::WebCompositorInputHandlerImpl::handleInputEventInternal):
+
+2012-03-27  Nat Duca  <nduca@chromium.org>
+
+        [chromium] Route monotonic clock up from compositor
+        https://bugs.webkit.org/show_bug.cgi?id=82154
+
+        Reviewed by James Robinson.
+
+        * public/WebWidget.h:
+        (WebKit::WebWidget::animate):
+        * src/WebLayerTreeViewImpl.cpp:
+        (WebKit::WebLayerTreeViewImpl::updateAnimations):
+        * src/WebLayerTreeViewImpl.h:
+        (WebLayerTreeViewImpl):
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::animate):
+        (WebKit::WebViewImpl::updateAnimations):
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/FakeCCLayerTreeHostClient.h:
+        (WebCore::FakeCCLayerTreeHostClient::updateAnimations):
+
+2012-03-27  James Robinson  <jamesr@chromium.org>
+
+        webkit_unit_tests crashing on chromium lion in CCLayerTreeHostTestCompositeAndReadbackWhileInvisible
+        https://bugs.webkit.org/show_bug.cgi?id=82382
+
+        Reviewed by Adrienne Walker.
+
+        Use UnsignedWithZeroKeyHashTraits trait for the HashSet<WebGLId> m_usedTextures in
+        CompositorFakeWebGraphicsContext3DWithTextureTracking. This set is used to track all textures that are bound in
+        a given context during a test. During ..CompositeAndReadback.. we bind texture id 0. By default, HashSet<T>
+        where T is an unsigned does not allow 0 as a value. WebGLId is typedef'd to unsigned.
+
+        * tests/CCLayerTreeHostTest.cpp:
+        (CompositorFakeWebGraphicsContext3DWithTextureTracking):
+
+2012-03-27  James Robinson  <jamesr@chromium.org>
+
+        webkit_unit_tests crashing on chromium lion in ScrollbarLayerChromiumTest.resolveScrollLayerPointer
+        https://bugs.webkit.org/show_bug.cgi?id=82381
+
+        Reviewed by Adrienne Walker.
+
+        Use the mock scrollbar theme for this unit test. The real ScrollbarThemeMac isn't compatible with the mocks this
+        test uses and the test isn't designed to cover the theming code, only code inside the compositor.
+
+        * tests/ScrollbarLayerChromiumTest.cpp:
+        (WebCore::TEST):
+
+2012-03-27  Dirk Pranke  <dpranke@chromium.org>
+
+        Unreviewed, rolling out r112339.
+        http://trac.webkit.org/changeset/112339
+        https://bugs.webkit.org/show_bug.cgi?id=82354
+
+        webkit_unit_tests crashing on chromium mac bots
+
+        * src/AssociatedURLLoader.cpp:
+        (AssociatedURLLoader::ClientAdapter):
+        * tests/AssociatedURLLoaderTest.cpp:
+        (WebKit::AssociatedURLLoaderTest::TearDown):
+        (WebKit):
+        (WebKit::TEST_F):
+
+2012-03-27  Kausalya Madhusudhanan  <kmadhusu@chromium.org>
+
+        [Coverity] Address some uninitialized constructor values.
+        https://bugs.webkit.org/show_bug.cgi?id=82376
+
+        Reviewed by James Robinson.
+
+        New tests are not required since I did not modify any code behavior. I just initialized the class member variables in the constructor.
+
+        * src/WebCompositorInputHandlerImpl.cpp:
+        (WebCore::PlatformGestureToCCGestureAdapter::PlatformGestureToCCGestureAdapter):
+
+2012-03-27  Dirk Pranke  <dpranke@chromium.org>
+
+        Roll chromium DEPS to r129300.
+
+        Unreviewed, deps change.
+
+        * DEPS:
+
 2012-03-27  Bill Budge  <bbudge@chromium.org>
 
         AssociatedURLLoader does not support Cross Origin Redirects when using
