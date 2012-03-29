@@ -2049,6 +2049,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsBoolean(src1.asInt32() == src2.asInt32());
         else {
             JSValue result = jsBoolean(JSValue::equalSlowCase(callFrame, src1, src2));
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2089,6 +2091,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsBoolean(src1.asInt32() != src2.asInt32());
         else {
             JSValue result = jsBoolean(!JSValue::equalSlowCase(callFrame, src1, src2));
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2125,7 +2129,9 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         int dst = vPC[1].u.operand;
         JSValue src1 = callFrame->r(vPC[2].u.operand).jsValue();
         JSValue src2 = callFrame->r(vPC[3].u.operand).jsValue();
-        bool result = JSValue::strictEqual(callFrame, src1, src2);
+        JSValue result = jsBoolean(JSValue::strictEqual(callFrame, src1, src2));
+        if (src1.isTainted() || src2.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = jsBoolean(result);
 
@@ -2142,7 +2148,9 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         int dst = vPC[1].u.operand;
         JSValue src1 = callFrame->r(vPC[2].u.operand).jsValue();
         JSValue src2 = callFrame->r(vPC[3].u.operand).jsValue();
-        bool result = !JSValue::strictEqual(callFrame, src1, src2);
+        JSValue result = jsBoolean(!JSValue::strictEqual(callFrame, src1, src2));
+        if (src1.isTainted() || src2.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = jsBoolean(result);
 
@@ -2160,6 +2168,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         JSValue src1 = callFrame->r(vPC[2].u.operand).jsValue();
         JSValue src2 = callFrame->r(vPC[3].u.operand).jsValue();
         JSValue result = jsBoolean(jsLess<true>(callFrame, src1, src2));
+        if (src1.isTainted() || src2.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = result;
 
@@ -2177,6 +2187,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         JSValue src1 = callFrame->r(vPC[2].u.operand).jsValue();
         JSValue src2 = callFrame->r(vPC[3].u.operand).jsValue();
         JSValue result = jsBoolean(jsLessEq<true>(callFrame, src1, src2));
+        if (src1.isTainted() || src2.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = result;
 
@@ -2194,6 +2206,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         JSValue src1 = callFrame->r(vPC[2].u.operand).jsValue();
         JSValue src2 = callFrame->r(vPC[3].u.operand).jsValue();
         JSValue result = jsBoolean(jsLess<false>(callFrame, src2, src1));
+        if (src1.isTainted() || src2.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = result;
 
@@ -2211,6 +2225,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         JSValue src1 = callFrame->r(vPC[2].u.operand).jsValue();
         JSValue src2 = callFrame->r(vPC[3].u.operand).jsValue();
         JSValue result = jsBoolean(jsLessEq<false>(callFrame, src2, src1));
+        if (src1.isTainted() || src2.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = result;
 
@@ -2229,6 +2245,9 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(srcDst) = jsNumber(v.asInt32() + 1);
         else {
             JSValue result = jsNumber(v.toNumber(callFrame) + 1);
+            if (v.isTainted()) {
+                result = result.taint(callFrame);
+            }
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(srcDst) = result;
         }
@@ -2248,6 +2267,9 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(srcDst) = jsNumber(v.asInt32() - 1);
         else {
             JSValue result = jsNumber(v.toNumber(callFrame) - 1);
+            if (v.isTainted()) {
+                result = result.taint(callFrame);
+            }
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(srcDst) = result;
         }
@@ -2270,9 +2292,15 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = v;
         } else {
             double number = callFrame->r(srcDst).jsValue().toNumber(callFrame);
+            JSValue srcDst_result = jsNumber(number + 1);
+            JSValue dst_result = jsNumber(number);
+            if (v.isTainted()) {
+                srcDst_result = srcDst_result.taint(callFrame);
+                dst_result = dst_result.taint(callFrame);
+            }
             CHECK_FOR_EXCEPTION();
-            callFrame->uncheckedR(srcDst) = jsNumber(number + 1);
-            callFrame->uncheckedR(dst) = jsNumber(number);
+            callFrame->uncheckedR(srcDst) = srcDst_result;
+            callFrame->uncheckedR(dst) = dst_result;
         }
 
         vPC += OPCODE_LENGTH(op_post_inc);
@@ -2293,9 +2321,15 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = v;
         } else {
             double number = callFrame->r(srcDst).jsValue().toNumber(callFrame);
+            JSValue srcDst_result = jsNumber(number - 1);
+            JSValue dst_result = jsNumber(number);
+            if (v.isTainted()) {
+                srcDst_result = srcDst_result.taint(callFrame);
+                dst_result = dst_result.taint(callFrame);
+            }
             CHECK_FOR_EXCEPTION();
-            callFrame->uncheckedR(srcDst) = jsNumber(number - 1);
-            callFrame->uncheckedR(dst) = jsNumber(number);
+            callFrame->uncheckedR(srcDst) = srcDst_result;
+            callFrame->uncheckedR(dst) = dst_result;
         }
 
         vPC += OPCODE_LENGTH(op_post_dec);
@@ -2316,8 +2350,11 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = callFrame->r(src);
         else {
             double number = srcVal.toNumber(callFrame);
+            JSValue result = jsNumber(number);
+            if (srcVal.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
-            callFrame->uncheckedR(dst) = jsNumber(number);
+            callFrame->uncheckedR(dst) = result;
         }
 
         vPC += OPCODE_LENGTH(op_to_jsnumber);
@@ -2335,6 +2372,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(-src.asInt32());
         else {
             JSValue result = jsNumber(-src.toNumber(callFrame));
+            if (src.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2474,6 +2513,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(val.asInt32() << (shift.asInt32() & 0x1f));
         else {
             JSValue result = jsNumber((val.toInt32(callFrame)) << (shift.toUInt32(callFrame) & 0x1f));
+            if (val.isTainted() || shift.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2496,6 +2537,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(val.asInt32() >> (shift.asInt32() & 0x1f));
         else {
             JSValue result = jsNumber((val.toInt32(callFrame)) >> (shift.toUInt32(callFrame) & 0x1f));
+            if (val.isTainted() || shift.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2517,6 +2560,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(val.asInt32() >> (shift.asInt32() & 0x1f));
         else {
             JSValue result = jsNumber((val.toUInt32(callFrame)) >> (shift.toUInt32(callFrame) & 0x1f));
+            if (val.isTainted() || shift.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2538,6 +2583,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(src1.asInt32() & src2.asInt32());
         else {
             JSValue result = jsNumber(src1.toInt32(callFrame) & src2.toInt32(callFrame));
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2559,6 +2606,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(src1.asInt32() ^ src2.asInt32());
         else {
             JSValue result = jsNumber(src1.toInt32(callFrame) ^ src2.toInt32(callFrame));
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2580,6 +2629,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = jsNumber(src1.asInt32() | src2.asInt32());
         else {
             JSValue result = jsNumber(src1.toInt32(callFrame) | src2.toInt32(callFrame));
+            if (src1.isTainted() || src2.isTainted())
+                result = result.taint(callFrame);
             CHECK_FOR_EXCEPTION();
             callFrame->uncheckedR(dst) = result;
         }
@@ -2595,7 +2646,10 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         */
         int dst = vPC[1].u.operand;
         int src = vPC[2].u.operand;
-        JSValue result = jsBoolean(!callFrame->r(src).jsValue().toBoolean(callFrame));
+        JSValue v = callFrame->r(src).jsValue();
+        JSValue result = jsBoolean(!v.toBoolean(callFrame));
+        if (v.isTainted())
+            result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
         callFrame->uncheckedR(dst) = result;
 
