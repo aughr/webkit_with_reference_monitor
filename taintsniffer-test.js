@@ -1,5 +1,5 @@
 function assertFunc(a, b, label, desc) {
-  if (a === b) {
+  if (a == b) {
     print("PASS " + label + ": " + desc);
   } else {
     print("FAIL " + label + ": " + desc);
@@ -349,7 +349,7 @@ function Scoping(a, b) {
        print("Taint is: " + isTainted(exposedProperty));
        boolValue = !boolValue;
 
-       return taintedClosure;
+       return exposedProperty;
     }
 
     return InsideScope;
