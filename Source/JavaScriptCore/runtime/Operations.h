@@ -78,16 +78,22 @@ namespace JSC {
         JSString::RopeBuilder ropeBuilder(*globalData);
 
         unsigned oldLength = 0;
+        bool tainted = false;
 
         for (unsigned i = 0; i < count; ++i) {
             JSValue v = strings[i].jsValue();
+            tainted = tainted || v.isTainted();
             ropeBuilder.append(v.toString(exec));
 
             if (ropeBuilder.length() < oldLength) // True for overflow
                 return throwOutOfMemoryError(exec);
         }
 
-        return ropeBuilder.release();
+        JSValue result = ropeBuilder.release();
+        if (tainted) {
+            result = result.taint(exec);
+        }
+        return result;
     }
 
     ALWAYS_INLINE JSValue jsStringFromArguments(ExecState* exec, JSValue thisValue)
