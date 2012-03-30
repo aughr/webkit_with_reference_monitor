@@ -384,10 +384,15 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
         return JSValue::encode(earlyReturnValue);
 
     JSStringBuilder strBuffer;
+    
+    bool tainted = thisObj->isTainted();
 
     UString separator;
-    if (!exec->argument(0).isUndefined())
+    if (!exec->argument(0).isUndefined()) {
+        JSValue argument = exec->argument(0);
+        tainted = tainted || argument.isTainted(); //TODO: if obj itself isn't tainted, but component is
         separator = exec->argument(0).toString(exec)->value(exec);
+    }
 
     unsigned k = 0;
     if (isJSArray(thisObj)) {
@@ -397,6 +402,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
             if (!array->canGetIndex(k)) 
                 goto skipFirstLoop;
             JSValue element = array->getIndex(k);
+            tainted = tainted || element.isTainted();
             if (!element.isUndefinedOrNull())
                 strBuffer.append(element.toString(exec)->value(exec));
             k++;
@@ -408,6 +414,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
                     break;
                 strBuffer.append(',');
                 JSValue element = array->getIndex(k);
+                tainted = tainted || element.isTainted();
                 if (!element.isUndefinedOrNull())
                     strBuffer.append(element.toString(exec)->value(exec));
             }
@@ -417,6 +424,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
                     break;
                 strBuffer.append(separator);
                 JSValue element = array->getIndex(k);
+                tainted = tainted || element.isTainted();
                 if (!element.isUndefinedOrNull())
                     strBuffer.append(element.toString(exec)->value(exec));
             }
@@ -432,11 +440,15 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
         }
 
         JSValue element = thisObj->get(exec, k);
+        tainted = tainted || element.isTainted();
         if (!element.isUndefinedOrNull())
             strBuffer.append(element.toString(exec)->value(exec));
     }
 
-    return JSValue::encode(strBuffer.build(exec));
+    JSValue result = JSValue(strBuffer.build(exec));
+    if (tainted)
+        result = result.taint(exec);
+    return JSValue::encode(result);
 }
 
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncConcat(ExecState* exec)
