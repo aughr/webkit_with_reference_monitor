@@ -270,6 +270,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
     unsigned totalSize = length ? length - 1 : 0;
     Vector<RefPtr<StringImpl>, 256> strBuffer(length);
     bool allStrings8Bit = true;
+    bool tainted = thisValue.hasTaintAnywhere();
 
     for (unsigned k = 0; k < length; k++) {
         JSValue element;
@@ -285,6 +286,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
         strBuffer[k] = str.impl();
         totalSize += str.length();
         allStrings8Bit = allStrings8Bit && str.is8Bit();
+        tainted = tainted || element.hasTaintAnywhere();
         
         if (!strBuffer.data()) {
             throwOutOfMemoryError(exec);
@@ -309,7 +311,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
                 buffer.append(rep->characters8(), rep->length());
         }
         ASSERT(buffer.size() == totalSize);
-        return JSValue::encode(jsString(exec, UString::adopt(buffer)));        
+        return JSValue::encode(jsString(exec, UString::adopt(buffer)), exec, tainted);
     }
 
     Vector<UChar> buffer;
@@ -324,7 +326,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
             buffer.append(rep->characters(), rep->length());
     }
     ASSERT(buffer.size() == totalSize);
-    return JSValue::encode(jsString(exec, UString::adopt(buffer)));
+    return JSValue::encode(jsString(exec, UString::adopt(buffer)), exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncToLocaleString(ExecState* exec)
@@ -459,12 +461,14 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncConcat(ExecState* exec)
     JSValue curArg = thisValue.toObject(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
+    bool tainted = thisValue.isTainted();
     size_t i = 0;
     size_t argCount = exec->argumentCount();
     while (1) {
         if (curArg.inherits(&JSArray::s_info)) {
             unsigned length = curArg.get(exec, exec->propertyNames().length).toUInt32(exec);
             JSObject* curObject = curArg.toObject(exec);
+            tainted = tainted || curObject->isTainted();
             for (unsigned k = 0; k < length; ++k) {
                 JSValue v = getProperty(exec, curObject, k);
                 if (exec->hadException())
@@ -483,7 +487,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncConcat(ExecState* exec)
         ++i;
     }
     arr->setLength(exec, n);
-    return JSValue::encode(arr);
+    return JSValue::encode(arr, exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncPop(ExecState* exec)
@@ -630,7 +634,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncSlice(ExecState* exec)
             resObj->putDirectIndex(exec, n, v);
     }
     resObj->setLength(exec, n);
-    return JSValue::encode(result);
+    return JSValue::encode(result, exec, thisObj->isTainted());
 }
 
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncSort(ExecState* exec)

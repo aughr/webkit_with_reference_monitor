@@ -185,7 +185,8 @@ CallType DateConstructor::getCallData(JSCell*, CallData& callData)
 
 static EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
 {
-    return JSValue::encode(jsNumber(parseDate(exec, exec->argument(0).toString(exec)->value(exec))));
+    bool tainted = exec->argument(0).hasTaintAnywhere();
+    return JSValue::encode(jsNumber(parseDate(exec, exec->argument(0).toString(exec)->value(exec))), exec, tainted);
 }
 
 static EncodedJSValue JSC_HOST_CALL dateNow(ExecState*)
@@ -204,6 +205,13 @@ static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
         exec->argument(5).toNumber(exec), 
         exec->argument(6).toNumber(exec)
     };
+    bool tainted = exec->argument(0).hasTaintAnywhere()
+                || exec->argument(1).hasTaintAnywhere()
+                || exec->argument(2).hasTaintAnywhere()
+                || exec->argument(3).hasTaintAnywhere()
+                || exec->argument(4).hasTaintAnywhere()
+                || exec->argument(5).hasTaintAnywhere()
+                || exec->argument(6).hasTaintAnywhere();
     int n = exec->argumentCount();
     if (isnan(doubleArguments[0])
             || isnan(doubleArguments[1])
@@ -223,7 +231,7 @@ static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
     t.minute = JSC::toInt32(doubleArguments[4]);
     t.second = JSC::toInt32(doubleArguments[5]);
     double ms = (n >= 7) ? doubleArguments[6] : 0;
-    return JSValue::encode(jsNumber(timeClip(gregorianDateTimeToMS(exec, t, ms, true))));
+    return JSValue::encode(jsNumber(timeClip(gregorianDateTimeToMS(exec, t, ms, true))), exec, tainted);
 }
 
 } // namespace JSC

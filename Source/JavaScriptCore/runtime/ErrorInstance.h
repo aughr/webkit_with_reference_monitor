@@ -45,7 +45,10 @@ namespace JSC {
 
         static ErrorInstance* create(ExecState* exec, Structure* structure, JSValue message)
         {
-            return create(exec->globalData(), structure, message.isUndefined() ? UString() : message.toString(exec)->value(exec));
+            JSGlobalData& globalData = exec->globalData();
+            ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(globalData.heap)) ErrorInstance(globalData, structure);
+            instance->finishCreation(exec, message.isUndefined() ? UString() : message.toString(exec)->value(exec), message.hasTaintAnywhere());
+            return instance;
         }
 
         bool appendSourceToMessage() { return m_appendSourceToMessage; }
@@ -61,6 +64,19 @@ namespace JSC {
             ASSERT(inherits(&s_info));
             if (!message.isNull())
                 putDirect(globalData, globalData.propertyNames->message, jsString(&globalData, message), DontEnum);
+        }
+
+        void finishCreation(ExecState* exec, const UString& message, bool tainted)
+        {
+            JSGlobalData& globalData = exec->globalData();
+            Base::finishCreation(globalData);
+            ASSERT(inherits(&s_info));
+            if (!message.isNull()) {
+                JSValue message_value = jsString(&globalData, message);
+                if (tainted)
+                    message_value = message_value.taint(exec);
+                putDirect(globalData, globalData.propertyNames->message, message_value, DontEnum);
+            }
         }
 
         bool m_appendSourceToMessage;

@@ -78,8 +78,11 @@ bool ErrorPrototype::getOwnPropertyDescriptor(JSObject* object, ExecState* exec,
 // ECMA-262 5.1, 15.11.4.4
 EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
 {
+    bool tainted = false;
+
     // 1. Let O be the this value.
     JSValue thisValue = exec->hostThisValue();
+    tainted = tainted || thisValue.isTainted();
 
     // 2. If Type(O) is not Object, throw a TypeError exception.
     if (!thisValue.isObject())
@@ -101,9 +104,11 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
     if (name.isUndefined())
         nameString = "Error";
     else {
-        nameString = name.toString(exec)->value(exec);
+        JSString* nameStringValue = name.toString(exec);
+        nameString = nameStringValue->value(exec);
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
+        tainted = tainted || nameStringValue->isTainted();
     }
 
     // 5. Let msg be the result of calling the [[Get]] internal method of O with argument "message".
@@ -118,21 +123,23 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
     if (message.isUndefined())
         messageString = "";
     else {
-        messageString = message.toString(exec)->value(exec);
+        JSString* messageStringValue = message.toString(exec);
+        messageString = messageStringValue->value(exec);
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
+        tainted = tainted || messageStringValue->isTainted();
     }
 
     // 8. If name is the empty String, return msg.
     if (!nameString.length())
-        return JSValue::encode(message.isString() ? message : jsString(exec, messageString));
+        return JSValue::encode(message.isString() ? message : jsString(exec, messageString), exec, tainted);
 
     // 9. If msg is the empty String, return name.
     if (!messageString.length())
-        return JSValue::encode(name.isString() ? name : jsNontrivialString(exec, nameString));
+        return JSValue::encode(name.isString() ? name : jsNontrivialString(exec, nameString), exec, tainted);
 
     // 10. Return the result of concatenating name, ":", a single space character, and msg.
-    return JSValue::encode(jsMakeNontrivialString(exec, nameString, ": ", messageString));
+    return JSValue::encode(jsMakeNontrivialString(exec, nameString, ": ", messageString), exec, tainted);
 }
 
 } // namespace JSC

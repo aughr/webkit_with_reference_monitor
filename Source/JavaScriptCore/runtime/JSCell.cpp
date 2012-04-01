@@ -212,4 +212,8 @@ bool JSCell::getOwnPropertyDescriptor(JSObject*, ExecState*, const Identifier&, 
     return false;
 }
 
+bool JSCell::hasTaintAnywhere() const {
+    return isTainted();
+}
+
 } // namespace JSC

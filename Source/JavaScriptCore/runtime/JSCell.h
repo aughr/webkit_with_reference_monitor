@@ -80,6 +80,7 @@ namespace JSC {
         bool inherits(const ClassInfo*) const;
         bool isAPIValueWrapper() const;
         bool isTainted() const;
+        bool hasTaintAnywhere() const;
         void taint();
 
         Structure* structure() const;

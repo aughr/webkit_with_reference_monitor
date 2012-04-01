@@ -851,13 +851,23 @@ inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue 
 }
     
 inline JSValue JSValue::taint(ExecState* exec) {
-    JSObject *object = toObject(exec);
-    object->taint();
-    return JSValue(object);
+    JSCell *cell;
+    if (isString()) {
+        const JSString *string = static_cast<const JSString*>(asCell());
+        cell = jsNontrivialString(&exec->globalData(), string->value(exec));
+    } else {
+        cell = toObject(exec);
+    }
+    cell->taint();
+    return JSValue(cell);
 }
 
 inline bool JSValue::isTainted() const {
     return isCell() && asCell()->isTainted();
+}
+
+inline bool JSValue::hasTaintAnywhere() const {
+    return isTainted(); // TODO: make this dig deeper
 }
 
 inline EncodedJSValue JSValue::encode(JSValue value, ExecState* exec, bool taint) {

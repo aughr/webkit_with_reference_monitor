@@ -241,6 +241,7 @@ namespace JSC {
         
         JSValue taint(ExecState*);
         bool isTainted() const;
+        bool hasTaintAnywhere() const;
 
         char* description();
 
