@@ -2133,7 +2133,7 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         if (src1.isTainted() || src2.isTainted())
             result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
-        callFrame->uncheckedR(dst) = jsBoolean(result);
+        callFrame->uncheckedR(dst) = result;
 
         vPC += OPCODE_LENGTH(op_stricteq);
         NEXT_INSTRUCTION();
@@ -2152,7 +2152,7 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         if (src1.isTainted() || src2.isTainted())
             result = result.taint(callFrame);
         CHECK_FOR_EXCEPTION();
-        callFrame->uncheckedR(dst) = jsBoolean(result);
+        callFrame->uncheckedR(dst) = result;
 
         vPC += OPCODE_LENGTH(op_nstricteq);
         NEXT_INSTRUCTION();
