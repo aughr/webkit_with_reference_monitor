@@ -77,15 +77,23 @@ static NEVER_INLINE JSValue stringFromCharCodeSlowCase(ExecState* exec)
     unsigned length = exec->argumentCount();
     UChar* buf;
     PassRefPtr<StringImpl> impl = StringImpl::createUninitialized(length, buf);
-    for (unsigned i = 0; i < length; ++i)
-        buf[i] = static_cast<UChar>(exec->argument(i).toUInt32(exec));
-    return jsString(exec, impl);
+    bool tainted = false;
+    for (unsigned i = 0; i < length; ++i) {
+        JSValue argument = exec->argument(i);
+        tainted = tainted || argument.hasTaintAnywhere();
+        buf[i] = static_cast<UChar>(argument.toUInt32(exec));
+    }
+    
+    JSString* string = jsString(exec, impl);
+    if (tainted)
+        string->taint();
+    return string;
 }
 
 static EncodedJSValue JSC_HOST_CALL stringFromCharCode(ExecState* exec)
 {
     if (LIKELY(exec->argumentCount() == 1))
-        return JSValue::encode(jsSingleCharacterString(exec, exec->argument(0).toUInt32(exec)));
+        return JSValue::encode(jsSingleCharacterString(exec, exec->argument(0).toUInt32(exec)), exec, exec->argument(0).hasTaintAnywhere());
     return JSValue::encode(stringFromCharCodeSlowCase(exec));
 }
 

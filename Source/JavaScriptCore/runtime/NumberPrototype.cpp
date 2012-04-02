@@ -116,7 +116,7 @@ static ALWAYS_INLINE bool toThisNumber(JSValue thisValue, double& x)
     return false;
 }
 
-static ALWAYS_INLINE bool getIntegerArgumentInRange(ExecState* exec, int low, int high, int& result, bool& isUndefined)
+static ALWAYS_INLINE bool getIntegerArgumentInRange(ExecState* exec, int low, int high, int& result, bool& isUndefined, bool& tainted)
 {
     result = 0;
     isUndefined = false;
@@ -126,6 +126,9 @@ static ALWAYS_INLINE bool getIntegerArgumentInRange(ExecState* exec, int low, in
         isUndefined = true;
         return true;
     }
+    
+    if (argument0.hasTaintAnywhere())
+        tainted = true;
 
     double asDouble = argument0.toInteger(exec);
     if (asDouble < low || asDouble > high)
@@ -352,12 +355,13 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
     // Get the argument. 
     int decimalPlacesInExponent;
     bool isUndefined;
-    if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlacesInExponent, isUndefined))
+    bool tainted = exec->hostThisValue().isTainted();
+    if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlacesInExponent, isUndefined, tainted))
         return throwVMError(exec, createRangeError(exec, "toExponential() argument must be between 0 and 20"));
 
     // Handle NaN and Infinity.
     if (!isfinite(x))
-        return JSValue::encode(jsString(exec, UString::number(x)));
+        return JSValue::encode(jsString(exec, UString::number(x)), exec, tainted);
 
     // Round if the argument is not undefined, always format as exponential.
     char buffer[WTF::NumberToStringBufferLength];
@@ -367,7 +371,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
     isUndefined
         ? converter.ToExponential(x, -1, &builder)
         : converter.ToExponential(x, decimalPlacesInExponent, &builder);
-    return JSValue::encode(jsString(exec, UString(builder.Finalize())));
+    return JSValue::encode(jsString(exec, UString(builder.Finalize())), exec, tainted);
 }
 
 // toFixed converts a number to a string, always formatting as an a decimal fraction.
@@ -383,21 +387,22 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(ExecState* exec)
     // Get the argument. 
     int decimalPlaces;
     bool isUndefined; // This is ignored; undefined treated as 0.
-    if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlaces, isUndefined))
+    bool tainted = exec->hostThisValue().isTainted();
+    if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlaces, isUndefined, tainted))
         return throwVMError(exec, createRangeError(exec, "toFixed() argument must be between 0 and 20"));
 
     // 15.7.4.5.7 states "If x >= 10^21, then let m = ToString(x)"
     // This also covers Ininity, and structure the check so that NaN
     // values are also handled by numberToString
     if (!(fabs(x) < 1e+21))
-        return JSValue::encode(jsString(exec, UString::number(x)));
+        return JSValue::encode(jsString(exec, UString::number(x)), exec, tainted);
 
     // The check above will return false for NaN or Infinity, these will be
     // handled by numberToString.
     ASSERT(isfinite(x));
 
     NumberToStringBuffer buffer;
-    return JSValue::encode(jsString(exec, UString(numberToFixedWidthString(x, decimalPlaces, buffer))));
+    return JSValue::encode(jsString(exec, UString(numberToFixedWidthString(x, decimalPlaces, buffer))), exec, tainted);
 }
 
 // toPrecision converts a number to a string, takeing an argument specifying a
@@ -416,19 +421,20 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(ExecState* exec)
     // Get the argument. 
     int significantFigures;
     bool isUndefined;
-    if (!getIntegerArgumentInRange(exec, 1, 21, significantFigures, isUndefined))
+    bool tainted = exec->hostThisValue().isTainted();
+    if (!getIntegerArgumentInRange(exec, 1, 21, significantFigures, isUndefined, tainted))
         return throwVMError(exec, createRangeError(exec, "toPrecision() argument must be between 1 and 21"));
 
     // To precision called with no argument is treated as ToString.
     if (isUndefined)
-        return JSValue::encode(jsString(exec, UString::number(x)));
+        return JSValue::encode(jsString(exec, UString::number(x)), exec, tainted);
 
     // Handle NaN and Infinity.
     if (!isfinite(x))
-        return JSValue::encode(jsString(exec, UString::number(x)));
+        return JSValue::encode(jsString(exec, UString::number(x)), exec, tainted);
 
     NumberToStringBuffer buffer;
-    return JSValue::encode(jsString(exec, UString(numberToFixedPrecisionString(x, significantFigures, buffer))));
+    return JSValue::encode(jsString(exec, UString(numberToFixedPrecisionString(x, significantFigures, buffer))), exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
@@ -436,8 +442,10 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
     double x;
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
+    bool tainted = exec->hostThisValue().isTainted();
 
     JSValue radixValue = exec->argument(0);
+    tainted = tainted || radixValue.isTainted();
     int radix;
     if (radixValue.isInt32())
         radix = radixValue.asInt32();
@@ -454,7 +462,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
         unsigned c = static_cast<unsigned>(x);
         if (c == x && c < 36) {
             JSGlobalData* globalData = &exec->globalData();
-            return JSValue::encode(globalData->smallStrings.singleCharacterString(globalData, radixDigits[c]));
+            return JSValue::encode(globalData->smallStrings.singleCharacterString(globalData, radixDigits[c]), exec, tainted);
         }
     }
 
@@ -462,10 +470,10 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
         return throwVMError(exec, createRangeError(exec, "toString() radix argument must be between 2 and 36"));
 
     if (!isfinite(x))
-        return JSValue::encode(jsString(exec, UString::number(x)));
+        return JSValue::encode(jsString(exec, UString::number(x)), exec, tainted);
 
     RadixBuffer s;
-    return JSValue::encode(jsString(exec, toStringWithRadix(s, x, radix)));
+    return JSValue::encode(jsString(exec, toStringWithRadix(s, x, radix)), exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(ExecState* exec)
@@ -474,7 +482,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(ExecState* exec)
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
 
-    return JSValue::encode(jsNumber(x).toString(exec));
+    return JSValue::encode(jsNumber(x).toString(exec), exec, exec->hostThisValue().isTainted());
 }
 
 EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(ExecState* exec)
@@ -482,7 +490,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(ExecState* exec)
     double x;
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
-    return JSValue::encode(jsNumber(x));
+    return JSValue::encode(jsNumber(x), exec, exec->hostThisValue().isTainted());
 }
 
 } // namespace JSC

@@ -3835,6 +3835,9 @@ skip_id_custom_self:
 
         JSValue baseValue = callFrame->r(base).jsValue();
         JSValue subscript = callFrame->r(property).jsValue();
+        bool tainted = subscript.hasTaintAnywhere();
+        if (tainted)
+            baseValue = baseValue.taint(callFrame);
 
         if (LIKELY(subscript.isUInt32())) {
             uint32_t i = subscript.asUInt32();

@@ -84,7 +84,10 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncTest(ExecState* exec)
     JSValue thisValue = exec->hostThisValue();
     if (!thisValue.inherits(&RegExpObject::s_info))
         return throwVMTypeError(exec);
-    return JSValue::encode(jsBoolean(asRegExpObject(thisValue)->test(exec, exec->argument(0).toString(exec))));
+
+    JSString* string = exec->argument(0).toString(exec);
+    bool tainted = thisValue.isTainted() || string->isTainted();
+    return JSValue::encode(jsBoolean(asRegExpObject(thisValue)->test(exec, string)), exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL regExpProtoFuncExec(ExecState* exec)
@@ -92,7 +95,9 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncExec(ExecState* exec)
     JSValue thisValue = exec->hostThisValue();
     if (!thisValue.inherits(&RegExpObject::s_info))
         return throwVMTypeError(exec);
-    return JSValue::encode(asRegExpObject(thisValue)->exec(exec, exec->argument(0).toString(exec)));
+    JSString* string = exec->argument(0).toString(exec);
+    bool tainted = thisValue.isTainted() || string->isTainted();
+    return JSValue::encode(asRegExpObject(thisValue)->exec(exec, string), exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(ExecState* exec)
@@ -104,6 +109,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(ExecState* exec)
     RegExp* regExp;
     JSValue arg0 = exec->argument(0);
     JSValue arg1 = exec->argument(1);
+    bool tainted = arg0.hasTaintAnywhere() || arg1.hasTaintAnywhere();
     
     if (arg0.inherits(&RegExpObject::s_info)) {
         if (!arg1.isUndefined())
@@ -130,6 +136,8 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(ExecState* exec)
 
     asRegExpObject(thisValue)->setRegExp(exec->globalData(), regExp);
     asRegExpObject(thisValue)->setLastIndex(exec, 0);
+    if (tainted)
+        asRegExpObject(thisValue)->taint();
     return JSValue::encode(jsUndefined());
 }
 
@@ -153,9 +161,11 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncToString(ExecState* exec)
         postfix[index++] = 'i';
     if (thisObject->get(exec, exec->propertyNames().multiline).toBoolean(exec))
         postfix[index] = 'm';
-    UString source = thisObject->get(exec, exec->propertyNames().source).toString(exec)->value(exec);
+    JSString *source_string = thisObject->get(exec, exec->propertyNames().source).toString(exec);
+    UString source = source_string->value(exec);
+    bool tainted = thisObject->isTainted() || source_string->isTainted();
     // If source is empty, use "/(?:)/" to avoid colliding with comment syntax
-    return JSValue::encode(jsMakeNontrivialString(exec, "/", source, postfix));
+    return JSValue::encode(jsMakeNontrivialString(exec, "/", source, postfix), exec, tainted);
 }
 
 } // namespace JSC

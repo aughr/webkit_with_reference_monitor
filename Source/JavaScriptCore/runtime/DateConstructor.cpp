@@ -102,10 +102,12 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
     int numArgs = args.size();
 
     double value;
+    bool tainted = false;
 
     if (numArgs == 0) // new Date() ECMA 15.9.3.3
         value = jsCurrentTime();
     else if (numArgs == 1) {
+        tainted = args.at(0).hasTaintAnywhere();
         if (args.at(0).inherits(&DateInstance::s_info))
             value = asDateInstance(args.at(0))->internalNumber();
         else {
@@ -125,6 +127,13 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
             args.at(5).toNumber(exec), 
             args.at(6).toNumber(exec)
         };
+        tainted = exec->argument(0).hasTaintAnywhere()
+            || exec->argument(1).hasTaintAnywhere()
+            || exec->argument(2).hasTaintAnywhere()
+            || exec->argument(3).hasTaintAnywhere()
+            || exec->argument(4).hasTaintAnywhere()
+            || exec->argument(5).hasTaintAnywhere()
+            || exec->argument(6).hasTaintAnywhere();
         if (!isfinite(doubleArguments[0])
             || !isfinite(doubleArguments[1])
             || (numArgs >= 3 && !isfinite(doubleArguments[2]))
@@ -148,7 +157,10 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
         }
     }
 
-    return DateInstance::create(exec, globalObject->dateStructure(), value);
+    JSObject* object = DateInstance::create(exec, globalObject->dateStructure(), value);
+    if (tainted)
+        object->taint();
+    return object;
 }
     
 static EncodedJSValue JSC_HOST_CALL constructWithDateConstructor(ExecState* exec)

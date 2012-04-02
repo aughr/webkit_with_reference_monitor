@@ -854,7 +854,7 @@ inline JSValue JSValue::taint(ExecState* exec) {
     JSCell *cell;
     if (isString()) {
         const JSString *string = static_cast<const JSString*>(asCell());
-        cell = jsNontrivialString(&exec->globalData(), string->value(exec));
+        cell = JSString::create(exec->globalData(), string->value(exec).impl());
     } else {
         cell = toObject(exec);
     }
