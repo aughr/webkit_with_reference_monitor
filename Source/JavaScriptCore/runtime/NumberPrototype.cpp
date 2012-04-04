@@ -455,7 +455,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
         radix = static_cast<int>(radixValue.toInteger(exec)); // nan -> 0
 
     if (radix == 10)
-        return JSValue::encode(jsNumber(x).toString(exec));
+        return JSValue::encode(jsNumber(x).toString(exec), exec, tainted);
 
     // Fast path for number to character conversion.
     if (radix == 36) {
