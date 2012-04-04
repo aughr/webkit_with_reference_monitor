@@ -46,6 +46,7 @@
 #include "JSEvent.h"
 #include "JSEventListener.h"
 #include "XMLHttpRequest.h"
+#include <runtime/JSObject.h>
 #include <runtime/Error.h>
 #include <interpreter/Interpreter.h>
 #include <wtf/ArrayBuffer.h>
@@ -111,13 +112,24 @@ JSValue JSXMLHttpRequest::open(ExecState* exec)
 
 JSValue JSXMLHttpRequest::send(ExecState* exec)
 {
+    DEFINE_STATIC_LOCAL(const AtomicString, requestDenied, ("XMLHttpRequest denied by event handler."));
+
     InspectorInstrumentation::willSendXMLHttpRequest(impl()->scriptExecutionContext(), impl()->url());
+
+    JSValue val = exec->argument(0);
+    DOMWindow* window = activeDOMWindow(exec);
+    if (window) {
+        bool result = window->dispatchEvent(Event::create(eventNames().xmlhttpsendEvent, false, true));
+        if (!result) {
+            reportException(exec, jsString(exec, requestDenied));
+            return jsUndefined();
+        }
+    }
 
     ExceptionCode ec = 0;
     if (!exec->argumentCount())
         impl()->send(ec);
     else {
-        JSValue val = exec->argument(0);
         if (val.isUndefinedOrNull())
             impl()->send(ec);
         else if (val.inherits(&JSDocument::s_info))
