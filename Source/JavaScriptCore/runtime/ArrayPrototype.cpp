@@ -407,7 +407,6 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
             JSValue element = array->getIndex(k);
             tainted = tainted || element.isTainted();
             if (!element.isUndefinedOrNull())
-                tainted = tainted || element.isTainted();
                 stringJoiner.append(element.toUStringInline(exec));
             else
                 stringJoiner.append(UString());
