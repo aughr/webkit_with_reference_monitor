@@ -120,14 +120,14 @@ String valueToStringWithNullCheck(ExecState* exec, JSValue value)
 {
     if (value.isNull())
         return String();
-    return ustringToString(value.toString(exec)->value(exec));
+    return valueToString(exec, value);
 }
 
 String valueToStringWithUndefinedOrNullCheck(ExecState* exec, JSValue value)
 {
     if (value.isUndefinedOrNull())
         return String();
-    return ustringToString(value.toString(exec)->value(exec));
+    return valueToString(exec, value);
 }
 
 JSValue jsDateOrNull(ExecState* exec, double value)

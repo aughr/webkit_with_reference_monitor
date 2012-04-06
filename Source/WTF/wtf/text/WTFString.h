@@ -124,9 +124,9 @@ public:
     WTF_EXPORT_PRIVATE String(const char* characters);
 
     // Construct a string referencing an existing StringImpl.
-    String(StringImpl* impl) : m_impl(impl) { }
-    String(PassRefPtr<StringImpl> impl) : m_impl(impl) { }
-    String(RefPtr<StringImpl> impl) : m_impl(impl) { }
+    String(StringImpl* impl, bool tainted=false) : m_impl(impl), m_tainted(tainted) { }
+    String(PassRefPtr<StringImpl> impl, bool tainted=false) : m_impl(impl), m_tainted(tainted) { }
+    String(RefPtr<StringImpl> impl, bool tainted=false) : m_impl(impl), m_tainted(tainted) { }
 
     // Inline the destructor.
     ALWAYS_INLINE ~String() { }
@@ -383,12 +383,16 @@ public:
     String(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_impl.isHashTableDeletedValue(); }
 
+    WTF_EXPORT_PRIVATE bool isTainted() const;
+    WTF_EXPORT_PRIVATE void taint();
+
 #ifndef NDEBUG
     void show() const;
 #endif
 
 private:
     RefPtr<StringImpl> m_impl;
+    bool m_tainted;
 };
 
 #if PLATFORM(QT)

@@ -250,6 +250,10 @@ enum ParameterDefaultPolicy {
     // object, to let the engine know that collecting the JSString wrapper is unlikely to save memory.
     JSC::JSValue jsOwnedStringOrNull(JSC::ExecState*, const String&); 
 
+    JSC::JSValue jsTaint(JSC::JSValue, JSC::ExecState*, const String&);
+    JSC::JSValue jsTaint(JSC::JSValue, JSC::ExecState*, const KURL&);
+    JSC::JSValue jsTaint(JSC::JSValue, JSC::ExecState*, const JSC::UString&);
+
     String identifierToString(const JSC::Identifier&);
     String ustringToString(const JSC::UString&);
     JSC::UString stringToUString(const String&);
@@ -260,6 +264,7 @@ enum ParameterDefaultPolicy {
 
     String valueToStringWithNullCheck(JSC::ExecState*, JSC::JSValue); // null if the value is null
     String valueToStringWithUndefinedOrNullCheck(JSC::ExecState*, JSC::JSValue); // null if the value is null or undefined
+    String valueToString(JSC::ExecState*, JSC::JSValue);
 
     inline int32_t finiteInt32Value(JSC::JSValue value, JSC::ExecState* exec, bool& okay)
     {
@@ -388,6 +393,32 @@ enum ParameterDefaultPolicy {
             result.append(indexedValue.toUInt32(exec));
         }
         return result;
+    }
+
+    inline JSC::JSValue jsTaint(JSC::JSValue value, JSC::ExecState* exec, const String& string) {
+        if (string.isTainted())
+            return value.taint(exec);
+        else
+            return value;
+    }
+
+    inline JSC::JSValue jsTaint(JSC::JSValue value, JSC::ExecState* exec, const KURL& url) {
+        return jsTaint(value, exec, url.string());
+    }
+
+    inline JSC::JSValue jsTaint(JSC::JSValue value, JSC::ExecState*, const JSC::UString&) {
+        return value;
+    }
+
+    inline String valueToString(JSC::ExecState* exec, JSC::JSValue value) {
+        if (value.isEmpty())
+            return ustringToString(JSC::UString());
+
+        JSC::JSString *jsString = value.toString(exec);
+        String string = ustringToString(jsString->value(exec));
+        if (jsString->isTainted())
+            string.taint();
+        return string;
     }
 } // namespace WebCore
 

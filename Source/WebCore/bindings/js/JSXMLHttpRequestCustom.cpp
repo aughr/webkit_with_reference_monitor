@@ -119,8 +119,9 @@ JSValue JSXMLHttpRequest::send(ExecState* exec)
     JSValue val = exec->argument(0);
     DOMWindow* window = activeDOMWindow(exec);
     if (window) {
-        bool result = window->dispatchEvent(Event::create(eventNames().xmlhttpsendEvent, false, true));
-        if (!result) {
+        RefPtr<Event> event = Event::create(eventNames().xmlhttpsendEvent, false, true);
+        window->dispatchEvent(event);
+        if (event->defaultPrevented()) {
             reportException(exec, jsString(exec, requestDenied));
             return jsUndefined();
         }

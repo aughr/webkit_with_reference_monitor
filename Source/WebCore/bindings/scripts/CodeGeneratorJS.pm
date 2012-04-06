@@ -2889,7 +2889,8 @@ sub JSValueToNative
             return "valueToStringWithNullCheck(exec, $value)"
         }
         # FIXME: Add the case for 'if ($signature->extendedAttributes->{"TreatUndefinedAs"} and $signature->extendedAttributes->{"TreatUndefinedAs"} eq "NullString"))'.
-        return "ustringToString($value.isEmpty() ? UString() : $value.toString(exec)->value(exec))";
+        return "valueToString(exec, $value)";
+        #return "ustringToString($value.isEmpty() ? UString() : $value.toString(exec)->value(exec))";
     }
 
     if ($type eq "DOMObject") {
@@ -2977,14 +2978,14 @@ sub NativeToJSValue
         AddToImplIncludes("KURL.h", $conditional);
         my $conv = $signature->extendedAttributes->{"TreatReturnedNullStringAs"};
         if (defined $conv) {
-            return "jsStringOrNull(exec, $value)" if $conv eq "Null";
-            return "jsStringOrUndefined(exec, $value)" if $conv eq "Undefined";
-            return "jsStringOrFalse(exec, $value)" if $conv eq "False";
+            return "jsTaint(jsStringOrNull(exec, $value), exec, $value)" if $conv eq "Null";
+            return "jsTaint(jsStringOrUndefined(exec, $value), exec, $value)" if $conv eq "Undefined";
+            return "jsTaint(jsStringOrFalse(exec, $value), exec, $value)" if $conv eq "False";
 
             die "Unknown value for TreatReturnedNullStringAs extended attribute";
         }
         AddToImplIncludes("<runtime/JSString.h>", $conditional);
-        return "jsString(exec, $value)";
+        return "jsTaint(jsString(exec, $value), exec, $value)";
     }
 
     my $globalObject;

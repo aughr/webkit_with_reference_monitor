@@ -43,11 +43,13 @@ using namespace std;
 // Construct a string with UTF-16 data.
 String::String(const UChar* characters, unsigned length)
     : m_impl(characters ? StringImpl::create(characters, length) : 0)
+    , m_tainted(false)
 {
 }
 
 // Construct a string with UTF-16 data, from a null-terminated source.
 String::String(const UChar* str)
+    : m_tainted(false)
 {
     if (!str)
         return;
@@ -65,22 +67,26 @@ String::String(const UChar* str)
 // Construct a string with latin1 data.
 String::String(const LChar* characters, unsigned length)
     : m_impl(characters ? StringImpl::create(characters, length) : 0)
+    , m_tainted(false)
 {
 }
 
 String::String(const char* characters, unsigned length)
     : m_impl(characters ? StringImpl::create(reinterpret_cast<const LChar*>(characters), length) : 0)
+    , m_tainted(false)
 {
 }
 
 // Construct a string with latin1 data, from a null-terminated source.
 String::String(const LChar* characters)
     : m_impl(characters ? StringImpl::create(characters) : 0)
+    , m_tainted(false)
 {
 }
 
 String::String(const char* characters)
     : m_impl(characters ? StringImpl::create(reinterpret_cast<const LChar*>(characters)) : 0)
+    , m_tainted(false)
 {
 }
 
@@ -817,6 +823,14 @@ String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
     if (!utf8)
         return String(string, size);
     return utf8;
+}
+    
+bool String::isTainted() const {
+    return m_tainted;
+}
+
+void String::taint() {
+    m_tainted = true;
 }
 
 // String Operations
