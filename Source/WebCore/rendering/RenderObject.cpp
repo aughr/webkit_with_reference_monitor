@@ -46,13 +46,13 @@
 #include "RenderCounter.h"
 #include "RenderDeprecatedFlexibleBox.h"
 #include "RenderFlexibleBox.h"
-#include "RenderFlowThread.h"
 #include "RenderImage.h"
 #include "RenderImageResourceStyleImage.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderMultiColumnBlock.h"
+#include "RenderNamedFlowThread.h"
 #include "RenderRegion.h"
 #include "RenderRuby.h"
 #include "RenderRubyText.h"
@@ -269,16 +269,6 @@ static bool isBeforeAfterContentGeneratedByAncestor(RenderObject* renderer, Rend
     return false;
 }
 
-RenderTable* RenderObject::createAnonymousTable() const
-{
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyle(style());
-    newStyle->setDisplay(TABLE);
-
-    RenderTable* table = new (renderArena()) RenderTable(document() /* is anonymous */);
-    table->setStyle(newStyle.release());
-    return table;
-}
-
 void RenderObject::addChild(RenderObject* newChild, RenderObject* beforeChild)
 {
     RenderObjectChildList* children = virtualChildren();
@@ -323,7 +313,7 @@ void RenderObject::addChild(RenderObject* newChild, RenderObject* beforeChild)
         if (afterChild && afterChild->isAnonymous() && afterChild->isTable() && !afterChild->isBeforeContent())
             table = toRenderTable(afterChild);
         else {
-            table = createAnonymousTable();
+            table = RenderTable::createAnonymousWithParentRenderer(this);
             addChild(table, beforeChild);
         }
         table->addChild(newChild);
@@ -680,11 +670,11 @@ void RenderObject::markContainingBlocksForLayout(bool scheduleRelayout, RenderOb
         last->scheduleRelayout();
 }
 
-void RenderObject::setPreferredLogicalWidthsDirty(bool b, bool markParents)
+void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBehavior markParents)
 {
     bool alreadyDirty = preferredLogicalWidthsDirty();
-    m_bitfields.setPreferredLogicalWidthsDirty(b);
-    if (b && !alreadyDirty && markParents && (isText() || !style()->isPositioned()))
+    m_bitfields.setPreferredLogicalWidthsDirty(shouldBeDirty);
+    if (shouldBeDirty && !alreadyDirty && markParents == MarkContainingBlockChain && (isText() || !style()->isPositioned()))
         invalidateContainerPreferredLogicalWidths();
 }
 
@@ -1280,6 +1270,14 @@ RenderBoxModelObject* RenderObject::containerForRepaint() const
             repaintContainer = compLayer->renderer();
     }
 #endif
+    
+#if ENABLE(CSS_FILTERS)
+    if (RenderLayer* parentLayer = enclosingLayer()) {
+        RenderLayer* enclosingFilterLayer = parentLayer->enclosingFilterLayer();
+        if (enclosingFilterLayer)
+            return enclosingFilterLayer->renderer();
+    }
+#endif
 
     // If we have a flow thread, then we need to do individual repaints within the RenderRegions instead.
     // Return the flow thread as a repaint container in order to create a chokepoint that allows us to change
@@ -1302,6 +1300,13 @@ void RenderObject::repaintUsingContainer(RenderBoxModelObject* repaintContainer,
         toRenderFlowThread(repaintContainer)->repaintRectangleInRegions(r, immediate);
         return;
     }
+
+#if ENABLE(CSS_FILTERS)
+    if (repaintContainer->hasFilter() && repaintContainer->layer() && repaintContainer->layer()->requiresFullLayerImageForFilters()) {
+        repaintContainer->layer()->setFilterBackendNeedsRepaintingInRect(r, immediate);
+        return;
+    }
+#endif
 
 #if USE(ACCELERATED_COMPOSITING)
     RenderView* v = view();
@@ -1717,6 +1722,16 @@ StyleDifference RenderObject::adjustStyleDifference(StyleDifference diff, unsign
         else if (diff < StyleDifferenceRecompositeLayer)
             diff = StyleDifferenceRecompositeLayer;
     }
+    
+#if ENABLE(CSS_FILTERS)
+    if ((contextSensitiveProperties & ContextSensitivePropertyFilter) && hasLayer()) {
+        RenderLayer* layer = toRenderBoxModelObject(this)->layer();
+        if (!layer->isComposited() || layer->paintsWithFilters())
+            diff = StyleDifferenceRepaintLayer;
+        else if (diff < StyleDifferenceRecompositeLayer)
+            diff = StyleDifferenceRecompositeLayer;
+    }
+#endif
     
     // The answer to requiresLayer() for plugins and iframes can change outside of the style system,
     // since it depends on whether we decide to composite these elements. When the layer status of
@@ -2288,11 +2303,11 @@ void RenderObject::willBeDestroyed()
     remove();
 
 #ifndef NDEBUG
-    if (!documentBeingDestroyed() && view() && view()->hasRenderFlowThreads()) {
+    if (!documentBeingDestroyed() && view() && view()->hasRenderNamedFlowThreads()) {
         // After remove, the object and the associated information should not be in any flow thread.
-        const RenderFlowThreadList* flowThreadList = view()->renderFlowThreadList();
-        for (RenderFlowThreadList::const_iterator iter = flowThreadList->begin(); iter != flowThreadList->end(); ++iter) {
-            const RenderFlowThread* renderFlowThread = *iter;
+        const RenderNamedFlowThreadList* flowThreadList = view()->renderNamedFlowThreadList();
+        for (RenderNamedFlowThreadList::const_iterator iter = flowThreadList->begin(); iter != flowThreadList->end(); ++iter) {
+            const RenderNamedFlowThread* renderFlowThread = *iter;
             ASSERT(!renderFlowThread->hasChild(this));
             ASSERT(!renderFlowThread->hasChildInfo(this));
         }
@@ -2535,19 +2550,20 @@ PassRefPtr<RenderStyle> RenderObject::getUncachedPseudoStyle(PseudoId pseudo, Re
         parentStyle = style();
     }
 
+    // FIXME: This "find nearest element parent" should be a helper function.
     Node* n = node();
     while (n && !n->isElementNode())
         n = n->parentNode();
     if (!n)
         return 0;
+    Element* element = toElement(n);
 
-    RefPtr<RenderStyle> result;
     if (pseudo == FIRST_LINE_INHERITED) {
-        result = document()->styleSelector()->styleForElement(static_cast<Element*>(n), parentStyle, false);
+        RefPtr<RenderStyle> result = document()->styleSelector()->styleForElement(element, parentStyle, DisallowStyleSharing);
         result->setStyleType(FIRST_LINE_INHERITED);
-    } else
-        result = document()->styleSelector()->pseudoStyleForElement(pseudo, static_cast<Element*>(n), parentStyle);
-    return result.release();
+        return result.release();
+    }
+    return document()->styleSelector()->pseudoStyleForElement(pseudo, element, parentStyle);
 }
 
 static Color decorationColor(RenderObject* renderer)

@@ -316,9 +316,9 @@ var TEST_RESULTS_BASE_PATH = 'http://build.chromium.org/f/chromium/layout_test_r
 
 // FIXME: These platform names should probably be changed to match the directories in LayoutTests/platform
 // instead of matching the values we use in the test_expectations.txt file.
-var PLATFORMS = ['SNOWLEOPARD', 'LEOPARD', 'XP', 'VISTA', 'WIN7', 'LUCID', 'APPLE_LEOPARD', 'APPLE_SNOWLEOPARD', 'APPLE_XP', 'APPLE_WIN7', 'GTK_LINUX', 'QT_LINUX'];
+var PLATFORMS = ['LION', 'SNOWLEOPARD', 'LEOPARD', 'XP', 'VISTA', 'WIN7', 'LUCID', 'APPLE_LION', 'APPLE_LEOPARD', 'APPLE_SNOWLEOPARD', 'APPLE_XP', 'APPLE_WIN7', 'GTK_LINUX', 'QT_LINUX'];
 var PLATFORM_UNIONS = {
-    'MAC': ['LEOPARD', 'SNOWLEOPARD'],
+    'MAC': ['LEOPARD', 'SNOWLEOPARD', 'LION'],
     'WIN': ['XP', 'VISTA', 'WIN7'],
     'LINUX': ['LUCID']
 }
@@ -328,7 +328,9 @@ var PLATFORM_FALLBACKS = {
     'WIN': 'ALL',
     'XP': 'WIN',
     'VISTA': 'WIN',
+    'WIN7': 'WIN',
     'MAC': 'ALL',
+    'LION': 'MAC',
     'SNOWLEOPARD': 'MAC',
     'LEOPARD': 'MAC',
     'LINUX': 'ALL',
@@ -352,7 +354,7 @@ var VIRTUAL_SUITES = {
 //////////////////////////////////////////////////////////////////////////////
 function generatePage()
 {
-    if (g_currentState.useTestData)
+    if (g_crossDashboardState.useTestData)
         return;
 
     updateDefaultBuilderState();
@@ -450,7 +452,7 @@ function handleValidHashParameter(key, value)
     }
 }
 
-g_defaultStateValues = {
+g_defaultDashboardSpecificStateValues = {
     sortOrder: BACKWARD,
     sortColumn: 'flakiness',
     showExpectations: false,
@@ -465,9 +467,10 @@ g_defaultStateValues = {
     showUnexpectedPasses: !isLayoutTestResults(),
     expectationsUpdate: false,
     updateIndex: 0,
-    builder: g_defaultBuilderName,
     resultsHeight: 300,
-    revision: null
+    revision: null,
+    tests: '',
+    result: '',
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -524,6 +527,8 @@ function matchingElement(stringToMatch, elementsMap)
 
 function nonChromiumPlatform(builderNameUpperCase)
 {
+    if (stringContains(builderNameUpperCase, 'LION'))
+        return 'APPLE_LION';
     if (stringContains(builderNameUpperCase, 'SNOWLEOPARD'))
         return 'APPLE_SNOWLEOPARD';
     if (stringContains(builderNameUpperCase, 'LEOPARD'))
@@ -543,6 +548,9 @@ function chromiumPlatform(builderNameUpperCase)
     if (stringContains(builderNameUpperCase, 'MAC')) {
         if (stringContains(builderNameUpperCase, '10.5'))
             return 'LEOPARD';
+        if (stringContains(builderNameUpperCase, '10.7'))
+            return 'LION';
+        // The webkit.org 'Chromium Mac Release (Tests)' bot runs SnowLeopard.
         return 'SNOWLEOPARD';
     }
     if (stringContains(builderNameUpperCase, 'WIN7'))
@@ -565,7 +573,7 @@ function platformAndBuildType(builderName)
         var builderNameUpperCase = builderName.toUpperCase();
         
         var platform = '';
-        if (isLayoutTestResults() && g_currentState.group == '@ToT - webkit.org' && !stringContains(builderNameUpperCase, 'CHROMIUM'))
+        if (isLayoutTestResults() && g_crossDashboardState.group == '@ToT - webkit.org' && !stringContains(builderNameUpperCase, 'CHROMIUM'))
             platform = nonChromiumPlatform(builderNameUpperCase);
         else
             platform = chromiumPlatform(builderNameUpperCase);
@@ -1237,7 +1245,7 @@ function indexesForFailures(builder, testName)
 // Returns the path to the failure log for this non-webkit test.
 function pathToFailureLog(testName)
 {
-    return '/steps/' + g_currentState.testType + '/logs/' + testName.split('.')[1]
+    return '/steps/' + g_crossDashboardState.testType + '/logs/' + testName.split('.')[1]
 }
 
 function showPopupForBuild(e, builder, index, opt_testName)
@@ -1252,7 +1260,7 @@ function showPopupForBuild(e, builder, index, opt_testName)
 
     var buildNumber = g_resultsByBuilder[builder].buildNumbers[index];
     var master = builderMaster(builder);
-    var buildBasePath = master.getLogPath(builder, buildNumber);
+    var buildBasePath = master.logPath(builder, buildNumber);
 
     html += '<ul><li>' + linkHTMLToOpenWindow(buildBasePath, 'Build log') +
         '</li><li>' +
@@ -1626,7 +1634,7 @@ function realModifiers(modifierString)
 function generatePageForExpectationsUpdate()
 {
     // Always show all runs when auto-updating expectations.
-    if (!g_currentState.showAllRuns)
+    if (!g_crossDashboardState.showAllRuns)
         setQueryParameter('showAllRuns', true);
 
     processTestRunsForAllBuilders();
@@ -2142,7 +2150,7 @@ function loadGPUResultsForBuilder(builder, test, expectationsContainer)
     var failureIndex = indexesForFailures(builder, test)[0];
 
     var buildNumber = g_resultsByBuilder[builder].buildNumbers[failureIndex];
-    var pathToLog = builderMaster(builder).getLogPath(builder, buildNumber) + pathToFailureLog(test);
+    var pathToLog = builderMaster(builder).logPath(builder, buildNumber) + pathToFailureLog(test);
 
     var chromeRevision = g_resultsByBuilder[builder].chromeRevision[failureIndex];
     var builderName = builder.replace(/[^A-Za-z0-9 ]/g, '').replace(/ /g, '_');
@@ -2165,7 +2173,7 @@ function loadNonWebKitResultsForBuilder(builder, test, expectationsContainer)
         // FIXME: This doesn't seem to work anymore. Did the paths change?
         // Once that's resolved, see if we need to try each GTEST_MODIFIERS prefix as well.
         var buildNumber = g_resultsByBuilder[builder].buildNumbers[failureIndexes[i]];
-        var pathToLog = builderMaster(builder).getLogPath(builder, buildNumber) + pathToFailureLog(test);
+        var pathToLog = builderMaster(builder).logPath(builder, buildNumber) + pathToFailureLog(test);
         appendNonWebKitResults(container, pathToLog, 'non-webkit-results');
     }
 }
@@ -2481,9 +2489,9 @@ function isInvalidKeyForCrossBuilderView(key)
 function updateDefaultBuilderState()
 {
     if (isCrossBuilderView())
-        delete g_defaultStateValues.builder;
+        delete g_defaultDashboardSpecificStateValues.builder;
     else
-        g_defaultStateValues.builder = g_defaultBuilderName;
+        g_defaultDashboardSpecificStateValues.builder = g_defaultBuilderName;
 }
 
 // Sets the page state to regenerate the page.
@@ -2516,12 +2524,14 @@ function hideLegend()
 }
 
 var g_fallbacksMap = {};
+// FIXME: Do we still need the -GPU entries? Do we need a MAC-LION-GPU entry?
 g_fallbacksMap['WIN-XP'] = ['chromium-win-xp', 'chromium-win-vista', 'chromium-win', 'chromium', 'win', 'mac'];
 g_fallbacksMap['WIN-VISTA'] = ['chromium-win-vista', 'chromium-win', 'chromium', 'win', 'mac'];
 g_fallbacksMap['WIN-7'] = ['chromium-win', 'chromium', 'win', 'mac'];
 g_fallbacksMap['WIN-7-GPU'] = ['chromium-gpu-win'].concat(g_fallbacksMap['WIN-7']);
 g_fallbacksMap['MAC-LEOPARD'] = ['chromium-mac-leopard', 'chromium-mac-snowleopard', 'chromium-mac', 'chromium', 'mac-leopard', 'mac-snowleopard', 'mac'];
 g_fallbacksMap['MAC-SNOWLEOPARD'] = ['chromium-mac-snowleopard', 'chromium-mac', 'chromium', 'mac-snowleopard', 'mac'];
+g_fallbacksMap['MAC-LION'] = ['chromium-mac', 'chromium', 'mac'];
 g_fallbacksMap['MAC-SNOWLEOPARD-GPU'] = ['chromium-gpu-mac'].concat(g_fallbacksMap['MAC-SNOWLEOPARD']);
 g_fallbacksMap['LINUX-32'] = ['chromium-linux-x86', 'chromium-linux', 'chromium-win', 'chromium', 'win', 'mac'];
 g_fallbacksMap['LINUX-64'] = ['chromium-linux', 'chromium-win', 'chromium', 'win', 'mac'];

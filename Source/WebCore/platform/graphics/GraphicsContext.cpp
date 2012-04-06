@@ -765,7 +765,7 @@ PassOwnPtr<ImageBuffer> GraphicsContext::createCompatibleBuffer(const IntSize& s
 }
 
 #if !USE(CG)
-void GraphicsContext::platformApplyDeviceScaleFactor()
+void GraphicsContext::platformApplyDeviceScaleFactor(float)
 {
 }
 #endif
@@ -773,7 +773,49 @@ void GraphicsContext::platformApplyDeviceScaleFactor()
 void GraphicsContext::applyDeviceScaleFactor(float deviceScaleFactor)
 {
     scale(FloatSize(deviceScaleFactor, deviceScaleFactor));
-    platformApplyDeviceScaleFactor();
+    platformApplyDeviceScaleFactor(deviceScaleFactor);
 }
+
+void GraphicsContext::fillEllipse(const FloatRect& ellipse)
+{
+    platformFillEllipse(ellipse);
+}
+
+void GraphicsContext::strokeEllipse(const FloatRect& ellipse)
+{
+    platformStrokeEllipse(ellipse);
+}
+
+void GraphicsContext::fillEllipseAsPath(const FloatRect& ellipse)
+{
+    Path path;
+    path.addEllipse(ellipse);
+    fillPath(path);
+}
+
+void GraphicsContext::strokeEllipseAsPath(const FloatRect& ellipse)
+{
+    Path path;
+    path.addEllipse(ellipse);
+    strokePath(path);
+}
+
+#if !USE(CG) && !USE(SKIA) // append && !USE(MYPLATFORM) here to optimize ellipses on your platform.
+void GraphicsContext::platformFillEllipse(const FloatRect& ellipse)
+{
+    if (paintingDisabled())
+        return;
+
+    fillEllipseAsPath(ellipse);
+}
+
+void GraphicsContext::platformStrokeEllipse(const FloatRect& ellipse)
+{
+    if (paintingDisabled())
+        return;
+
+    strokeEllipseAsPath(ellipse);
+}
+#endif
 
 }

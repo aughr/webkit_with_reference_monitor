@@ -94,7 +94,6 @@ public:
     IconController* icon() const { return &m_icon; }
 
     void prepareForHistoryNavigation();
-    void prepareForLoadStart();
     void setupForReplace();
 
     // FIXME: These are all functions which start loads. We have too many.
@@ -150,13 +149,11 @@ public:
 
     const ResourceRequest& originalRequest() const;
     const ResourceRequest& initialRequest() const;
-    void receivedMainResourceError(const ResourceError&, bool isComplete);
+    void receivedMainResourceError(const ResourceError&);
 
     bool willLoadMediaElementURL(KURL&);
 
     void handleFallbackContent();
-
-    void finishedLoading();
 
     ResourceError cancelledError(const ResourceRequest&) const;
 
@@ -166,11 +163,12 @@ public:
     void finishedLoadingDocument(DocumentLoader*);
     bool isReplacing() const;
     void setReplacing();
-    void mainReceivedCompleteError(DocumentLoader*, const ResourceError&);
     bool subframeIsLoading() const;
     void willChangeTitle(DocumentLoader*);
     void didChangeTitle(DocumentLoader*);
     void didChangeIcons(IconType);
+
+    bool shouldTreatURLAsSrcdocDocument(const KURL&) const;
 
     FrameLoadType loadType() const;
 
@@ -311,6 +309,8 @@ private:
     void transitionToCommitted(PassRefPtr<CachedPage>);
     void frameLoadCompleted();
 
+    SubstituteData defaultSubstituteDataForURL(const KURL&);
+
     static void callContinueLoadAfterNavigationPolicy(void*, const ResourceRequest&, PassRefPtr<FormState>, bool shouldContinue);
     static void callContinueLoadAfterNewWindowPolicy(void*, const ResourceRequest&, PassRefPtr<FormState>, const String& frameName, const NavigationAction&, bool shouldContinue);
     static void callContinueFragmentScrollAfterNavigationPolicy(void*, const ResourceRequest&, PassRefPtr<FormState>, bool shouldContinue);
@@ -360,6 +360,7 @@ private:
 
     void loadInSameDocument(const KURL&, SerializedScriptValue* stateObject, bool isNewNavigation);
 
+    void prepareForLoadStart();
     void provisionalLoadStarted();
 
     bool didOpenURL();

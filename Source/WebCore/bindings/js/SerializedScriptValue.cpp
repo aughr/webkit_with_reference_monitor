@@ -370,7 +370,7 @@ private:
     {
         if (!input)
             return;
-        JSDOMGlobalObject* globalObject = static_cast<JSDOMGlobalObject*>(m_exec->lexicalGlobalObject());
+        JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(m_exec->lexicalGlobalObject());
         for (size_t i = 0; i < input->size(); i++) {
             JSC::JSValue value = toJS(m_exec, globalObject, input->at(i).get());
             JSC::JSObject* obj = value.getObject();
@@ -389,20 +389,33 @@ private:
         return isJSArray(object) || object->inherits(&JSArray::s_info);
     }
 
-    bool startObjectInternal(JSObject* object)
+    bool checkForDuplicate(JSObject* object)
     {
         // Record object for graph reconstruction
-        pair<ObjectPool::iterator, bool> iter = m_objectPool.add(object, m_objectPool.size());
-        
+        ObjectPool::AddResult addResult = m_objectPool.add(object, m_objectPool.size());
+
         // Handle duplicate references
-        if (!iter.second) {
+        if (!addResult.isNewEntry) {
             write(ObjectReferenceTag);
-            ASSERT(static_cast<int32_t>(iter.first->second) < m_objectPool.size());
-            writeObjectIndex(iter.first->second);
-            return false;
+            ASSERT(static_cast<int32_t>(addResult.iterator->second) < m_objectPool.size());
+            writeObjectIndex(addResult.iterator->second);
+            return true;
         }
-        
+
+        return false;
+    }
+
+    void recordObject(JSObject* object)
+    {
+        m_objectPool.add(object, m_objectPool.size());
         m_gcBuffer.append(object);
+    }
+
+    bool startObjectInternal(JSObject* object)
+    {
+        if (checkForDuplicate(object))
+            return false;
+        recordObject(object);
         return true;
     }
 
@@ -526,7 +539,7 @@ private:
             code = ValidationError;
             return true;
         }
-        JSValue bufferObj = toJS(m_exec, static_cast<JSDOMGlobalObject*>(m_exec->lexicalGlobalObject()), arrayBuffer.get());
+        JSValue bufferObj = toJS(m_exec, jsCast<JSDOMGlobalObject*>(m_exec->lexicalGlobalObject()), arrayBuffer.get());
         return dumpIfTerminal(bufferObj, code);
     }
 
@@ -643,9 +656,11 @@ private:
                 return true;
             }
             if (obj->inherits(&JSArrayBufferView::s_info)) {
-                if (!startObjectInternal(obj))
+                if (checkForDuplicate(obj))
                     return true;
-                return dumpArrayBufferView(obj, code);
+                bool success = dumpArrayBufferView(obj, code);
+                recordObject(obj);
+                return success;
             }
 
             CallData unusedData;
@@ -726,10 +741,10 @@ private:
     void write(const Identifier& ident)
     {
         UString str = ident.ustring();
-        pair<StringConstantPool::iterator, bool> iter = m_constantPool.add(str.impl(), m_constantPool.size());
-        if (!iter.second) {
+        StringConstantPool::AddResult addResult = m_constantPool.add(str.impl(), m_constantPool.size());
+        if (!addResult.isNewEntry) {
             write(StringPoolTag);
-            writeStringIndex(iter.first->second);
+            writeStringIndex(addResult.iterator->second);
             return;
         }
 
@@ -1335,7 +1350,7 @@ private:
     template<class T>
     JSValue getJSValue(T* nativeObj)
     {
-        return toJS(m_exec, static_cast<JSDOMGlobalObject*>(m_globalObject), nativeObj);
+        return toJS(m_exec, jsCast<JSDOMGlobalObject*>(m_globalObject), nativeObj);
     }
 
     JSValue readTerminal()
@@ -1378,7 +1393,7 @@ private:
                 return JSValue();
             if (!m_isDOMGlobalObject)
                 return jsNull();
-            return toJS(m_exec, static_cast<JSDOMGlobalObject*>(m_globalObject), file.get());
+            return toJS(m_exec, jsCast<JSDOMGlobalObject*>(m_globalObject), file.get());
         }
         case FileListTag: {
             unsigned length = 0;

@@ -218,6 +218,8 @@ namespace WebCore {
     \
     macro(webkitRegionLayoutUpdate) \
     \
+    macro(webkitnetworkinfochange) \
+    \
     macro(xmlhttpsend) \
     \
 

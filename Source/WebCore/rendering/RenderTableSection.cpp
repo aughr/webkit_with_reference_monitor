@@ -161,11 +161,7 @@ void RenderTableSection::addChild(RenderObject* child, RenderObject* beforeChild
             return;
         }
 
-        RenderObject* row = new (renderArena()) RenderTableRow(document() /* anonymous table row */);
-        RefPtr<RenderStyle> newStyle = RenderStyle::create();
-        newStyle->inheritFrom(style());
-        newStyle->setDisplay(TABLE_ROW);
-        row->setStyle(newStyle.release());
+        RenderObject* row = RenderTableRow::createAnonymousWithParentRenderer(this);
         addChild(row, beforeChild);
         row->addChild(child);
         return;
@@ -367,7 +363,7 @@ int RenderTableSection::calcRowLogicalHeight()
                 }
                 cell->clearIntrinsicPadding();
                 cell->clearOverrideSize();
-                cell->setChildNeedsLayout(true, false);
+                cell->setChildNeedsLayout(true, MarkOnlyThis);
                 cell->layoutIfNeeded();
             }
 
@@ -377,7 +373,7 @@ int RenderTableSection::calcRowLogicalHeight()
             // find out the baseline
             EVerticalAlign va = cell->style()->verticalAlign();
             if (va == BASELINE || va == TEXT_BOTTOM || va == TEXT_TOP || va == SUPER || va == SUB) {
-                int baselinePosition = cell->cellBaselinePosition();
+                LayoutUnit baselinePosition = cell->cellBaselinePosition();
                 if (baselinePosition > cell->borderBefore() + cell->paddingBefore()) {
                     m_grid[r].baseline = max(m_grid[r].baseline, baselinePosition - cell->intrinsicPaddingBefore());
                     baselineDescent = max(baselineDescent, m_rowPos[cellStartRow] + cellLogicalHeight - (baselinePosition - cell->intrinsicPaddingBefore()));
@@ -388,7 +384,7 @@ int RenderTableSection::calcRowLogicalHeight()
         // do we have baseline aligned elements?
         if (m_grid[r].baseline)
             // increase rowheight if baseline requires
-            m_rowPos[r + 1] = max(m_rowPos[r + 1], m_grid[r].baseline + baselineDescent);
+            m_rowPos[r + 1] = max<int>(m_rowPos[r + 1], m_grid[r].baseline + baselineDescent);
 
         // Add the border-spacing to our final position.
         m_rowPos[r + 1] += m_grid[r].rowRenderer ? spacing : 0;
@@ -583,7 +579,7 @@ void RenderTableSection::layoutRows()
                 if (!o->isText() && o->style()->logicalHeight().isPercent() && (flexAllChildren || o->isReplaced() || (o->isBox() && toRenderBox(o)->scrollsOverflow()))) {
                     // Tables with no sections do not flex.
                     if (!o->isTable() || toRenderTable(o)->hasSections()) {
-                        o->setNeedsLayout(true, false);
+                        o->setNeedsLayout(true, MarkOnlyThis);
                         cellChildrenFlex = true;
                     }
                 }
@@ -599,7 +595,7 @@ void RenderTableSection::layoutRows()
                     while (box != cell) {
                         if (box->normalChildNeedsLayout())
                             break;
-                        box->setChildNeedsLayout(true, false);
+                        box->setChildNeedsLayout(true, MarkOnlyThis);
                         box = box->containingBlock();
                         ASSERT(box);
                         if (!box)
@@ -610,7 +606,7 @@ void RenderTableSection::layoutRows()
             }
 
             if (cellChildrenFlex) {
-                cell->setChildNeedsLayout(true, false);
+                cell->setChildNeedsLayout(true, MarkOnlyThis);
                 // Alignment within a cell is based off the calculated
                 // height, which becomes irrelevant once the cell has
                 // been resized based off its percentage.
@@ -637,7 +633,7 @@ void RenderTableSection::layoutRows()
                 case TEXT_TOP:
                 case TEXT_BOTTOM:
                 case BASELINE: {
-                    int b = cell->cellBaselinePosition();
+                    LayoutUnit b = cell->cellBaselinePosition();
                     if (b > cell->borderBefore() + cell->paddingBefore())
                         intrinsicPaddingBefore = getBaseline(r) - (b - oldIntrinsicPaddingBefore);
                     break;
@@ -669,10 +665,10 @@ void RenderTableSection::layoutRows()
             view()->addLayoutDelta(oldCellRect.location() - cell->location());
 
             if (intrinsicPaddingBefore != oldIntrinsicPaddingBefore || intrinsicPaddingAfter != oldIntrinsicPaddingAfter)
-                cell->setNeedsLayout(true, false);
+                cell->setNeedsLayout(true, MarkOnlyThis);
 
             if (!cell->needsLayout() && view()->layoutState()->pageLogicalHeight() && view()->layoutState()->pageLogicalOffset(cell->logicalTop()) != cell->pageLogicalOffset())
-                cell->setChildNeedsLayout(true, false);
+                cell->setChildNeedsLayout(true, MarkOnlyThis);
 
             cell->layoutIfNeeded();
 
@@ -950,7 +946,7 @@ LayoutUnit RenderTableSection::firstLineBoxBaseline() const
         const CellStruct& cs = firstRow.at(i);
         const RenderTableCell* cell = cs.primaryCell();
         if (cell)
-            firstLineBaseline = max(firstLineBaseline, cell->logicalTop() + cell->paddingBefore() + cell->borderBefore() + cell->contentLogicalHeight(IncludeIntrinsicPadding));
+            firstLineBaseline = max(firstLineBaseline, cell->logicalTop() + cell->paddingBefore() + cell->borderBefore() + cell->contentLogicalHeight());
     }
 
     return firstLineBaseline;
@@ -1415,6 +1411,16 @@ CollapsedBorderValue& RenderTableSection::cachedCollapsedBorder(const RenderTabl
     HashMap<pair<const RenderTableCell*, int>, CollapsedBorderValue>::iterator it = m_cellsCollapsedBorders.find(make_pair(cell, side));
     ASSERT(it != m_cellsCollapsedBorders.end());
     return it->second;
+}
+
+RenderTableSection* RenderTableSection::createAnonymousWithParentRenderer(const RenderObject* parent)
+{
+    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyle(parent->style());
+    newStyle->setDisplay(TABLE_ROW_GROUP);
+
+    RenderTableSection* newSection = new (parent->renderArena()) RenderTableSection(parent->document() /* is anonymous */);
+    newSection->setStyle(newStyle.release());
+    return newSection;
 }
 
 } // namespace WebCore

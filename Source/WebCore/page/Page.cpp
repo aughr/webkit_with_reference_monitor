@@ -43,7 +43,6 @@
 #include "FrameSelection.h"
 #include "FrameTree.h"
 #include "FrameView.h"
-#include "GeolocationController.h"
 #include "HTMLElement.h"
 #include "HistoryItem.h"
 #include "InspectorController.h"
@@ -122,9 +121,6 @@ Page::Page(PageClients& pageClients)
 #if ENABLE(INSPECTOR)
     , m_inspectorController(InspectorController::create(this, pageClients.inspectorClient))
 #endif
-#if ENABLE(GEOLOCATION)
-    , m_geolocationController(GeolocationController::create(this, pageClients.geolocationClient))
-#endif
 #if ENABLE(POINTER_LOCK)
     , m_pointerLockController(PointerLockController::create(this))
 #endif
@@ -163,6 +159,8 @@ Page::Page(PageClients& pageClients)
 #ifndef NDEBUG
     , m_isPainting(false)
 #endif
+    , m_alternativeTextClient(pageClients.alternativeTextClient)
+    , m_scriptedAnimationsSuspended(false)
 {
     if (!allPages) {
         allPages = new HashSet<Page*>;
@@ -720,6 +718,7 @@ void Page::windowScreenDidChange(PlatformDisplayID displayID)
 
 void Page::suspendScriptedAnimations()
 {
+    m_scriptedAnimationsSuspended = true;
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (frame->document())
             frame->document()->suspendScriptedAnimationControllerCallbacks();
@@ -728,6 +727,7 @@ void Page::suspendScriptedAnimations()
 
 void Page::resumeScriptedAnimations()
 {
+    m_scriptedAnimationsSuspended = false;
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (frame->document())
             frame->document()->resumeScriptedAnimationControllerCallbacks();
@@ -1115,12 +1115,14 @@ void Page::resumeActiveDOMObjectsAndAnimations()
 }
 
 Page::PageClients::PageClients()
-    : chromeClient(0)
+    : alternativeTextClient(0)
+    , chromeClient(0)
+#if ENABLE(CONTEXT_MENUS)
     , contextMenuClient(0)
+#endif
     , editorClient(0)
     , dragClient(0)
     , inspectorClient(0)
-    , geolocationClient(0)
 {
 }
 

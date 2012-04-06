@@ -11,6 +11,16 @@ LIST(APPEND WebCore_IDL_INCLUDES
     bindings/js
 )
 
+IF (PORT MATCHES "BlackBerry")
+    LIST(APPEND WebCore_IDL_INCLUDES
+        testing/js
+    )
+    LIST(APPEND WebCore_IDL_FILES
+        testing/Internals.idl
+        testing/InternalSettings.idl
+    )
+ENDIF ()
+
 LIST(APPEND WebCore_SOURCES
     bindings/js/CallbackFunction.cpp
     bindings/js/DOMObjectHashTableMap.cpp
@@ -102,7 +112,6 @@ LIST(APPEND WebCore_SOURCES
     bindings/js/JSMessageChannelCustom.cpp
     bindings/js/JSMessageEventCustom.cpp
     bindings/js/JSMessagePortCustom.cpp
-    bindings/js/JSMutationCallbackCustom.cpp
     bindings/js/JSNamedNodeMapCustom.cpp
     bindings/js/JSNodeCustom.cpp
     bindings/js/JSNodeFilterCondition.cpp
@@ -169,7 +178,6 @@ LIST(APPEND WebCore_SOURCES
 )
 
 LIST(APPEND WebCoreTestSupport_SOURCES
-    testing/js/JSInternalsCustom.cpp
     testing/js/WebCoreTestSupport.cpp
 )
 

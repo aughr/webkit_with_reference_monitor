@@ -118,7 +118,6 @@ IDL_BINDINGS += \
     $$PWD/Modules/indexeddb/DOMWindowIndexedDatabase.idl \
     $$PWD/Modules/indexeddb/IDBAny.idl \
     $$PWD/Modules/indexeddb/IDBCursor.idl \
-    $$PWD/Modules/indexeddb/IDBDatabaseError.idl \
     $$PWD/Modules/indexeddb/IDBDatabaseException.idl \
     $$PWD/Modules/indexeddb/IDBDatabase.idl \
     $$PWD/Modules/indexeddb/IDBFactory.idl \
@@ -295,6 +294,7 @@ IDL_BINDINGS += \
     $$PWD/html/canvas/WebGLRenderbuffer.idl \
     $$PWD/html/canvas/WebGLRenderingContext.idl \
     $$PWD/html/canvas/WebGLShader.idl \
+    $$PWD/html/canvas/WebGLShaderPrecisionFormat.idl \
     $$PWD/html/canvas/Int16Array.idl \
     $$PWD/html/canvas/WebGLTexture.idl \
     $$PWD/html/canvas/WebGLUniformLocation.idl \

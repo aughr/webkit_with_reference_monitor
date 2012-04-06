@@ -166,7 +166,8 @@ bool TiledLayerChromium::drawsContent() const
     if (!LayerChromium::drawsContent())
         return false;
 
-    if (m_tilingOption == NeverTile && m_tiler->numTiles() > 1)
+    bool hasMoreThanOneTile = m_tiler->numTilesX() > 1 || m_tiler->numTilesY() > 1;
+    if (m_tilingOption == NeverTile && hasMoreThanOneTile)
         return false;
 
     return true;
@@ -432,8 +433,6 @@ void TiledLayerChromium::prepareToUpdateTiles(bool idle, int left, int top, int 
                 IntRect visibleTileRect = intersection(m_tiler->tileBounds(i, j), visibleLayerRect());
                 if (occlusion->occluded(this, visibleTileRect)) {
                     ASSERT(!tile->m_updated);
-                    // Save the area we culled for recording metrics.
-                    tile->m_updateRect = tile->m_dirtyRect;
                     continue;
                 }
             }
@@ -477,6 +476,8 @@ void TiledLayerChromium::prepareToUpdateTiles(bool idle, int left, int top, int 
             UpdatableTile* tile = tileAt(i, j);
             if (tile->m_updated)
                 tile->copyAndClearDirty();
+            else if (!idle && occlusion && tile->isDirty())
+                occlusion->overdrawMetrics().didCullTileForUpload();
         }
     }
 
@@ -509,23 +510,13 @@ void TiledLayerChromium::prepareToUpdateTiles(bool idle, int left, int top, int 
 
             IntRect tileRect = m_tiler->tileBounds(i, j);
 
+            if (!tile->m_updated)
+                continue;
+
             // Use m_updateRect as the above loop copied the dirty rect for this frame to m_updateRect.
             const IntRect& dirtyRect = tile->m_updateRect;
             if (dirtyRect.isEmpty())
                 continue;
-
-            // sourceRect starts as a full-sized tile with border texels included.
-            IntRect sourceRect = m_tiler->tileRect(tile);
-            sourceRect.intersect(dirtyRect);
-            // Paint rect not guaranteed to line up on tile boundaries, so
-            // make sure that sourceRect doesn't extend outside of it.
-            sourceRect.intersect(m_paintRect);
-
-            if (!tile->m_updated) {
-                if (occlusion)
-                    occlusion->overdrawMetrics().didCull(TransformationMatrix(), sourceRect, IntRect());
-                continue;
-            }
 
             // Save what was painted opaque in the tile. Keep the old area if the paint didn't touch it, and didn't paint some
             // other part of the tile opaque.
@@ -540,13 +531,20 @@ void TiledLayerChromium::prepareToUpdateTiles(bool idle, int left, int top, int 
                     tile->setOpaqueRect(tilePaintedOpaqueRect);
             }
 
+            // sourceRect starts as a full-sized tile with border texels included.
+            IntRect sourceRect = m_tiler->tileRect(tile);
+            sourceRect.intersect(dirtyRect);
+            // Paint rect not guaranteed to line up on tile boundaries, so
+            // make sure that sourceRect doesn't extend outside of it.
+            sourceRect.intersect(m_paintRect);
+
             tile->m_updateRect = sourceRect;
             if (sourceRect.isEmpty())
                 continue;
 
             tile->texture()->prepareRect(sourceRect);
             if (occlusion)
-                occlusion->overdrawMetrics().didDraw(TransformationMatrix(), sourceRect, tile->opaqueRect());
+                occlusion->overdrawMetrics().didUpload(TransformationMatrix(), sourceRect, tile->opaqueRect());
         }
     }
 }
@@ -556,7 +554,7 @@ void TiledLayerChromium::reserveTextures()
     updateBounds();
 
     const IntRect& layerRect = visibleLayerRect();
-    if (layerRect.isEmpty() || !m_tiler->numTiles())
+    if (layerRect.isEmpty() || m_tiler->hasEmptyBounds())
         return;
 
     int left, top, right, bottom;
@@ -609,7 +607,7 @@ void TiledLayerChromium::prepareToUpdate(const IntRect& layerRect, const CCOcclu
 
     resetUpdateState();
 
-    if (layerRect.isEmpty() || !m_tiler->numTiles())
+    if (layerRect.isEmpty() || m_tiler->hasEmptyBounds())
         return;
 
     int left, top, right, bottom;
@@ -628,7 +626,7 @@ void TiledLayerChromium::prepareToUpdateIdle(const IntRect& layerRect, const CCO
 
     updateBounds();
 
-    if (!m_tiler->numTiles())
+    if (m_tiler->hasEmptyBounds())
         return;
 
     IntRect idlePaintLayerRect = idlePaintRect(layerRect);
@@ -701,7 +699,7 @@ bool TiledLayerChromium::needsIdlePaint(const IntRect& layerRect)
     if (m_skipsIdlePaint)
         return false;
 
-    if (!m_tiler->numTiles())
+    if (m_tiler->hasEmptyBounds())
         return false;
 
     IntRect idlePaintLayerRect = idlePaintRect(layerRect);
@@ -731,7 +729,8 @@ IntRect TiledLayerChromium::idlePaintRect(const IntRect& visibleLayerRect)
     // of them is going to become visible. For small layers we return the entire layer, for larger
     // ones we avoid prepainting the layer at all.
     if (visibleLayerRect.isEmpty()) {
-        if ((drawTransformIsAnimating() || screenSpaceTransformIsAnimating()) && m_tiler->numTiles() <= 9)
+        bool isSmallLayer = m_tiler->numTilesX() <= 9 && m_tiler->numTilesY() <= 9 && m_tiler->numTilesX() * m_tiler->numTilesY() <= 9;
+        if ((drawTransformIsAnimating() || screenSpaceTransformIsAnimating()) && isSmallLayer)
             return IntRect(IntPoint(), contentBounds());
         return IntRect();
     }

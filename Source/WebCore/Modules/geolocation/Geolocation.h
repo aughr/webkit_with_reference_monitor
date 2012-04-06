@@ -41,8 +41,9 @@ namespace WebCore {
 
 class Document;
 class Frame;
-class GeolocationPosition;
+class GeolocationController;
 class GeolocationError;
+class GeolocationPosition;
 class Page;
 class ScriptExecutionContext;
 
@@ -141,7 +142,6 @@ private:
     void cancelRequests(GeoNotifierVector&);
     void cancelAllRequests();
 
-    void positionChangedInternal();
     void makeSuccessCallbacks();
     void handleError(PositionError*);
 

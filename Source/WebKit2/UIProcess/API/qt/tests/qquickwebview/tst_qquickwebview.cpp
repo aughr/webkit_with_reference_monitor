@@ -20,8 +20,8 @@
 #include "../testwindow.h"
 #include "../util.h"
 
-#include <QDeclarativeEngine>
 #include <QScopedPointer>
+#include <QtQml/QQmlEngine>
 #include <QtTest/QtTest>
 #include <private/qquickwebpage_p.h>
 #include <private/qquickwebview_p.h>
@@ -382,7 +382,7 @@ void tst_QQuickWebView::scrollRequest()
     // Use qRound as that is also used when calculating the position
     // in WebKit.
     int y = qRound(50 * webView()->page()->contentsScale());
-    QVERIFY(webView()->experimental()->contentY() == y);
+    QVERIFY(webView()->contentY() == y);
 }
 
 QTEST_MAIN(tst_QQuickWebView)

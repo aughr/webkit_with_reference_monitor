@@ -27,6 +27,7 @@
 #include "cc/CCLayerTreeHost.h"
 
 #include "CCAnimationTestCommon.h"
+#include "CCOcclusionTrackerTestCommon.h"
 #include "CompositorFakeWebGraphicsContext3D.h"
 #include "ContentLayerChromium.h"
 #include "FilterOperations.h"
@@ -66,6 +67,7 @@ public:
     virtual void prepareToDrawOnCCThread(CCLayerTreeHostImpl*) { }
     virtual void drawLayersOnCCThread(CCLayerTreeHostImpl*) { }
     virtual void animateLayers(CCLayerTreeHostImpl*, double monotonicTime) { }
+    virtual void willAnimateLayers(CCLayerTreeHostImpl*, double monotonicTime) { }
     virtual void applyScrollAndScale(const IntSize&, float) { }
     virtual void updateAnimations(double monotonicTime) { }
     virtual void layout() { }
@@ -112,6 +114,7 @@ public:
 protected:
     virtual void animateLayers(double monotonicTime, double wallClockTime)
     {
+        m_testHooks->willAnimateLayers(this, monotonicTime);
         CCLayerTreeHostImpl::animateLayers(monotonicTime, wallClockTime);
         m_testHooks->animateLayers(this, monotonicTime);
     }
@@ -1064,7 +1067,7 @@ public:
 class CCLayerTreeHostTestSynchronizeAnimationStartTimes : public CCLayerTreeHostTestThreadOnly {
 public:
     CCLayerTreeHostTestSynchronizeAnimationStartTimes()
-        : m_numAnimates(0)
+        : m_layerTreeHostImpl(0)
     {
     }
 
@@ -1073,14 +1076,17 @@ public:
         postAddAnimationToMainThread();
     }
 
-    virtual void animateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime)
+    // This is guaranteed to be called before CCLayerTreeHostImpl::animateLayers.
+    virtual void willAnimateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime)
     {
-        if (!m_numAnimates) {
-            m_numAnimates++;
-            return;
-        }
+        m_layerTreeHostImpl = layerTreeHostImpl;
+    }
 
-        CCLayerAnimationController* controllerImpl = layerTreeHostImpl->rootLayer()->layerAnimationController();
+    virtual void notifyAnimationStarted(double time)
+    {
+        EXPECT_TRUE(m_layerTreeHostImpl);
+
+        CCLayerAnimationController* controllerImpl = m_layerTreeHostImpl->rootLayer()->layerAnimationController();
         CCLayerAnimationController* controller = m_layerTreeHost->rootLayer()->layerAnimationController();
         CCActiveAnimation* animationImpl = controllerImpl->getActiveAnimation(0, CCActiveAnimation::Opacity);
         CCActiveAnimation* animation = controller->getActiveAnimation(0, CCActiveAnimation::Opacity);
@@ -1095,7 +1101,7 @@ public:
     }
 
 private:
-    int m_numAnimates;
+    CCLayerTreeHostImpl* m_layerTreeHostImpl;
 };
 
 TEST_F(CCLayerTreeHostTestSynchronizeAnimationStartTimes, runMultiThread)
@@ -1756,7 +1762,9 @@ public:
 
     virtual void paintContentsIfDirty(const CCOcclusionTracker* occlusion)
     {
-        m_occludedScreenSpace = occlusion ? occlusion->currentOcclusionInScreenSpace() : Region();
+        // Gain access to internals of the CCOcclusionTracker.
+        const TestCCOcclusionTracker* testOcclusion = static_cast<const TestCCOcclusionTracker*>(occlusion);
+        m_occludedScreenSpace = testOcclusion ? testOcclusion->occlusionInScreenSpace() : Region();
     }
 
     virtual bool drawsContent() const { return true; }

@@ -192,11 +192,8 @@ void RenderTable::addChild(RenderObject* child, RenderObject* beforeChild)
 
     if (beforeChild && !beforeChild->isTableSection() && beforeChild->style()->display() != TABLE_CAPTION && beforeChild->style()->display() != TABLE_COLUMN_GROUP)
         beforeChild = 0;
-    RenderTableSection* section = new (renderArena()) RenderTableSection(document() /* anonymous */);
-    RefPtr<RenderStyle> newStyle = RenderStyle::create();
-    newStyle->inheritFrom(style());
-    newStyle->setDisplay(TABLE_ROW_GROUP);
-    section->setStyle(newStyle.release());
+
+    RenderTableSection* section = RenderTableSection::createAnonymousWithParentRenderer(this);
     addChild(section, beforeChild);
     section->addChild(child);
 }
@@ -271,28 +268,28 @@ void RenderTable::computeLogicalWidth()
 LayoutUnit RenderTable::convertStyleLogicalWidthToComputedWidth(const Length& styleLogicalWidth, LayoutUnit availableWidth)
 {
     // HTML tables' width styles already include borders and paddings, but CSS tables' width styles do not.
-    int borders = 0;
+    LayoutUnit borders = 0;
     bool isCSSTable = !node() || !node()->hasTagName(tableTag);
     if (isCSSTable && styleLogicalWidth.isFixed() && styleLogicalWidth.isPositive()) {
         recalcBordersInRowDirection();
-        borders = borderStart() + borderEnd() + (collapseBorders() ? 0 : paddingStart() + paddingEnd());
+        borders = borderStart() + borderEnd() + (collapseBorders() ? zeroLayoutUnit : paddingStart() + paddingEnd());
     }
     return minimumValueForLength(styleLogicalWidth, availableWidth, view()) + borders;
 }
 
 void RenderTable::layoutCaption(RenderTableCaption* caption)
 {
-    IntRect captionRect(caption->x(), caption->y(), caption->width(), caption->height());
+    LayoutRect captionRect(caption->frameRect());
 
     if (caption->needsLayout()) {
         // The margins may not be available but ensure the caption is at least located beneath any previous sibling caption
         // so that it does not mistakenly think any floats in the previous caption intrude into it.
-        caption->setLogicalLocation(IntPoint(caption->marginStart(), caption->marginBefore() + logicalHeight()));
+        caption->setLogicalLocation(LayoutPoint(caption->marginStart(), caption->marginBefore() + logicalHeight()));
         // If RenderTableCaption ever gets a layout() function, use it here.
         caption->layoutIfNeeded();
     }
     // Apply the margins to the location now that they are definitely available from layout
-    caption->setLogicalLocation(IntPoint(caption->marginStart(), caption->marginBefore() + logicalHeight()));
+    caption->setLogicalLocation(LayoutPoint(caption->marginStart(), caption->marginBefore() + logicalHeight()));
 
     if (!selfNeedsLayout() && caption->checkForRepaintDuringLayout())
         caption->repaintDuringLayoutIfMoved(captionRect);
@@ -336,7 +333,7 @@ void RenderTable::layout()
 
     if (logicalWidth() != oldLogicalWidth) {
         for (unsigned i = 0; i < m_captions.size(); i++)
-            m_captions[i]->setNeedsLayout(true, false);
+            m_captions[i]->setNeedsLayout(true, MarkOnlyThis);
     }
     // FIXME: The optimisation below doesn't work since the internal table
     // layout could have changed.  we need to add a flag to the table
@@ -1278,6 +1275,16 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     }
 
     return false;
+}
+
+RenderTable* RenderTable::createAnonymousWithParentRenderer(const RenderObject* parent)
+{
+    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyle(parent->style());
+    newStyle->setDisplay(TABLE);
+
+    RenderTable* newTable = new (parent->renderArena()) RenderTable(parent->document() /* is anonymous */);
+    newTable->setStyle(newStyle.release());
+    return newTable;
 }
 
 }

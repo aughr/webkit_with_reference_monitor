@@ -81,16 +81,18 @@ public:
     PassRefPtr<Element> createContentElement(Document*, ExceptionCode&);
     Element* getElementByIdInShadowRoot(Node* shadowRoot, const String& id, ExceptionCode&);
     bool isValidContentSelect(Element* insertionPoint, ExceptionCode&);
+    Node* treeScopeRootNode(Node*, ExceptionCode&);
 
     bool attached(Node*, ExceptionCode&);
 
-    Node* nextSiblingInReifiedTree(Node*, ExceptionCode&);
-    Node* firstChildInReifiedTree(Node*, ExceptionCode&);
-    Node* lastChildInReifiedTree(Node*, ExceptionCode&);
-    Node* traverseNextNodeInReifiedTree(Node*, ExceptionCode&);
-    Node* traversePreviousNodeInReifiedTree(Node*, ExceptionCode&);
+    // FIXME: Rename these functions if walker is prefered.
+    Node* nextSiblingByWalker(Node*, ExceptionCode&);
+    Node* firstChildByWalker(Node*, ExceptionCode&);
+    Node* lastChildByWalker(Node*, ExceptionCode&);
+    Node* nextNodeByWalker(Node*, ExceptionCode&);
+    Node* previousNodeByWalker(Node*, ExceptionCode&);
 
-#if ENABLE(INPUT_COLOR)
+#if ENABLE(INPUT_TYPE_COLOR)
     void selectColorInColorChooser(Element*, const String& colorValue);
 #endif
 
@@ -121,6 +123,7 @@ public:
 #if ENABLE(TOUCH_ADJUSTMENT)
     PassRefPtr<WebKitPoint> touchPositionAdjustedToBestClickableNode(long x, long y, long width, long height, Document*, ExceptionCode&);
     Node* touchNodeAdjustedToBestClickableNode(long x, long y, long width, long height, Document*, ExceptionCode&);
+    PassRefPtr<ClientRect> bestZoomableAreaForTouchPoint(long x, long y, long width, long height, Document*, ExceptionCode&);
 #endif
 
     int lastSpellCheckRequestSequence(Document*, ExceptionCode&);
@@ -138,7 +141,7 @@ public:
     unsigned touchEventHandlerCount(Document*, ExceptionCode&);
 
     PassRefPtr<NodeList> nodesFromRect(Document*, int x, int y, unsigned topPadding, unsigned rightPadding,
-        unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, ExceptionCode&) const;
+        unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent, ExceptionCode&) const;
 
     void emitInspectorDidBeginFrame();
     void emitInspectorDidCancelFrame();
@@ -151,6 +154,8 @@ public:
     InternalSettings* settings() const { return m_settings.get(); }
 
     void setBatteryStatus(Document*, const String& eventType, bool charging, double chargingTime, double dischargingTime, double level, ExceptionCode&);
+
+    void setNetworkInformation(Document*, const String& eventType, long bandwidth, bool metered, ExceptionCode&);
 
 #if ENABLE(INSPECTOR)
     unsigned numberOfLiveNodes() const;

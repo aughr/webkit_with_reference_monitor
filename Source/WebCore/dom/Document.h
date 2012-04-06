@@ -370,7 +370,7 @@ public:
      *        If false, this method returns null for coordinates outside of the viewport.
      */
     PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding,
-                                       unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping) const;
+                                       unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent) const;
     Element* elementFromPoint(int x, int y) const;
     PassRefPtr<Range> caretRangeFromPoint(int x, int y);
 
@@ -442,7 +442,9 @@ public:
     virtual bool isPluginDocument() const { return false; }
     virtual bool isMediaDocument() const { return false; }
     virtual bool isFrameSet() const { return false; }
-    
+
+    bool isSrcdocDocument() const { return m_isSrcdocDocument; }
+
     PassRefPtr<CSSValuePool> cssValuePool() const;
     
     CSSStyleSelector* styleSelectorIfExists() const { return m_styleSelector.get(); }
@@ -1426,6 +1428,7 @@ private:
 
     bool m_isViewSource;
     bool m_sawElementsInKnownNamespaces;
+    bool m_isSrcdocDocument;
 
     RefPtr<DocumentEventQueue> m_eventQueue;
 

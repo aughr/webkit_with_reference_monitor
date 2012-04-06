@@ -50,6 +50,7 @@ class CSSImageSetValue;
 class CSSImageValue;
 class CSSSelector;
 class CSSStyleApplyProperty;
+class CSSStyleRule;
 class CSSStyleSheet;
 class CSSValue;
 class ContainerNode;
@@ -70,17 +71,18 @@ class RuleSet;
 class Settings;
 class StaticCSSRuleList;
 class StyleImage;
+class StyleKeyframe;
 class StylePendingImage;
 class StylePropertySet;
 class StyleRule;
+class StyleRuleKeyframes;
+class StyleRulePage;
+class StyleRuleRegion;
 class StyleShader;
 class StyleSheet;
 class StyleSheetList;
 class StyledElement;
-class WebKitCSSKeyframeRule;
-class WebKitCSSKeyframesRule;
 class WebKitCSSFilterValue;
-class WebKitCSSRegionRule;
 class WebKitCSSShaderValue;
 
 #if ENABLE(CSS_SHADERS)
@@ -100,6 +102,20 @@ public:
     bool m_result;
 };
 
+enum StyleSharingBehavior {
+    AllowStyleSharing,
+    DisallowStyleSharing,
+};
+
+// MatchOnlyUserAgentRules is used in media queries, where relative units
+// are interpreted according to the document root element style, and styled only
+// from the User Agent Stylesheet rules.
+
+enum RuleMatchingBehavior {
+    MatchAllRules,
+    MatchOnlyUserAgentRules,
+};
+
 // This class selects a RenderStyle for a given element based on a collection of stylesheets.
 class CSSStyleSelector {
     WTF_MAKE_NONCOPYABLE(CSSStyleSelector); WTF_MAKE_FAST_ALLOCATED;
@@ -113,7 +129,8 @@ public:
     void pushParentShadowRoot(const ShadowRoot*);
     void popParentShadowRoot(const ShadowRoot*);
 
-    PassRefPtr<RenderStyle> styleForElement(Element*, RenderStyle* parentStyle = 0, bool allowSharing = true, bool resolveForRootDefault = false, RenderRegion* regionForStyling = 0);
+    PassRefPtr<RenderStyle> styleForElement(Element*, RenderStyle* parentStyle = 0, StyleSharingBehavior = AllowStyleSharing,
+        RuleMatchingBehavior = MatchAllRules, RenderRegion* regionForStyling = 0);
 
     void keyframeStylesForAnimation(Element*, const RenderStyle*, KeyframeList&);
 
@@ -151,7 +168,7 @@ private:
     StyledElement* findSiblingForStyleSharing(Node*, unsigned& count) const;
     bool canShareStyleWithElement(StyledElement*) const;
 
-    PassRefPtr<RenderStyle> styleForKeyframe(const RenderStyle*, const WebKitCSSKeyframeRule*, KeyframeValue&);
+    PassRefPtr<RenderStyle> styleForKeyframe(const RenderStyle*, const StyleKeyframe*, KeyframeValue&);
 
 #if ENABLE(STYLE_SCOPED)
     void pushScope(const ContainerNode* scope, const ContainerNode* scopeParent);
@@ -184,9 +201,9 @@ public:
 public:
     void setStyle(PassRefPtr<RenderStyle> s) { m_style = s; } // Used by the document when setting up its root style.
 
-    void applyPropertyToStyle(int id, CSSValue*, RenderStyle*);
+    void applyPropertyToStyle(CSSPropertyID, CSSValue*, RenderStyle*);
 
-    void applyPropertyToCurrentStyle(int id, CSSValue*);
+    void applyPropertyToCurrentStyle(CSSPropertyID, CSSValue*);
 
     void updateFont();
 
@@ -213,7 +230,7 @@ public:
     void allVisitedStateChanged() { m_checker.allVisitedStateChanged(); }
     void visitedStateChanged(LinkHash visitedHash) { m_checker.visitedStateChanged(visitedHash); }
 
-    void addKeyframeStyle(PassRefPtr<WebKitCSSKeyframesRule>);
+    void addKeyframeStyle(PassRefPtr<StyleRuleKeyframes>);
 
     bool checkRegionStyle(Element* regionElement);
 
@@ -225,6 +242,10 @@ public:
     static bool createTransformOperations(CSSValue* inValue, RenderStyle* inStyle, RenderStyle* rootStyle, TransformOperations& outOperations);
     
     void invalidateMatchedPropertiesCache();
+    
+    // WARNING. This will construct CSSOM wrappers for all style rules and cache then in a map for significant memory cost.
+    // It is here to support inspector. Don't use for any regular engine functions.
+    CSSStyleRule* ensureFullCSSOMWrapperForInspector(StyleRule*);
 
 #if ENABLE(CSS_FILTERS)
     bool createFilterOperations(CSSValue* inValue, RenderStyle* inStyle, RenderStyle* rootStyle, FilterOperations& outOperations);
@@ -238,10 +259,16 @@ public:
 #endif
 #endif // ENABLE(CSS_FILTERS)
 
-    struct RuleSelectorPair {
-        RuleSelectorPair(StyleRule* rule, CSSSelector* selector) : rule(rule), selector(selector) { }
+    struct RuleFeature {
+        RuleFeature(StyleRule* rule, CSSSelector* selector, bool hasDocumentSecurityOrigin)
+            : rule(rule)
+            , selector(selector)
+            , hasDocumentSecurityOrigin(hasDocumentSecurityOrigin) 
+        { 
+        }
         StyleRule* rule;
         CSSSelector* selector;
+        bool hasDocumentSecurityOrigin;
     };
     struct Features {
         Features();
@@ -250,8 +277,8 @@ public:
         void clear();
         HashSet<AtomicStringImpl*> idsInRules;
         HashSet<AtomicStringImpl*> attrsInRules;
-        Vector<RuleSelectorPair> siblingRules;
-        Vector<RuleSelectorPair> uncommonAttributeRules;
+        Vector<RuleFeature> siblingRules;
+        Vector<RuleFeature> uncommonAttributeRules;
         bool usesFirstLineRules;
         bool usesBeforeAfterRules;
         bool usesLinkRules;
@@ -329,10 +356,10 @@ private:
     template <bool firstPass>
     void applyProperties(const StylePropertySet* properties, StyleRule*, bool isImportant, bool inheritedOnly, bool filterRegionProperties);
 
-    static bool isValidRegionStyleProperty(int id);
+    static bool isValidRegionStyleProperty(CSSPropertyID);
 
     void matchPageRules(MatchResult&, RuleSet*, bool isLeftPage, bool isFirstPage, const String& pageName);
-    void matchPageRulesForList(Vector<CSSPageRule*>& matchedRules, const Vector<CSSPageRule*>&, bool isLeftPage, bool isFirstPage, const String& pageName);
+    void matchPageRulesForList(Vector<StyleRulePage*>& matchedRules, const Vector<StyleRulePage*>&, bool isLeftPage, bool isFirstPage, const String& pageName);
     bool isLeftPage(int pageIndex) const;
     bool isRightPage(int pageIndex) const { return !isLeftPage(pageIndex); }
     bool isFirstPage(int pageIndex) const;
@@ -350,7 +377,7 @@ private:
     FillLayer m_backgroundData;
     Color m_backgroundColor;
 
-    typedef HashMap<AtomicStringImpl*, RefPtr<WebKitCSSKeyframesRule> > KeyframesRuleMap;
+    typedef HashMap<AtomicStringImpl*, RefPtr<StyleRuleKeyframes> > KeyframesRuleMap;
     KeyframesRuleMap m_keyframesRuleMap;
 
 public:
@@ -371,6 +398,8 @@ public:
 
 private:
     static RenderStyle* s_styleNotYetAvailable;
+
+    void addAuthorRulesAndCollectUserRulesFromSheets(const Vector<RefPtr<CSSStyleSheet> >*, RuleSet& userStyle);
 
     void cacheBorderAndBackground();
 
@@ -403,10 +432,10 @@ public:
 private:
     bool canShareStyleWithControl(StyledElement*) const;
 
-    void applyProperty(int id, CSSValue*);
+    void applyProperty(CSSPropertyID, CSSValue*);
 
 #if ENABLE(SVG)
-    void applySVGProperty(int id, CSSValue*);
+    void applySVGProperty(CSSPropertyID, CSSValue*);
 #endif
 
     PassRefPtr<StyleImage> loadPendingImage(StylePendingImage*);
@@ -465,6 +494,8 @@ private:
     bool m_applyPropertyToRegularStyle;
     bool m_applyPropertyToVisitedLinkStyle;
     const CSSStyleApplyProperty& m_applyProperty;
+    
+    HashMap<StyleRule*, RefPtr<CSSStyleRule> > m_styleRuleToCSSOMWrapperMap;
 
 #if ENABLE(CSS_SHADERS)
     bool m_hasPendingShaders;

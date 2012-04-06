@@ -419,12 +419,6 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
 #endif
         }
 
-#if ENABLE(CSS_FILTERS)
-        if (rareNonInheritedData->m_filter.get() != other->rareNonInheritedData->m_filter.get()
-            && *rareNonInheritedData->m_filter.get() != *other->rareNonInheritedData->m_filter.get()) {
-            return StyleDifferenceLayout;
-        }
-#endif
 #if ENABLE(CSS_GRID_LAYOUT)
         if (rareNonInheritedData->m_grid.get() != other->rareNonInheritedData->m_grid.get()
             && rareNonInheritedData->m_gridItem.get() != other->rareNonInheritedData->m_gridItem.get())
@@ -605,6 +599,18 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
         return StyleDifferenceRepaintLayer;
 #endif
     }
+
+#if ENABLE(CSS_FILTERS)
+    if (rareNonInheritedData->m_filter.get() != other->rareNonInheritedData->m_filter.get()
+        && *rareNonInheritedData->m_filter.get() != *other->rareNonInheritedData->m_filter.get()) {
+#if USE(ACCELERATED_COMPOSITING)
+        changedContextSensitiveProperties |= ContextSensitivePropertyFilter;
+        // Don't return; keep looking for another change.
+#else
+        return StyleDifferenceRepaintLayer;
+#endif
+    }
+#endif
 
     if (rareNonInheritedData->m_mask != other->rareNonInheritedData->m_mask
         || rareNonInheritedData->m_maskBoxImage != other->rareNonInheritedData->m_maskBoxImage)
@@ -924,7 +930,7 @@ RoundedRect RenderStyle::getRoundedBorderFor(const LayoutRect& borderRect, Rende
     RoundedRect roundedRect(pixelSnappedIntRect(borderRect));
     if (hasBorderRadius()) {
         RoundedRect::Radii radii = calcRadiiFor(surround->border, borderRect.size(), renderView);
-        radii.scale(calcConstraintScaleFor(borderRect, radii));
+        radii.scale(calcConstraintScaleFor(pixelSnappedIntRect(borderRect), radii));
         roundedRect.includeLogicalEdges(radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
     }
     return roundedRect;
@@ -1127,12 +1133,12 @@ AnimationList* RenderStyle::accessTransitions()
     return rareNonInheritedData->m_transitions.get();
 }
 
-const Animation* RenderStyle::transitionForProperty(int property) const
+const Animation* RenderStyle::transitionForProperty(CSSPropertyID property) const
 {
     if (transitions()) {
         for (size_t i = 0; i < transitions()->size(); ++i) {
             const Animation* p = transitions()->animation(i);
-            if (p->property() == cAnimateAll || p->property() == property) {
+            if (p->animationMode() == Animation::AnimateAll || p->property() == property) {
                 return p;
             }
         }

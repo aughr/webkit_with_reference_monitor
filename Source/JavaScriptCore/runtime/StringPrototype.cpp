@@ -1007,7 +1007,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSplit(ExecState* exec)
             // c. Call the [[DefineOwnProperty]] internal method of A with arguments "0",
             //    Property Descriptor {[[Value]]: S, [[Writable]]: true, [[Enumerable]]: true, [[Configurable]]: true}, and false.
             // d. Return A.
-            if (reg->match(*globalData, input, 0) < 0)
+            if (!reg->match(*globalData, input, 0))
                 result->putDirectIndex(exec, 0, jsStringWithReuse(exec, thisValue, input), false);
             return JSValue::encode(result);
         }
@@ -1018,7 +1018,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSplit(ExecState* exec)
         while (matchPosition < input.length()) {
             // a. Call SplitMatch(S, q, R) and let z be its MatchResult result.
             Vector<int, 32> ovector;
-            int mpos = reg->match(*globalData, input, matchPosition, &ovector);
+            int mpos = reg->match(*globalData, input, matchPosition, ovector);
             // b. If z is failure, then let q = q + 1.
             if (mpos < 0)
                 break;
@@ -1147,7 +1147,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSubstr(ExecState* exec)
     JSString* jsString = 0;
     UString uString;
     if (thisValue.isString()) {
-        jsString = static_cast<JSString*>(thisValue.asCell());
+        jsString = jsCast<JSString*>(thisValue.asCell());
         len = jsString->length();
     } else if (thisValue.isUndefinedOrNull()) {
         // CheckObjectCoercible

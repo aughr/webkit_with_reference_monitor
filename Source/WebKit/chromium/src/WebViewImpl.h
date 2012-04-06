@@ -73,6 +73,7 @@ class PopupContainer;
 class PopupMenuClient;
 class Range;
 class RenderTheme;
+class TextFieldDecorator;
 class Widget;
 }
 
@@ -85,6 +86,7 @@ class DragScrollTimer;
 class GeolocationClientProxy;
 class NonCompositedContentHost;
 class SpeechInputClientImpl;
+class SpeechRecognitionClientProxy;
 class UserMediaClientImpl;
 class WebAccessibilityObject;
 class WebCompositorImpl;
@@ -152,6 +154,7 @@ public:
     virtual void setDevToolsAgentClient(WebDevToolsAgentClient*);
     virtual void setPermissionClient(WebPermissionClient*);
     virtual void setSpellCheckClient(WebSpellCheckClient*);
+    virtual void addTextFieldDecoratorClient(WebTextFieldDecoratorClient*) OVERRIDE;
     virtual WebSettings* settings();
     virtual WebString pageEncoding() const;
     virtual void setPageEncoding(const WebString& encoding);
@@ -307,6 +310,8 @@ public:
         return m_spellCheckClient;
     }
 
+    const Vector<OwnPtr<WebCore::TextFieldDecorator> >& textFieldDecorators() const { return m_textFieldDecorators; }
+
     // Returns the page object associated with this view. This may be null when
     // the page is shutting down, but will be valid at all other times.
     WebCore::Page* page() const
@@ -398,6 +403,17 @@ public:
     WebNavigationPolicy initialNavigationPolicy() const
     {
         return m_initialNavigationPolicy;
+    }
+
+    // Sets the emulated text zoom factor
+    // (may not be 1 in the device metrics emulation mode).
+    void setEmulatedTextZoomFactor(float);
+
+    // Returns the emulated text zoom factor
+    // (which may not be 1 in the device metrics emulation mode).
+    float emulatedTextZoomFactor() const
+    {
+        return m_emulatedTextZoomFactor;
     }
 
     // Determines whether a page should e.g. be opened in a background tab.
@@ -492,6 +508,9 @@ public:
     void enterFullScreenForElement(WebCore::Element*);
     void exitFullScreenForElement(WebCore::Element*);
 
+    // Exposed for the purpose of overriding device metrics.
+    void sendResizeEventAndRepaint();
+
     // Exposed for testing purposes.
     bool hasHorizontalScrollbar();
     bool hasVerticalScrollbar();
@@ -547,7 +566,6 @@ private:
                                                const WebPoint& screenPoint,
                                                DragAction);
 
-    void sendResizeEventAndRepaint();
     void configureAutoResizeMode();
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -575,6 +593,7 @@ private:
     WebAutofillClient* m_autofillClient;
     WebPermissionClient* m_permissionClient;
     WebSpellCheckClient* m_spellCheckClient;
+    Vector<OwnPtr<WebCore::TextFieldDecorator> > m_textFieldDecorators;
 
     ChromeClientImpl m_chromeClientImpl;
     ContextMenuClientImpl m_contextMenuClientImpl;
@@ -701,6 +720,7 @@ private:
 
     // If set, the WebView is in fullscreen mode for an element in this frame.
     RefPtr<WebCore::Frame> m_fullScreenFrame;
+    bool m_isCancelingFullScreen;
 
 #if USE(ACCELERATED_COMPOSITING)
     WebCore::IntRect m_rootLayerScrollDamage;
@@ -718,12 +738,18 @@ private:
 #if ENABLE(INPUT_SPEECH)
     OwnPtr<SpeechInputClientImpl> m_speechInputClient;
 #endif
+#if ENABLE(SCRIPTED_SPEECH)
+    OwnPtr<SpeechRecognitionClientProxy> m_speechRecognitionClient;
+#endif
+
     // If we attempt to fetch the on-screen GraphicsContext3D before
     // the compositor has been turned on, we need to instantiate it
     // early. This member holds on to the GC3D in this case.
     OwnPtr<WebGraphicsContext3D> m_temporaryOnscreenGraphicsContext3D;
     OwnPtr<DeviceOrientationClientProxy> m_deviceOrientationClientProxy;
     OwnPtr<GeolocationClientProxy> m_geolocationClientProxy;
+
+    float m_emulatedTextZoomFactor;
 
 #if ENABLE(MEDIA_STREAM)
     UserMediaClientImpl m_userMediaClientImpl;

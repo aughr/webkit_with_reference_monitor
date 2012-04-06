@@ -29,10 +29,10 @@
 
 import codecs
 import mimetypes
-import socket
+import time
 import urllib2
 
-from webkitpy.common.net.networktransaction import NetworkTransaction
+from webkitpy.common.net.networktransaction import NetworkTransaction, NetworkTimeout
 
 
 def get_mime_type(filename):
@@ -85,6 +85,7 @@ class FileUploader(object):
     def __init__(self, url, timeout_seconds):
         self._url = url
         self._timeout_seconds = timeout_seconds
+        self._deadline = time.time() + self._timeout_seconds
 
     def upload_single_text_file(self, filesystem, content_type, filename):
         return self._upload_data(content_type, filesystem.read_text_file(filename))
@@ -102,15 +103,11 @@ class FileUploader(object):
 
     def _upload_data(self, content_type, data):
         def callback():
+            now = time.time()
+            if now > self._deadline:
+                # This shouldn't happen, but just to be safe ...
+                raise NetworkTimeout()
             request = urllib2.Request(self._url, data, {"Content-Type": content_type})
-            return urllib2.urlopen(request)
+            return urllib2.urlopen(request, timeout=(self._deadline - now))
 
-        orig_timeout = socket.getdefaulttimeout()
-        response = None
-        try:
-            # FIXME: We shouldn't mutate global static state.
-            socket.setdefaulttimeout(self._timeout_seconds)
-            response = NetworkTransaction(timeout_seconds=self._timeout_seconds).run(callback)
-        finally:
-            socket.setdefaulttimeout(orig_timeout)
-            return response
+        return NetworkTransaction(timeout_seconds=self._timeout_seconds).run(callback)

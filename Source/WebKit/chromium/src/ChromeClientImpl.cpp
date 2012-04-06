@@ -34,7 +34,7 @@
 
 #include "AXObjectCache.h"
 #include "AccessibilityObject.h"
-#if ENABLE(INPUT_COLOR)
+#if ENABLE(INPUT_TYPE_COLOR)
 #include "ColorChooser.h"
 #include "ColorChooserClient.h"
 #include "ColorChooserProxy.h"
@@ -52,6 +52,7 @@
 #include "FrameView.h"
 #include "Geolocation.h"
 #include "GraphicsLayer.h"
+#include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
 #include "Icon.h"
@@ -68,11 +69,12 @@
 #include "SearchPopupMenuChromium.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "TextFieldDecorationElement.h"
 #if USE(V8)
 #include "V8Proxy.h"
 #endif
 #include "WebAccessibilityObject.h"
-#if ENABLE(INPUT_COLOR)
+#if ENABLE(INPUT_TYPE_COLOR)
 #include "WebColorChooser.h"
 #include "WebColorChooserClientImpl.h"
 #endif
@@ -99,6 +101,7 @@
 #include "WebWindowFeatures.h"
 #include "WindowFeatures.h"
 #include "WrappedResourceRequest.h"
+#include <public/Platform.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -698,7 +701,7 @@ void ChromeClientImpl::reachedApplicationCacheOriginQuota(SecurityOrigin*, int64
     ASSERT_NOT_REACHED();
 }
 
-#if ENABLE(INPUT_COLOR)
+#if ENABLE(INPUT_TYPE_COLOR)
 PassOwnPtr<ColorChooser> ChromeClientImpl::createColorChooser(ColorChooserClient* chooserClient, const Color& initialColor)
 {
     WebViewClient* client = m_webView->client();
@@ -985,6 +988,42 @@ PassRefPtr<SearchPopupMenu> ChromeClientImpl::createSearchPopupMenu(PopupMenuCli
     return adoptRef(new SearchPopupMenuChromium(client));
 }
 
+#if ENABLE(PAGE_POPUP)
+PagePopup* ChromeClientImpl::openPagePopup(PagePopupClient*, const IntRect&)
+{
+    // FIXME: Impelement this.
+    return 0;
+}
+
+void ChromeClientImpl::closePagePopup(PagePopup*)
+{
+    // FIXME: Implement this.
+}
+#endif
+
+bool ChromeClientImpl::willAddTextFieldDecorationsTo(HTMLInputElement* input)
+{
+    ASSERT(input);
+    const Vector<OwnPtr<TextFieldDecorator> >& decorators = m_webView->textFieldDecorators();
+    for (unsigned i = 0; i < decorators.size(); ++i) {
+        if (decorators[i]->willAddDecorationTo(input))
+            return true;
+    }
+    return false;
+}
+
+void ChromeClientImpl::addTextFieldDecorationsTo(HTMLInputElement* input)
+{
+    ASSERT(willAddTextFieldDecorationsTo(input));
+    const Vector<OwnPtr<TextFieldDecorator> >& decorators = m_webView->textFieldDecorators();
+    for (unsigned i = 0; i < decorators.size(); ++i) {
+        if (!decorators[i]->willAddDecorationTo(input))
+            continue;
+        RefPtr<TextFieldDecorationElement> decoration = TextFieldDecorationElement::create(input->document(), decorators[i].get());
+        decoration->decorate(input);
+    }
+}
+
 bool ChromeClientImpl::shouldRunModalDialogDuringPageDismissal(const DialogType& dialogType, const String& dialogMessage, FrameLoader::PageDismissalType dismissalType) const
 {
     const char* kDialogs[] = {"alert", "confirm", "prompt", "showModalDialog"};
@@ -995,7 +1034,7 @@ bool ChromeClientImpl::shouldRunModalDialogDuringPageDismissal(const DialogType&
     int dismissal = static_cast<int>(dismissalType) - 1; // Exclude NoDismissal.
     ASSERT(0 <= dismissal && dismissal < static_cast<int>(arraysize(kDismissals)));
 
-    PlatformSupport::histogramEnumeration("Renderer.ModalDialogsDuringPageDismissal", dismissal * arraysize(kDialogs) + dialog, arraysize(kDialogs) * arraysize(kDismissals));
+    WebKit::Platform::current()->histogramEnumeration("Renderer.ModalDialogsDuringPageDismissal", dismissal * arraysize(kDialogs) + dialog, arraysize(kDialogs) * arraysize(kDismissals));
 
     m_webView->mainFrame()->addMessageToConsole(WebConsoleMessage(WebConsoleMessage::LevelError, makeString("Blocked ", kDialogs[dialog], "('", dialogMessage, "') during ", kDismissals[dismissal], ".")));
 

@@ -702,7 +702,7 @@ static LayoutUnit computeMargin(const RenderInline* renderer, const Length& marg
         return margin.value();
     if (margin.isPercent())
         return minimumValueForLength(margin, max<LayoutUnit>(0, renderer->containingBlock()->availableLogicalWidth()));
-    if (margin.isViewportRelative())
+    if (margin.isViewportPercentage())
         return valueForLength(margin, 0, renderer->view());
     return 0;
 }
@@ -1112,18 +1112,6 @@ void RenderInline::computeRectForRepaint(RenderBoxModelObject* repaintContainer,
         }
     }
 
-#if ENABLE(CSS_FILTERS)
-    if (style()->hasFilterOutsets()) {
-        LayoutUnit topOutset;
-        LayoutUnit rightOutset;
-        LayoutUnit bottomOutset;
-        LayoutUnit leftOutset;
-        style()->filter().getOutsets(topOutset, rightOutset, bottomOutset, leftOutset);
-        rect.move(-leftOutset, -topOutset);
-        rect.expand(leftOutset + rightOutset, topOutset + bottomOutset);
-    }
-#endif
-
     if (style()->position() == RelativePosition && layer()) {
         // Apply the relative position offset when invalidating a rectangle.  The layer
         // is translated, but the render box isn't, so we need to do this to get the
@@ -1465,6 +1453,8 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
         LayoutSize(thisline.width() + offset, thisline.height() + offset));
 
     IntRect pixelSnappedBox = pixelSnappedIntRect(box);
+    IntRect pixelSnappedLastLine = pixelSnappedIntRect(paintOffset.x() + lastline.x(), 0, lastline.width(), 0);
+    IntRect pixelSnappedNextLine = pixelSnappedIntRect(paintOffset.x() + nextline.x(), 0, nextline.width(), 0);
     
     // left edge
     drawLineForBoxSide(graphicsContext,
@@ -1494,7 +1484,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
         drawLineForBoxSide(graphicsContext,
             pixelSnappedBox.x() - outlineWidth,
             pixelSnappedBox.y() - outlineWidth,
-            min(pixelSnappedBox.maxX() + outlineWidth, (lastline.isEmpty() ? 1000000 : paintOffset.x() + lastline.x())),
+            min(pixelSnappedBox.maxX() + outlineWidth, (lastline.isEmpty() ? 1000000 : pixelSnappedLastLine.x())),
             pixelSnappedBox.y(),
             BSTop, outlineColor, outlineStyle,
             outlineWidth,
@@ -1503,7 +1493,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
     
     if (lastline.maxX() < thisline.maxX())
         drawLineForBoxSide(graphicsContext,
-            max(lastline.isEmpty() ? -1000000 : paintOffset.x() + lastline.maxX(), pixelSnappedBox.x() - outlineWidth),
+            max(lastline.isEmpty() ? -1000000 : pixelSnappedLastLine.maxX(), pixelSnappedBox.x() - outlineWidth),
             pixelSnappedBox.y() - outlineWidth,
             pixelSnappedBox.maxX() + outlineWidth,
             pixelSnappedBox.y(),
@@ -1527,7 +1517,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
         drawLineForBoxSide(graphicsContext,
             pixelSnappedBox.x() - outlineWidth,
             pixelSnappedBox.maxY(),
-            min(pixelSnappedBox.maxX() + outlineWidth, !nextline.isEmpty() ? paintOffset.x() + nextline.x() + 1 : 1000000),
+            min(pixelSnappedBox.maxX() + outlineWidth, !nextline.isEmpty() ? pixelSnappedNextLine.x() + 1 : 1000000),
             pixelSnappedBox.maxY() + outlineWidth,
             BSBottom, outlineColor, outlineStyle,
             outlineWidth,
@@ -1536,7 +1526,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
     
     if (nextline.maxX() < thisline.maxX())
         drawLineForBoxSide(graphicsContext,
-            max(!nextline.isEmpty() ? paintOffset.x() + nextline.maxX() : -1000000, pixelSnappedBox.x() - outlineWidth),
+            max(!nextline.isEmpty() ? pixelSnappedNextLine.maxX() : -1000000, pixelSnappedBox.x() - outlineWidth),
             pixelSnappedBox.maxY(),
             pixelSnappedBox.maxX() + outlineWidth,
             pixelSnappedBox.maxY() + outlineWidth,

@@ -1072,6 +1072,8 @@ editing/spelling/markers.html
 
 # EditorClient::requestCheckingOfString() is not implemented
 editing/spelling/spellcheck-paste.html
+editing/spelling/spellcheck-paste-disabled.html
+
 # Replacement text for misspelling is not given.
 # https://bugs.webkit.org/show_bug.cgi?id=77934
 editing/spelling/spelling-marker-description.html
@@ -1156,6 +1158,9 @@ fast/forms/number/input-number-large-padding.html
 fast/forms/number/input-number-size.html
 fast/forms/number/input-spinbutton-capturing.html
 fast/forms/number/spin-button-gets-disabled-or-readonly.html
+
+# Datalist is not yet enabled.
+fast/forms/datalist
 
 # Color input is not yet enabled.
 fast/forms/color
@@ -1250,6 +1255,10 @@ inspector/debugger/event-listener-breakpoints.html
 inspector/debugger/step-through-event-listeners.html
 inspector/debugger/xhr-breakpoints.html
 
+# JSC doesn't support heap profiling
+# https://bugs.webkit.org/show_bug.cgi?id=50485
+inspector/profiler/heap-snapshot-inspect-dom-wrapper.html
+
 # https://bugs.webkit.org/show_bug.cgi?id=40300
 inspector/debugger/live-edit.html
 
@@ -1335,6 +1344,7 @@ editing/pasteboard/onpaste-text-html-types.html
 editing/pasteboard/data-transfer-items.html
 editing/pasteboard/data-transfer-items-image-png.html
 editing/pasteboard/data-transfer-items-drag-drop-file.html
+editing/pasteboard/data-transfer-items-drag-drop-entry.html
 editing/pasteboard/data-transfer-items-drag-drop-string.html
 fast/events/clipboard-dataTransferItemList.html
 fast/events/drag-dataTransferItemList.html
@@ -1474,7 +1484,6 @@ fast/dom/shadow/content-element-outside-shadow-style.html
 fast/dom/shadow/content-element-in-media-element.html
 fast/dom/shadow/content-element-in-meter-element.html
 fast/dom/shadow/get-element-by-id-in-shadow-root.html
-fast/dom/shadow/reified-tree-traversal.html
 fast/dom/shadow/shadow-root-js-api.html
 fast/dom/shadow/shadow-disable.html
 fast/dom/shadow/shadow-root-activeElement.html
@@ -1677,6 +1686,9 @@ fast/dom/navigator-vibration.html
 #Battery Status API is not implemented.
 batterystatus
 
+# https://bugs.webkit.org/show_bug.cgi?id=82628
+svg/hittest/svg-ellipse-non-scale-stroke.xhtml
+
 # Touch adjustment not enabled
 # https://bugs.webkit.org/show_bug.cgi?id=78801
 touchadjustment
@@ -1878,3 +1890,13 @@ fast/table/cell-pref-width-invalidation.html
 
 # The inner <input> should now grow to take the full cell's height.
 fast/table/colspanMinWidth-vertical.html
+
+# This should only be a layer change.
+# http://webkit.org/b/82129
+fast/box-shadow/shadow-buffer-partial.html
+fast/block/lineboxcontain/block-font.html
+fast/block/lineboxcontain/block-glyphs.html
+fast/block/lineboxcontain/font.html
+
+# http://webkit.org/b/82886
+inspector/styles/override-screen-size.html

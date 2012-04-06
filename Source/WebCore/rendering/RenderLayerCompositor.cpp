@@ -510,84 +510,7 @@ IntRect RenderLayerCompositor::calculateCompositedBounds(const RenderLayer* laye
 {
     if (!canBeComposited(layer))
         return IntRect();
-
-    LayoutRect boundingBoxRect = layer->localBoundingBox();
-    if (layer->renderer()->isRoot()) {
-        // If the root layer becomes composited (e.g. because some descendant with negative z-index is composited),
-        // then it has to be big enough to cover the viewport in order to display the background. This is akin
-        // to the code in RenderBox::paintRootBoxFillLayers().
-        if (m_renderView->frameView()) {
-            LayoutUnit rw = m_renderView->frameView()->contentsWidth();
-            LayoutUnit rh = m_renderView->frameView()->contentsHeight();
-            
-            boundingBoxRect.setWidth(max(boundingBoxRect.width(), rw - boundingBoxRect.x()));
-            boundingBoxRect.setHeight(max(boundingBoxRect.height(), rh - boundingBoxRect.y()));
-        }
-    }
-    
-    LayoutRect unionBounds = boundingBoxRect;
-
-    LayoutRect localClipRect = layer->localClipRect();
-    if (localClipRect != PaintInfo::infiniteRect()) {
-        LayoutPoint ancestorRelOffset;
-        layer->convertToLayerCoords(ancestorLayer, ancestorRelOffset);
-        localClipRect.moveBy(ancestorRelOffset);
-        return pixelSnappedIntRect(localClipRect);
-    }
-
-    if (RenderLayer* reflection = layer->reflectionLayer()) {
-        if (!reflection->isComposited()) {
-            LayoutRect childUnionBounds = calculateCompositedBounds(reflection, layer);
-            unionBounds.unite(childUnionBounds);
-        }
-    }
-    
-    ASSERT(layer->isStackingContext() || (!layer->m_posZOrderList || layer->m_posZOrderList->size() == 0));
-
-    if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
-        size_t listSize = negZOrderList->size();
-        for (size_t i = 0; i < listSize; ++i) {
-            RenderLayer* curLayer = negZOrderList->at(i);
-            if (!curLayer->isComposited()) {
-                LayoutRect childUnionBounds = calculateCompositedBounds(curLayer, layer);
-                unionBounds.unite(childUnionBounds);
-            }
-        }
-    }
-
-    if (Vector<RenderLayer*>* posZOrderList = layer->posZOrderList()) {
-        size_t listSize = posZOrderList->size();
-        for (size_t i = 0; i < listSize; ++i) {
-            RenderLayer* curLayer = posZOrderList->at(i);
-            if (!curLayer->isComposited()) {
-                LayoutRect childUnionBounds = calculateCompositedBounds(curLayer, layer);
-                unionBounds.unite(childUnionBounds);
-            }
-        }
-    }
-
-    if (Vector<RenderLayer*>* normalFlowList = layer->normalFlowList()) {
-        size_t listSize = normalFlowList->size();
-        for (size_t i = 0; i < listSize; ++i) {
-            RenderLayer* curLayer = normalFlowList->at(i);
-            if (!curLayer->isComposited()) {
-                LayoutRect curAbsBounds = calculateCompositedBounds(curLayer, layer);
-                unionBounds.unite(curAbsBounds);
-            }
-        }
-    }
-
-    if (layer->paintsWithTransform(PaintBehaviorNormal)) {
-        TransformationMatrix* affineTrans = layer->transform();
-        boundingBoxRect = affineTrans->mapRect(boundingBoxRect);
-        unionBounds = affineTrans->mapRect(unionBounds);
-    }
-
-    LayoutPoint ancestorRelOffset;
-    layer->convertToLayerCoords(ancestorLayer, ancestorRelOffset);
-    unionBounds.moveBy(ancestorRelOffset);
-
-    return pixelSnappedIntRect(unionBounds);
+    return pixelSnappedIntRect(RenderLayer::calculateLayerBounds(layer, ancestorLayer));
 }
 
 void RenderLayerCompositor::layerWasAdded(RenderLayer* /*parent*/, RenderLayer* /*child*/)
@@ -660,6 +583,10 @@ void RenderLayerCompositor::addToOverlapMapRecursive(OverlapMap& overlapMap, Ren
     IntRect bounds;
     bool haveComputedBounds = false;
     addToOverlapMap(overlapMap, layer, bounds, haveComputedBounds);
+
+#if !ASSERT_DISABLED
+    LayerListMutationDetector mutationChecker(layer);
+#endif
 
     if (layer->isStackingContext()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
@@ -748,6 +675,10 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* layer, O
     // when the video element is a stacking context (e.g. due to opacity or transform).
     if (willBeComposited && layer->renderer()->isVideo())
         childState.m_subtreeIsCompositing = true;
+#endif
+
+#if !ASSERT_DISABLED
+    LayerListMutationDetector mutationChecker(layer);
 #endif
 
     if (layer->isStackingContext()) {
@@ -931,6 +862,10 @@ void RenderLayerCompositor::rebuildCompositingLayerTree(RenderLayer* layer, Vect
     Vector<GraphicsLayer*> layerChildren;
     Vector<GraphicsLayer*>& childList = layerBacking ? layerChildren : childLayersOfEnclosingLayer;
 
+#if !ASSERT_DISABLED
+    LayerListMutationDetector mutationChecker(layer);
+#endif
+
     if (layer->isStackingContext()) {
         ASSERT(!layer->m_zOrderListsDirty);
 
@@ -1105,6 +1040,10 @@ void RenderLayerCompositor::updateLayerTreeGeometry(RenderLayer* layer)
             updateRootLayerPosition();
     }
 
+#if !ASSERT_DISABLED
+    LayerListMutationDetector mutationChecker(layer);
+#endif
+
     if (layer->isStackingContext()) {
         ASSERT(!layer->m_zOrderListsDirty);
 
@@ -1154,6 +1093,10 @@ void RenderLayerCompositor::updateCompositingDescendantGeometry(RenderLayer* com
 
     if (!layer->hasCompositingDescendant())
         return;
+
+#if !ASSERT_DISABLED
+    LayerListMutationDetector mutationChecker(layer);
+#endif
     
     if (layer->isStackingContext()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
@@ -1189,6 +1132,10 @@ void RenderLayerCompositor::recursiveRepaintLayerRect(RenderLayer* layer, const 
     // FIXME: This method does not work correctly with transforms.
     if (layer->isComposited())
         layer->setBackingNeedsRepaintInRect(rect);
+
+#if !ASSERT_DISABLED
+    LayerListMutationDetector mutationChecker(layer);
+#endif
 
     if (layer->hasCompositingDescendant()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
@@ -2131,6 +2078,10 @@ bool RenderLayerCompositor::layerHas3DContent(const RenderLayer* layer) const
          style->hasPerspective() ||
          style->transform().has3DOperation()))
         return true;
+
+#if !ASSERT_DISABLED
+    LayerListMutationDetector mutationChecker(const_cast<RenderLayer*>(layer));
+#endif
 
     if (layer->isStackingContext()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {

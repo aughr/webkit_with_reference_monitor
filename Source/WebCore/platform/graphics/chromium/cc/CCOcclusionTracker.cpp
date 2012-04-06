@@ -31,6 +31,7 @@
 
 #include "LayerChromium.h"
 #include "cc/CCLayerImpl.h"
+#include "cc/CCMathUtil.h"
 
 #include <algorithm>
 
@@ -275,22 +276,6 @@ static inline IntRect rectSubtractRegion(const IntRect& rect, const Region& regi
     return boundsRect;
 }
 
-static FloatQuad projectQuad(const TransformationMatrix& transform, const FloatQuad& q, bool& clamped)
-{
-    FloatQuad projectedQuad;
-    bool clampedPoint;
-    projectedQuad.setP1(transform.projectPoint(q.p1(), &clampedPoint));
-    clamped = clampedPoint;
-    projectedQuad.setP2(transform.projectPoint(q.p2(), &clampedPoint));
-    clamped |= clampedPoint;
-    projectedQuad.setP3(transform.projectPoint(q.p3(), &clampedPoint));
-    clamped |= clampedPoint;
-    projectedQuad.setP4(transform.projectPoint(q.p4(), &clampedPoint));
-    clamped |= clampedPoint;
-
-    return projectedQuad;
-}
-
 static inline IntRect computeUnoccludedContentRect(const IntRect& contentRect, const TransformationMatrix& contentSpaceTransform, const IntRect& scissorRect, const Region& occlusion)
 {
     if (!contentSpaceTransform.isInvertible())
@@ -299,9 +284,9 @@ static inline IntRect computeUnoccludedContentRect(const IntRect& contentRect, c
     FloatRect transformedRect = contentSpaceTransform.mapRect(FloatRect(contentRect));
     // Take the enclosingIntRect at each step, as we want to contain any unoccluded partial pixels in the resulting IntRect.
     IntRect shrunkRect = rectSubtractRegion(intersection(enclosingIntRect(transformedRect), scissorRect), occlusion);
-    bool clamped; // FIXME: projectQuad returns invalid results when a point gets clamped. To be fixed in bug https://bugs.webkit.org/show_bug.cgi?id=80806.
-    IntRect unoccludedRect = enclosingIntRect(projectQuad(contentSpaceTransform.inverse(), FloatQuad(FloatRect(shrunkRect)), clamped).boundingBox());
-    if (clamped)
+    bool clipped; // FIXME: We should be able to use projectClippedQuad instead of forcing everything to be unoccluded. https://bugs.webkit.org/show_bug.cgi?id=83217.
+    IntRect unoccludedRect = enclosingIntRect(CCMathUtil::projectQuad(contentSpaceTransform.inverse(), FloatQuad(FloatRect(shrunkRect)), clipped).boundingBox());
+    if (clipped)
         return contentRect;
     // The rect back in content space is a bounding box and may extend outside of the original contentRect, so clamp it to the contentRectBounds.
     return intersection(unoccludedRect, contentRect);
@@ -340,26 +325,10 @@ IntRect CCOcclusionTrackerBase<LayerType, RenderSurfaceType>::layerScissorRectIn
 {
     const RenderSurfaceType* targetSurface = m_stack.last().surface;
     FloatRect totalScissor = targetSurface->contentRect();
-    // FIXME: layer->clipRect() and layer->usesLayerClipping() is changing: https://bugs.webkit.org/show_bug.cgi?id=80622
-    if (!layer->clipRect().isEmpty())
+    if (layer->usesLayerClipping())
         totalScissor.intersect(layer->clipRect());
     return enclosingIntRect(totalScissor);
 }
-
-template<typename LayerType, typename RenderSurfaceType>
-const Region& CCOcclusionTrackerBase<LayerType, RenderSurfaceType>::currentOcclusionInScreenSpace() const
-{
-    ASSERT(!m_stack.isEmpty());
-    return m_stack.last().occlusionInScreen;
-}
-
-template<typename LayerType, typename RenderSurfaceType>
-const Region& CCOcclusionTrackerBase<LayerType, RenderSurfaceType>::currentOcclusionInTargetSurface() const
-{
-    ASSERT(!m_stack.isEmpty());
-    return m_stack.last().occlusionInTarget;
-}
-
 
 // Declare the possible functions here for the linker.
 template CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::CCOcclusionTrackerBase(IntRect scissorRectInScreenSpace, bool recordMetricsForFrame);
@@ -369,8 +338,6 @@ template void CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::leav
 template void CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::markOccludedBehindLayer(const LayerChromium*);
 template bool CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::occluded(const LayerChromium*, const IntRect& contentRect) const;
 template IntRect CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::unoccludedContentRect(const LayerChromium*, const IntRect& contentRect) const;
-template const Region& CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::currentOcclusionInScreenSpace() const;
-template const Region& CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::currentOcclusionInTargetSurface() const;
 template IntRect CCOcclusionTrackerBase<LayerChromium, RenderSurfaceChromium>::layerScissorRectInTargetSurface(const LayerChromium*) const;
 
 template CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::CCOcclusionTrackerBase(IntRect scissorRectInScreenSpace, bool recordMetricsForFrame);
@@ -380,8 +347,6 @@ template void CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::leaveToTarge
 template void CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::markOccludedBehindLayer(const CCLayerImpl*);
 template bool CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::occluded(const CCLayerImpl*, const IntRect& contentRect) const;
 template IntRect CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::unoccludedContentRect(const CCLayerImpl*, const IntRect& contentRect) const;
-template const Region& CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::currentOcclusionInScreenSpace() const;
-template const Region& CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::currentOcclusionInTargetSurface() const;
 template IntRect CCOcclusionTrackerBase<CCLayerImpl, CCRenderSurface>::layerScissorRectInTargetSurface(const CCLayerImpl*) const;
 
 

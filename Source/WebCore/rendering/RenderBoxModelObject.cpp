@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderBoxModelObject.h"
 
+#include "FilterOperations.h"
 #include "GraphicsContext.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLNames.h"
@@ -329,9 +330,13 @@ void RenderBoxModelObject::styleWillChange(StyleDifference diff, const RenderSty
                     || !(oldStyle->clip() == newStyle->clip())
                     || oldStyle->hasClip() != newStyle->hasClip()
                     || oldStyle->opacity() != newStyle->opacity()
-                    || oldStyle->transform() != newStyle->transform())
+                    || oldStyle->transform() != newStyle->transform()
+#if ENABLE(CSS_FILTERS)
+                    || oldStyle->filter() != newStyle->filter()
+#endif
+                    )
                 layer()->repaintIncludingDescendants();
-            } else if (newStyle->hasTransform() || newStyle->opacity() < 1) {
+            } else if (newStyle->hasTransform() || newStyle->opacity() < 1 || newStyle->hasFilter()) {
                 // If we don't have a layer yet, but we are going to get one because of transform or opacity,
                 //  then we need to repaint the old position of the object.
                 repaint();
@@ -557,7 +562,7 @@ LayoutUnit RenderBoxModelObject::paddingTop(PaddingOptions) const
     Length padding = style()->paddingTop();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -569,7 +574,7 @@ LayoutUnit RenderBoxModelObject::paddingBottom(PaddingOptions) const
     Length padding = style()->paddingBottom();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -581,7 +586,7 @@ LayoutUnit RenderBoxModelObject::paddingLeft(PaddingOptions) const
     Length padding = style()->paddingLeft();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -593,7 +598,7 @@ LayoutUnit RenderBoxModelObject::paddingRight(PaddingOptions) const
     Length padding = style()->paddingRight();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -605,7 +610,7 @@ LayoutUnit RenderBoxModelObject::paddingBefore(PaddingOptions) const
     Length padding = style()->paddingBefore();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -617,7 +622,7 @@ LayoutUnit RenderBoxModelObject::paddingAfter(PaddingOptions) const
     Length padding = style()->paddingAfter();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -629,7 +634,7 @@ LayoutUnit RenderBoxModelObject::paddingStart(PaddingOptions) const
     Length padding = style()->paddingStart();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -641,7 +646,7 @@ LayoutUnit RenderBoxModelObject::paddingEnd(PaddingOptions) const
     Length padding = style()->paddingEnd();
     if (padding.isPercent())
         w = containingBlock()->availableLogicalWidth();
-    else if (padding.isViewportRelative())
+    else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
 }
@@ -1022,12 +1027,12 @@ IntSize RenderBoxModelObject::calculateFillTileSize(const FillLayer* fillLayer, 
 
             if (layerWidth.isFixed())
                 w = layerWidth.value();
-            else if (layerWidth.isPercent() || layerHeight.isViewportRelative())
+            else if (layerWidth.isPercent() || layerHeight.isViewportPercentage())
                 w = valueForLength(layerWidth, positioningAreaSize.width(), renderView);
             
             if (layerHeight.isFixed())
                 h = layerHeight.value();
-            else if (layerHeight.isPercent() || layerHeight.isViewportRelative())
+            else if (layerHeight.isPercent() || layerHeight.isViewportPercentage())
                 h = valueForLength(layerHeight, positioningAreaSize.height(), renderView);
             
             // If one of the values is auto we have to use the appropriate

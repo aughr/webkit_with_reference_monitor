@@ -760,7 +760,7 @@ class Manager(object):
         for worker_number in xrange(num_workers):
             worker_arguments = worker.WorkerArguments(worker_number, self.results_directory(), self._options)
             worker_connection = manager_connection.start_worker(worker_arguments)
-            if self._options.child_processes == 1:
+            if num_workers == 1:
                 # FIXME: We need to be able to share a port with the work so
                 # that some of the tests can query state on the port; ideally
                 # we'd rewrite the tests so that this wasn't necessary.
@@ -982,12 +982,21 @@ class Manager(object):
 
             self._update_summary_with_result(result_summary, result)
 
+    def _mark_interrupted_tests_as_skipped(self, result_summary):
+        for test_name in self._test_files:
+            if test_name not in result_summary.results:
+                result = test_results.TestResult(test_name)
+                result.type = test_expectations.SKIP
+                # FIXME: We probably need to loop here if there are multiple iterations.
+                result_summary.add(result, expected=True)
+
     def _interrupt_if_at_failure_limits(self, result_summary):
         # Note: The messages in this method are constructed to match old-run-webkit-tests
         # so that existing buildbot grep rules work.
         def interrupt_if_at_failure_limit(limit, failure_count, result_summary, message):
             if limit and failure_count >= limit:
                 message += " %d tests run." % (result_summary.expected + result_summary.unexpected)
+                self._mark_interrupted_tests_as_skipped(result_summary)
                 raise TestRunInterruptedException(message)
 
         interrupt_if_at_failure_limit(
@@ -1096,8 +1105,11 @@ class Manager(object):
 
         # Remove these files from the results directory so they don't take up too much space on the buildbot.
         # The tools use the version we uploaded to the results server anyway.
-        self._filesystem.remove(times_json_path)
-        self._filesystem.remove(incremental_results_path)
+
+        # FIXME: Remove after done debugging problems w/ uploads on leopard.
+        if self._port.name() != 'chromium-mac-leopard':
+            self._filesystem.remove(times_json_path)
+            self._filesystem.remove(incremental_results_path)
 
     def print_config(self):
         """Prints the configuration for the test run."""

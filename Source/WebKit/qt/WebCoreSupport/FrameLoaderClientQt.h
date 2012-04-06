@@ -35,14 +35,14 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "KURL.h"
-#include <wtf/OwnPtr.h>
 #include "WebCore/plugins/PluginView.h"
-#include "RefCounted.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
 #include <QUrl>
 #include <qobject.h>
 #include <wtf/Forward.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/RefCounted.h>
 
 QT_BEGIN_NAMESPACE
 class QNetworkReply;
@@ -138,7 +138,6 @@ public:
     virtual void dispatchWillSendSubmitEvent(HTMLFormElement*) { }
     virtual void dispatchWillSubmitForm(FramePolicyFunction, PassRefPtr<FormState>);
 
-    virtual void dispatchDidLoadMainResource(DocumentLoader*);
     virtual void revertToProvisionalState(DocumentLoader*);
     virtual void setMainDocumentError(DocumentLoader*, const ResourceError&);
 

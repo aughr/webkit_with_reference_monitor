@@ -32,17 +32,20 @@
 #define DateInputType_h
 
 #include "BaseDateAndTimeInputType.h"
+#include <wtf/RefPtr.h>
 
 #if ENABLE(INPUT_TYPE_DATE)
 
 namespace WebCore {
+
+class CalendarPickerElement;
 
 class DateInputType : public BaseDateAndTimeInputType {
 public:
     static PassOwnPtr<InputType> create(HTMLInputElement*);
 
 private:
-    DateInputType(HTMLInputElement* element) : BaseDateAndTimeInputType(element) { }
+    DateInputType(HTMLInputElement*);
     virtual const AtomicString& formControlType() const OVERRIDE;
     virtual DateComponents::Type dateType() const OVERRIDE;
     virtual double minimum() const OVERRIDE;
@@ -52,6 +55,17 @@ private:
     virtual bool parsedStepValueShouldBeInteger() const OVERRIDE;
     virtual bool parseToDateComponentsInternal(const UChar*, unsigned length, DateComponents*) const OVERRIDE;
     virtual bool setMillisecondToDateComponents(double, DateComponents*) const OVERRIDE;
+#if ENABLE(CALENDAR_PICKER)
+    virtual void createShadowSubtree() OVERRIDE;
+    virtual void destroyShadowSubtree() OVERRIDE;
+    virtual void handleBlurEvent() OVERRIDE;
+
+    // TextFieldInputType functions
+    virtual bool needsContainer() const OVERRIDE;
+    virtual bool shouldHaveSpinButton() const OVERRIDE;
+
+    RefPtr<CalendarPickerElement> m_pickerElement;
+#endif
 };
 
 } // namespace WebCore

@@ -1,3 +1,4 @@
+# Copyright (C) 2012 Google, Inc.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +25,6 @@
 
 import logging
 import optparse
-import os
 import StringIO
 import sys
 import traceback
@@ -39,7 +39,6 @@ _log = logging.getLogger(__name__)
 
 class Tester(object):
     def __init__(self, filesystem=None):
-        self._verbosity = 1
         self.finder = TestFinder(filesystem or FileSystem())
         self.stream = sys.stderr
 
@@ -54,10 +53,8 @@ class Tester(object):
                           help='generate code coverage info (requires http://pypi.python.org/pypi/coverage)'),
         parser.add_option('-q', '--quiet', action='store_true', default=False,
                           help='run quietly (errors, warnings, and progress only)'),
-        parser.add_option('-s', '--silent', action='store_true', default=False,
-                          help='run silently (errors and warnings only)'),
-        parser.add_option('-x', '--xml', action='store_true', default=False,
-                          help='output xUnit-style XML output')
+        parser.add_option('-t', '--timing', action='store_true', default=False,
+                          help='display per-test execution time (implies --verbose)'),
         parser.add_option('-v', '--verbose', action='count', default=0,
                           help='verbose output (specify once for individual test results, twice for debug messages)')
         parser.add_option('--skip-integrationtests', action='store_true', default=False,
@@ -71,21 +68,16 @@ class Tester(object):
     def _configure(self, options):
         self._options = options
 
-        if options.silent:
-            self._verbosity = 0
-            self._configure_logging(logging.WARNING)
-        elif options.quiet:
-            self._verbosity = 1
-            self._configure_logging(logging.WARNING)
-        elif options.verbose == 0:
-            self._verbosity = 1
-            self._configure_logging(logging.INFO)
-        elif options.verbose == 1:
-            self._verbosity = 2
-            self._configure_logging(logging.INFO)
+        if options.timing:
+            # --timing implies --verbose
+            options.verbose = max(options.verbose, 1)
+
+        log_level = logging.INFO
+        if options.quiet:
+            log_level = logging.WARNING
         elif options.verbose == 2:
-            self._verbosity = 2
-            self._configure_logging(logging.DEBUG)
+            log_level = logging.DEBUG
+        self._configure_logging(log_level)
 
     def _configure_logging(self, log_level):
         """Configure the root logger.
@@ -102,6 +94,7 @@ class Tester(object):
         # Modifying the handler, then, is less intrusive and less likely to
         # interfere with modifications made by other modules (e.g. in unit
         # tests).
+        handler.name = __name__
         handler.setLevel(log_level)
         formatter = logging.Formatter("%(message)s")
         handler.setFormatter(formatter)
@@ -176,11 +169,7 @@ class Tester(object):
             suites.append(loader.loadTestsFromName(name, None))
 
         test_suite = unittest.TestSuite(suites)
-        if self._options.xml:
-            from webkitpy.thirdparty.autoinstalled.xmlrunner import XMLTestRunner
-            test_runner = XMLTestRunner(output='test-webkitpy-xml-reports')
-        else:
-            test_runner = TestRunner(self.stream, self._options, loader)
+        test_runner = TestRunner(self.stream, self._options, loader)
 
         _log.debug("Running the tests.")
         result = test_runner.run(test_suite)

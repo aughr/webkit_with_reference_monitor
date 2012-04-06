@@ -92,7 +92,6 @@ BINDING_IDLS = \
     $(WebCore)/Modules/indexeddb/IDBAny.idl \
     $(WebCore)/Modules/indexeddb/IDBCursor.idl \
     $(WebCore)/Modules/indexeddb/IDBDatabase.idl \
-    $(WebCore)/Modules/indexeddb/IDBDatabaseError.idl \
     $(WebCore)/Modules/indexeddb/IDBDatabaseException.idl \
     $(WebCore)/Modules/indexeddb/IDBFactory.idl \
     $(WebCore)/Modules/indexeddb/IDBIndex.idl \
@@ -126,9 +125,11 @@ BINDING_IDLS = \
     $(WebCore)/Modules/webaudio/DynamicsCompressorNode.idl \
     $(WebCore)/Modules/webaudio/JavaScriptAudioNode.idl \
     $(WebCore)/Modules/webaudio/MediaElementAudioSourceNode.idl \
+    $(WebCore)/Modules/webaudio/Oscillator.idl \
     $(WebCore)/Modules/webaudio/OfflineAudioCompletionEvent.idl \
     $(WebCore)/Modules/webaudio/RealtimeAnalyserNode.idl \
     $(WebCore)/Modules/webaudio/WaveShaperNode.idl \
+    $(WebCore)/Modules/webaudio/WaveTable.idl \
     $(WebCore)/Modules/webdatabase/DOMWindowWebDatabase.idl \
     $(WebCore)/Modules/webdatabase/Database.idl \
     $(WebCore)/Modules/webdatabase/DatabaseCallback.idl \
@@ -367,6 +368,7 @@ BINDING_IDLS = \
     $(WebCore)/html/canvas/WebGLRenderbuffer.idl \
     $(WebCore)/html/canvas/WebGLRenderingContext.idl \
     $(WebCore)/html/canvas/WebGLShader.idl \
+    $(WebCore)/html/canvas/WebGLShaderPrecisionFormat.idl \
     $(WebCore)/html/canvas/WebGLTexture.idl \
     $(WebCore)/html/canvas/WebGLUniformLocation.idl \
     $(WebCore)/html/canvas/WebGLVertexArrayObjectOES.idl \

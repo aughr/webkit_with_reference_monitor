@@ -456,7 +456,6 @@ SET(WebCore_SOURCES
     css/CSSComputedStyleDeclaration.cpp
     css/CSSCrossfadeValue.cpp
     css/CSSCursorImageValue.cpp
-    css/CSSFlexValue.cpp
     css/CSSFontFace.cpp
     css/CSSFontFaceRule.cpp
     css/CSSFontFaceSource.cpp
@@ -477,7 +476,6 @@ SET(WebCore_SOURCES
     css/CSSParserValues.cpp
     css/CSSPrimitiveValue.cpp
     css/CSSProperty.cpp
-    css/CSSPropertyLonghand.cpp
     css/CSSPropertySourceData.cpp
     css/CSSReflectValue.cpp
     css/CSSRule.cpp
@@ -513,6 +511,7 @@ SET(WebCore_SOURCES
     css/ShadowValue.cpp
     css/StyleMedia.cpp
     css/StylePropertySet.cpp
+    css/StylePropertyShorthand.cpp
     css/StyleRule.cpp
     css/StyleSheet.cpp
     css/StyleSheetList.cpp
@@ -539,6 +538,7 @@ SET(WebCore_SOURCES
     dom/Clipboard.cpp
     dom/ClipboardEvent.cpp
     dom/Comment.cpp
+    dom/ComposedShadowTreeWalker.cpp
     dom/CompositionEvent.cpp
     dom/ContainerNode.cpp
     dom/ContextDestructionObserver.cpp
@@ -613,7 +613,6 @@ SET(WebCore_SOURCES
     dom/Range.cpp
     dom/RangeException.cpp
     dom/RegisteredEventListener.cpp
-    dom/ReifiedTreeTraversal.cpp
     dom/ScopedEventQueue.cpp
     dom/ScriptableDocumentParser.cpp
     dom/ScriptElement.cpp
@@ -653,6 +652,7 @@ SET(WebCore_SOURCES
 
     dom/default/PlatformMessagePortChannel.cpp
 
+    editing/AlternativeTextController.cpp
     editing/AppendNodeCommand.cpp
     editing/ApplyBlockElementCommand.cpp
     editing/ApplyStyleCommand.cpp
@@ -690,9 +690,9 @@ SET(WebCore_SOURCES
     editing/ReplaceSelectionCommand.cpp
     editing/SetNodeAttributeCommand.cpp
     editing/SetSelectionCommand.cpp
+    editing/SimplifyMarkupCommand.cpp
     editing/SmartReplace.cpp
     editing/SpellChecker.cpp
-    editing/SpellingCorrectionController.cpp
     editing/SpellingCorrectionCommand.cpp
     editing/SplitElementCommand.cpp
     editing/SplitTextNodeCommand.cpp
@@ -1226,6 +1226,7 @@ SET(WebCore_SOURCES
     platform/network/FormData.cpp
     platform/network/HTTPHeaderMap.cpp
     platform/network/HTTPParsers.cpp
+    platform/network/HTTPRequest.cpp
     platform/network/HTTPValidation.cpp
     platform/network/MIMEHeader.cpp
     platform/network/NetworkStateNotifier.cpp
@@ -1327,12 +1328,16 @@ SET(WebCore_SOURCES
     rendering/RenderMenuList.cpp
     rendering/RenderMeter.cpp
     rendering/RenderMultiColumnBlock.cpp
+    rendering/RenderMultiColumnFlowThread.cpp
+    rendering/RenderMultiColumnSet.cpp
+    rendering/RenderNamedFlowThread.cpp
     rendering/RenderObject.cpp
     rendering/RenderObjectChildList.cpp
     rendering/RenderPart.cpp
     rendering/RenderProgress.cpp
     rendering/RenderQuote.cpp
     rendering/RenderRegion.cpp
+    rendering/RenderRegionSet.cpp
     rendering/RenderReplaced.cpp
     rendering/RenderReplica.cpp
     rendering/RenderRuby.cpp
@@ -1566,7 +1571,6 @@ IF (ENABLE_INDEXED_DATABASE)
         Modules/indexeddb/DOMWindowIndexedDatabase.idl
         Modules/indexeddb/IDBAny.idl
         Modules/indexeddb/IDBCursor.idl
-        Modules/indexeddb/IDBDatabaseError.idl
         Modules/indexeddb/IDBDatabaseException.idl
         Modules/indexeddb/IDBDatabase.idl
         Modules/indexeddb/IDBFactory.idl
@@ -1621,6 +1625,24 @@ IF (ENABLE_NETSCAPE_PLUGIN_API)
         plugins/PluginDebug.cpp
         plugins/PluginStream.cpp
         plugins/npapi.cpp
+    )
+ENDIF ()
+
+IF (ENABLE_NETWORK_INFO)
+    LIST(APPEND WebCore_INCLUDE_DIRECTORIES
+         ${WEBCORE_DIR}/Modules/networkinfo
+    )
+
+    LIST(APPEND WebCore_SOURCES
+        Modules/networkinfo/NavigatorNetworkInfoConnection.cpp
+        Modules/networkinfo/NetworkInfo.cpp
+        Modules/networkinfo/NetworkInfoConnection.cpp
+        Modules/networkinfo/NetworkInfoController.cpp
+    )
+ 
+    LIST(APPEND WebCore_IDL_FILES
+        Modules/networkinfo/NavigatorNetworkInfoConnection.idl
+        Modules/networkinfo/NetworkInfoConnection.idl
     )
 ENDIF ()
 
@@ -1706,6 +1728,7 @@ IF (ENABLE_SVG)
         rendering/style/SVGRenderStyleDefs.cpp
         rendering/svg/RenderSVGBlock.cpp
         rendering/svg/RenderSVGContainer.cpp
+        rendering/svg/RenderSVGEllipse.cpp
         rendering/svg/RenderSVGGradientStop.cpp
         rendering/svg/RenderSVGForeignObject.cpp
         rendering/svg/RenderSVGHiddenContainer.cpp
@@ -1766,6 +1789,7 @@ IF (ENABLE_SVG)
         svg/SVGAnimatedAngle.cpp
         svg/SVGAnimatedBoolean.cpp
         svg/SVGAnimatedColor.cpp
+        svg/SVGAnimatedEnumeration.cpp
         svg/SVGAnimatedInteger.cpp
         svg/SVGAnimatedIntegerOptionalInteger.cpp
         svg/SVGAnimatedLength.cpp
@@ -2106,6 +2130,7 @@ IF (ENABLE_WEB_SOCKETS)
         Modules/websockets/WebSocketDeflater.cpp
         Modules/websockets/WebSocketDeflateFramer.cpp
         Modules/websockets/WebSocketExtensionDispatcher.cpp
+        Modules/websockets/WebSocketFrame.cpp
         Modules/websockets/WebSocketHandshake.cpp
         Modules/websockets/WebSocketHandshakeRequest.cpp
         Modules/websockets/WebSocketHandshakeResponse.cpp
@@ -2264,6 +2289,7 @@ IF (ENABLE_WEBGL)
         html/canvas/WebGLRenderbuffer.cpp
         html/canvas/WebGLRenderingContext.cpp
         html/canvas/WebGLShader.cpp
+        html/canvas/WebGLShaderPrecisionFormat.cpp
         html/canvas/WebGLSharedObject.cpp
         html/canvas/WebGLTexture.cpp
         html/canvas/WebGLUniformLocation.cpp
@@ -2295,6 +2321,7 @@ IF (ENABLE_WEBGL)
         html/canvas/WebGLRenderbuffer.idl
         html/canvas/WebGLRenderingContext.idl
         html/canvas/WebGLShader.idl
+        html/canvas/WebGLShaderPrecisionFormat.idl
         html/canvas/WebGLTexture.idl
         html/canvas/WebGLUniformLocation.idl
         html/canvas/WebGLVertexArrayObjectOES.idl
@@ -2456,7 +2483,7 @@ LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/HTMLEntityTable.cpp)
 SET(FEATURE_DEFINES_WITH_SPACE_SEPARATOR "")
 FOREACH(_feature ${FEATURE_DEFINES})
     # filter out color input since we have our own solution
-    IF (NOT CMAKE_SYSTEM_NAME MATCHES "QNX" OR NOT _feature MATCHES "ENABLE_INPUT_COLOR")
+    IF (NOT CMAKE_SYSTEM_NAME MATCHES "QNX" OR NOT _feature MATCHES "ENABLE_INPUT_TYPE_COLOR")
         SET(FEATURE_DEFINES_WITH_SPACE_SEPARATOR "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR} ${_feature}")
     ENDIF()
 ENDFOREACH()

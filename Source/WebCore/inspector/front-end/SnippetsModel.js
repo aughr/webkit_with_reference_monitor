@@ -59,6 +59,17 @@ WebInspector.SnippetsModel.prototype = {
         this._snippetsSetting.set(savedSnippets);
     },
 
+    /**
+     * @type {Array.<WebInspector.Snippet>}
+     */
+    get snippets()
+    {
+        var result = [];
+        for (var id in this._snippets)
+            result.push(this._snippets[id]);
+        return result;
+    },
+
     _loadSettings: function()
     {
         var savedSnippets = this._snippetsSetting.get();
@@ -277,9 +288,11 @@ WebInspector.SnippetsScriptMapping = function()
     this._scriptForUISourceCode = new Map();
     this._uiSourceCodeForSnippet = new Map();
 
-    WebInspector.snippetsModel.addEventListener(WebInspector.SnippetsModel.EventTypes.SnippetAdded, this._snippetAdded.bind(this));
+    WebInspector.snippetsModel.addEventListener(WebInspector.SnippetsModel.EventTypes.SnippetAdded, this._handleSnippetAdded.bind(this));
     WebInspector.snippetsModel.addEventListener(WebInspector.SnippetsModel.EventTypes.SnippetWillBeEvaluated, this._snippetWillBeEvaluated.bind(this));
     WebInspector.snippetsModel.addEventListener(WebInspector.SnippetsModel.EventTypes.SnippetRemoved, this._snippetRemoved.bind(this));
+    for (var i = 0; i < WebInspector.snippetsModel.snippets.length; ++i)
+        this._snippetAdded(WebInspector.snippetsModel.snippets[i]);
 }
 
 WebInspector.SnippetsScriptMapping.prototype = {
@@ -325,9 +338,7 @@ WebInspector.SnippetsScriptMapping.prototype = {
      */
     uiSourceCodeList: function()
     {
-        var result = [];
-        for (var uiSourceCode in this._uiSourceCodeForSnippet.values())
-            result.push(uiSourceCode);
+        var result = this._uiSourceCodeForSnippet.values();
         result = result.concat(this._releasedUISourceCodes());
         return result;
     },
@@ -370,9 +381,17 @@ WebInspector.SnippetsScriptMapping.prototype = {
     /**
      * @param {WebInspector.Event} event
      */
-    _snippetAdded: function(event)
+    _handleSnippetAdded: function(event)
     {
         var snippet = /** @type {WebInspector.Snippet} */ event.data;
+        this._snippetAdded(snippet);
+    },
+
+    /**
+     * @param {WebInspector.Snippet} snippet
+     */
+    _snippetAdded: function(snippet)
+    {
         var uiSourceCodeId = ""; // FIXME: to be implemented.
         var uiSourceCodeURL = ""; // FIXME: to be implemented.
         var uiSourceCode = new WebInspector.UISourceCodeImpl(uiSourceCodeId, uiSourceCodeURL, new WebInspector.SnippetContentProvider(snippet));

@@ -40,6 +40,7 @@ from webkitpy.common.system.systemhost_mock import MockSystemHost
 from webkitpy.layout_tests.servers import http_server_base
 from webkitpy.layout_tests.servers import http_server_base
 from webkitpy.layout_tests.port import factory
+from webkitpy.layout_tests.port.config_mock import MockConfig
 from webkitpy.tool.mocktool import MockOptions
 
 
@@ -53,12 +54,13 @@ class PortTestCase(unittest.TestCase):
     os_version = None
     port_maker = None
 
-    def make_port(self, host=None, port_name=None, options=None, os_name=None, os_version=None, **kwargs):
+    def make_port(self, host=None, port_name=None, options=None, os_name=None, os_version=None, config=None, **kwargs):
         host = host or MockSystemHost(os_name=(os_name or self.os_name), os_version=(os_version or self.os_version))
         options = options or MockOptions(configuration='Release')
+        config = config or MockConfig(filesystem=host.filesystem, default_configuration='Release')
         port_name = port_name or self.port_name
         port_name = self.port_maker.determine_full_port_name(host, options, port_name)
-        return self.port_maker(host, port_name, options=options, **kwargs)
+        return self.port_maker(host, port_name, options=options, config=config, **kwargs)
 
     def test_driver_cmd_line(self):
         port = self.make_port()
@@ -313,6 +315,18 @@ class PortTestCase(unittest.TestCase):
            ('crash log for <unknown process name> (pid <unknown>):\n'
             'STDOUT: <empty>\n'
             'STDERR: <empty>\n'))
+
+        self.assertEquals(port._get_crash_log('foo', 1234, 'out bar\nout baz', 'err bar\nerr baz\n'),
+            ('crash log for foo (pid 1234):\n'
+             'STDOUT: out bar\n'
+             'STDOUT: out baz\n'
+             'STDERR: err bar\n'
+             'STDERR: err baz\n'))
+
+        self.assertEquals(port._get_crash_log('foo', 1234, 'foo\xa6bar', 'foo\xa6bar'),
+            (u'crash log for foo (pid 1234):\n'
+             u'STDOUT: foo\ufffdbar\n'
+             u'STDERR: foo\ufffdbar\n'))
 
 
 # FIXME: This class and main() should be merged into test-webkitpy.

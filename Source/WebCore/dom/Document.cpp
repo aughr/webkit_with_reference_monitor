@@ -123,9 +123,9 @@
 #include "ProcessingInstruction.h"
 #include "RegisteredEventListener.h"
 #include "RenderArena.h"
-#include "RenderFlowThread.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderNamedFlowThread.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
@@ -374,6 +374,16 @@ static bool canAccessAncestor(const SecurityOrigin* activeSecurityOrigin, Frame*
     return false;
 }
 
+static void printNavigationErrorMessage(Frame* frame, const KURL& activeURL)
+{
+    // FIXME: this error message should contain more specifics of why the navigation change is not allowed.
+    String message = "Unsafe JavaScript attempt to initiate a navigation change for frame with URL " +
+                     frame->document()->url().string() + " from frame with URL " + activeURL.string() + ".\n";
+
+    // FIXME: should we print to the console of the document performing the navigation instead?
+    frame->domWindow()->printErrorMessage(message);
+}
+
 static HashSet<Document*>* documentsThatNeedStyleRecalc = 0;
 
 class DocumentWeakReference : public ThreadSafeRefCounted<DocumentWeakReference> {
@@ -448,6 +458,7 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
     , m_isHTML(isHTML)
     , m_isViewSource(false)
     , m_sawElementsInKnownNamespaces(false)
+    , m_isSrcdocDocument(false)
     , m_eventQueue(DocumentEventQueue::create(this))
     , m_weakReference(DocumentWeakReference::create(this))
     , m_idAttributeName(idAttr)
@@ -1068,8 +1079,8 @@ PassRefPtr<WebKitNamedFlow> Document::webkitGetFlowByName(const String& flowName
         return 0;
 
     // Make a slower check for invalid flow name
-    CSSParser p(true);
-    if (!p.parseFlowThread(flowName, this))
+    CSSParser parser(CSSStrictMode);
+    if (!parser.parseFlowThread(flowName, this))
         return 0;
 
     if (RenderView* view = renderer()->view())
@@ -1229,7 +1240,7 @@ String Document::suggestedMIMEType() const
 // * making it receive a rect as parameter, i.e. nodesFromRect(x, y, w, h);
 // * making it receive the expading size of each direction separately,
 //   i.e. nodesFromRect(x, y, topSize, rightSize, bottomSize, leftSize);
-PassRefPtr<NodeList> Document::nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping) const
+PassRefPtr<NodeList> Document::nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent) const
 {
     // FIXME: Share code between this, elementFromPoint and caretRangeFromPoint.
     if (!renderer())
@@ -1261,7 +1272,8 @@ PassRefPtr<NodeList> Document::nodesFromRect(int centerX, int centerY, unsigned 
         return handleZeroPadding(request, result);
     }
 
-    HitTestResult result(point, topPadding, rightPadding, bottomPadding, leftPadding);
+    enum ShadowContentFilterPolicy shadowContentFilterPolicy = allowShadowContent ? AllowShadowContent : DoNotAllowShadowContent;
+    HitTestResult result(point, topPadding, rightPadding, bottomPadding, leftPadding, shadowContentFilterPolicy);
     renderView()->layer()->hitTest(request, result);
 
     return StaticHashSetNodeList::adopt(result.rectBasedTestResult());
@@ -2339,11 +2351,11 @@ void Document::implicitClose()
         printf("onload fired at %d\n", elapsedTime());
 #endif
 
-    m_processingLoadEvent = false;
-
     // An event handler may have removed the frame
-    if (!frame())
+    if (!frame()) {
+        m_processingLoadEvent = false;
         return;
+    }
 
     // Make sure both the initial layout and reflow happen after the onload
     // fires. This will improve onload scores, and other browsers do it.
@@ -2352,6 +2364,7 @@ void Document::implicitClose()
     if (frame()->navigationScheduler()->locationChangePending() && elapsedTime() < cLayoutScheduleThreshold) {
         // Just bail out. Before or during the onload we were shifted to another page.
         // The old i-Bench suite does this. When this happens don't bother painting or laying out.        
+        m_processingLoadEvent = false;
         view()->unscheduleRelayout();
         return;
     }
@@ -2370,6 +2383,8 @@ void Document::implicitClose()
         if (view() && renderObject && (!renderObject->firstChild() || renderObject->needsLayout()))
             view()->layout();
     }
+
+    m_processingLoadEvent = false;
 
     // If painting and compositing layer updates were suppressed pending the load event, do these actions now.
     if (renderer() && settings() && settings()->suppressesIncrementalRendering()) {
@@ -2617,56 +2632,57 @@ void Document::disableEval()
 
 bool Document::canNavigate(Frame* targetFrame)
 {
-    // The navigation change is safe if the active document is:
-    //   - in the same security origin as the target or one of the target's
-    //     ancestors.
-    //
-    // Or the target frame is:
-    //   - a top-level frame in the frame hierarchy and the active frame can
-    //     navigate the target frame's opener per above or it is the opener of
-    //     the target frame.
-
     if (!m_frame)
         return false;
 
-    // FIXME: Do we actually ever call this function without a targetFrame?
+    // FIXME: We shouldn't call this function without a target frame, but
+    // fast/forms/submit-to-blank-multiple-times.html depends on this function
+    // returning true when supplied with a 0 targetFrame.
     if (!targetFrame)
         return true;
 
-    // Performance optimization.
-    // FIXME: Delete this code. It seems very unlikely that this affects performance.
-    if (m_frame == targetFrame)
-        return true;
-
-    // Let a document navigate window.top so that it can framebust.
+    // Frame-busting is generally allowed (unless we're sandboxed and prevent from frame-busting).
     if (!isSandboxed(SandboxTopNavigation) && targetFrame == m_frame->tree()->top())
         return true;
 
-    // A sandboxed frame can only navigate itself and its descendants.
-    if (isSandboxed(SandboxNavigation) && !targetFrame->tree()->isDescendantOf(m_frame))
+    if (isSandboxed(SandboxNavigation)) {
+        if (targetFrame->tree()->isDescendantOf(m_frame))
+            return true;
+
+        printNavigationErrorMessage(targetFrame, url());
         return false;
+    }
 
-    // Let a frame navigate its opener if the opener is a top-level window.
-    if (!targetFrame->tree()->parent() && m_frame->loader()->opener() == targetFrame)
-        return true;
-
-    // For top-level windows, check the opener.
-    // FIXME: Can this check be combined with the previous check?
-    if (!targetFrame->tree()->parent() && canAccessAncestor(securityOrigin(), targetFrame->loader()->opener()))
-        return true;
-
-    // In general, check the frame's ancestors.
+    // This is the normal case. A document can navigate its decendant frames,
+    // or, more generally, a document can navigate a frame if the document is
+    // in the same origin as any of that frame's ancestors (in the frame
+    // hierarchy).
+    //
+    // See http://www.adambarth.com/papers/2008/barth-jackson-mitchell.pdf for
+    // historical information about this security check.
     if (canAccessAncestor(securityOrigin(), targetFrame))
         return true;
 
-    Document* targetDocument = targetFrame->document();
-    // FIXME: this error message should contain more specifics of why the navigation change is not allowed.
-    String message = "Unsafe JavaScript attempt to initiate a navigation change for frame with URL " +
-                     targetDocument->url().string() + " from frame with URL " + url().string() + ".\n";
+    // Top-level frames are easier to navigate than other frames because they
+    // display their URLs in the address bar (in most browsers). However, there
+    // are still some restrictions on navigation to avoid nuisance attacks.
+    // Specifically, a document can navigate a top-level frame if that frame
+    // opened the document or if the document is the same-origin with any of
+    // the top-level frame's opener's ancestors (in the frame hierarchy).
+    //
+    // In both of these cases, the document performing the navigation is in
+    // some way related to the frame being navigate (e.g., by the "opener"
+    // and/or "parent" relation). Requiring some sort of relation prevents a
+    // document from navigating arbitrary, unrelated top-level frames.
+    if (!targetFrame->tree()->parent()) {
+        if (targetFrame == m_frame->loader()->opener())
+            return true;
 
-    // FIXME: should we print to the console of the activeFrame as well?
-    targetFrame->domWindow()->printErrorMessage(message);
+        if (canAccessAncestor(securityOrigin(), targetFrame->loader()->opener()))
+            return true;
+    }
 
+    printNavigationErrorMessage(targetFrame, url());
     return false;
 }
 
@@ -2686,7 +2702,7 @@ CSSStyleSheet* Document::pageUserSheet()
     // Parse the sheet and cache it.
     m_pageUserSheet = CSSStyleSheet::createInline(this, settings()->userStyleSheetLocation());
     m_pageUserSheet->setIsUserStyleSheet(true);
-    m_pageUserSheet->parseString(userSheetText, !inQuirksMode());
+    m_pageUserSheet->parseString(userSheetText, strictToCSSParserMode(!inQuirksMode()));
     return m_pageUserSheet.get();
 }
 
@@ -2732,7 +2748,7 @@ const Vector<RefPtr<CSSStyleSheet> >* Document::pageGroupUserSheets() const
                 continue;
             RefPtr<CSSStyleSheet> parsedSheet = CSSStyleSheet::createInline(const_cast<Document*>(this), sheet->url());
             parsedSheet->setIsUserStyleSheet(sheet->level() == UserStyleUserLevel);
-            parsedSheet->parseString(sheet->source(), !inQuirksMode());
+            parsedSheet->parseString(sheet->source(), strictToCSSParserMode(!inQuirksMode()));
             if (!m_pageGroupUserSheets)
                 m_pageGroupUserSheets = adoptPtr(new Vector<RefPtr<CSSStyleSheet> >);
             m_pageGroupUserSheets->append(parsedSheet.release());
@@ -4222,8 +4238,6 @@ void Document::documentDidResumeFromPageCache()
 
     ASSERT(m_frame);
     m_frame->loader()->client()->dispatchDidBecomeFrameset(isFrameSet());
-
-    updateViewportArguments();
 }
 
 void Document::registerForPageCacheSuspensionCallbacks(Element* e)
@@ -4521,7 +4535,7 @@ HTMLAllCollection* Document::all()
 
 HTMLCollection* Document::windowNamedItems(const AtomicString& name)
 {
-    OwnPtr<HTMLNameCollection>& collection = m_windowNamedItemCollections.add(name.impl(), nullptr).first->second;
+    OwnPtr<HTMLNameCollection>& collection = m_windowNamedItemCollections.add(name.impl(), nullptr).iterator->second;
     if (!collection)
         collection = HTMLNameCollection::create(this, WindowNamedItems, name);
     return collection.get();
@@ -4529,7 +4543,7 @@ HTMLCollection* Document::windowNamedItems(const AtomicString& name)
 
 HTMLCollection* Document::documentNamedItems(const AtomicString& name)
 {
-    OwnPtr<HTMLNameCollection>& collection = m_documentNamedItemCollections.add(name.impl(), nullptr).first->second;
+    OwnPtr<HTMLNameCollection>& collection = m_documentNamedItemCollections.add(name.impl(), nullptr).iterator->second;
     if (!collection)
         collection = HTMLNameCollection::create(this, DocumentNamedItems, name);
     return collection.get();
@@ -4822,6 +4836,21 @@ void Document::initSecurityContext()
         return;
     }
 
+    if (m_frame->loader()->shouldTreatURLAsSrcdocDocument(url())) {
+        m_isSrcdocDocument = true;
+        setBaseURLOverride(ownerFrame->document()->baseURL());
+    }
+
+    if (isSandboxed(SandboxOrigin)) {
+        // If we're supposed to inherit our security origin from our owner,
+        // but we're also sandboxed, the only thing we inherit is the ability
+        // to load local resources. This lets about:blank iframes in file://
+        // URL documents load images and other resources from the file system.
+        if (ownerFrame->document()->securityOrigin()->canLoadLocalResources())
+            securityOrigin()->grantLoadLocalResources();
+        return;
+    }
+
     m_cookieURL = ownerFrame->document()->cookieURL();
     // We alias the SecurityOrigins to match Firefox, see Bug 15313
     // https://bugs.webkit.org/show_bug.cgi?id=15313
@@ -4922,7 +4951,7 @@ CanvasRenderingContext* Document::getCSSCanvasContext(const String& type, const 
 
 HTMLCanvasElement* Document::getCSSCanvasElement(const String& name)
 {
-    RefPtr<HTMLCanvasElement>& element = m_cssCanvasElements.add(name, 0).first->second;
+    RefPtr<HTMLCanvasElement>& element = m_cssCanvasElements.add(name, 0).iterator->second;
     if (!element)
         element = HTMLCanvasElement::create(this);
     return element.get();
@@ -5353,6 +5382,9 @@ bool Document::webkitFullscreenEnabled() const
 
 void Document::webkitWillEnterFullScreenForElement(Element* element)
 {
+    if (!attached() || inPageCache())
+        return;
+
     ASSERT(element);
 
     // Protect against being called after the document has been removed from the page.
@@ -5389,7 +5421,10 @@ void Document::webkitDidEnterFullScreenForElement(Element*)
 {
     if (!m_fullScreenElement)
         return;
-    
+
+    if (!attached() || inPageCache())
+        return;
+
     m_fullScreenElement->didBecomeFullscreenElement();
 
     m_fullScreenChangeDelayTimer.startOneShot(0);
@@ -5400,6 +5435,9 @@ void Document::webkitWillExitFullScreenForElement(Element*)
     if (!m_fullScreenElement)
         return;
 
+    if (!attached() || inPageCache())
+        return;
+
     m_fullScreenElement->setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(false);
     
     m_fullScreenElement->willStopBeingFullscreenElement();
@@ -5407,6 +5445,9 @@ void Document::webkitWillExitFullScreenForElement(Element*)
 
 void Document::webkitDidExitFullScreenForElement(Element*)
 {
+    if (!attached() || inPageCache())
+        return;
+
     m_areKeysEnabledInFullScreen = false;
     
     if (m_fullScreenRenderer)
@@ -5597,10 +5638,15 @@ int Document::webkitRequestAnimationFrame(PassRefPtr<RequestAnimationFrameCallba
 {
     if (!m_scriptedAnimationController) {
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-        m_scriptedAnimationController = ScriptedAnimationController::create(this, page()->displayID());
+        m_scriptedAnimationController = ScriptedAnimationController::create(this, page() ? page()->displayID() : 0);
 #else
         m_scriptedAnimationController = ScriptedAnimationController::create(this, 0);
 #endif
+        // It's possible that the Page may have suspended scripted animations before
+        // we were created. We need to make sure that we don't start up the animation
+        // controller on a background tab, for example.
+        if (!page() || page()->scriptedAnimationsSuspended())
+            m_scriptedAnimationController->suspend();
     }
 
     return m_scriptedAnimationController->registerCallback(callback, animationElement);
@@ -5725,12 +5771,12 @@ PassRefPtr<NodeList> Document::getItems(const String& typeNames)
     // In this case we need to create an unique string identifier to map such request in the cache.
     String localTypeNames = typeNames.isNull() ? String("http://webkit.org/microdata/undefinedItemType") : typeNames;
 
-    pair<NodeListsNodeData::MicroDataItemListCache::iterator, bool> result = nodeLists->m_microDataItemListCache.add(localTypeNames, 0);
-    if (!result.second)
-        return PassRefPtr<NodeList>(result.first->second);
+    NodeListsNodeData::MicroDataItemListCache::AddResult result = nodeLists->m_microDataItemListCache.add(localTypeNames, 0);
+    if (!result.isNewEntry)
+        return PassRefPtr<NodeList>(result.iterator->second);
 
     RefPtr<MicroDataItemList> list = MicroDataItemList::create(this, typeNames);
-    result.first->second = list.get();
+    result.iterator->second = list.get();
     return list.release();
 }
 

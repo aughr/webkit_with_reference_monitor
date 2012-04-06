@@ -52,6 +52,7 @@
       '../',
       '../..',
       '../Modules/filesystem',
+      '../Modules/filesystem/chromium',
       '../Modules/gamepad',
       '../Modules/geolocation',
       '../Modules/intents',
@@ -102,6 +103,7 @@
       '../platform/audio',
       '../platform/audio/chromium',
       '../platform/chromium',
+      '../platform/chromium/support',
       '../platform/graphics',
       '../platform/graphics/chromium',
       '../platform/graphics/filters',
@@ -840,6 +842,25 @@
           ],
         },
         {
+          'action_name': 'CalendarPicker',
+          'inputs': [
+            '../Resources/calendarPicker.css',
+            '../Resources/calendarPicker.js',
+          ],
+          'outputs': [
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPicker.h',
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPicker.cpp',
+          ],
+          'action': [
+            'python',
+            '../make-file-arrays.py',
+            '--condition=ENABLE(CALENDAR_PICKER)',
+            '--out-h=<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPicker.h',
+            '--out-cpp=<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPicker.cpp',
+            '<@(_inputs)',
+          ],
+        },
+        {
           'action_name': 'XLinkNames',
           'inputs': [
             '../dom/make_names.pl',
@@ -1076,6 +1097,7 @@
         # Additional .cpp files from webcore_bindings_sources actions.
         '<(SHARED_INTERMEDIATE_DIR)/webkit/HTMLElementFactory.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/HTMLNames.cpp',
+        '<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPicker.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/EventFactory.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/EventHeaders.h',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/EventInterfaces.h',
@@ -1430,7 +1452,11 @@
       'type': 'static_library',
       'dependencies': [
         'webcore_prerequisites',
+        '../../Platform/Platform.gyp/Platform.gyp:webkit_platform',
       ],
+      'defines': [ 
+        'WEBKIT_IMPLEMENTATION=1', 
+      ], 
       # This is needed for mac because of webkit_system_interface. It'd be nice
       # if this hard dependency could be split off the rest.
       'hard_dependency': 1,
@@ -1461,10 +1487,20 @@
         ['exclude', 'platform/network/ResourceHandle\\.cpp$'],
         ['exclude', 'platform/sql/SQLiteFileSystem\\.cpp$'],
         ['exclude', 'platform/text/LocaleToScriptMappingICU\\.cpp$'],
+        ['exclude', 'platform/text/LocalizedDateNone\\.cpp$'],
         ['exclude', 'platform/text/LocalizedNumberNone\\.cpp$'],
         ['exclude', 'platform/text/TextEncodingDetectorNone\\.cpp$'],
       ],
       'conditions': [
+        ['inside_chromium_build==1', {
+            'conditions': [
+                ['component=="shared_library"', {
+                    'defines': [
+                        'WEBKIT_DLL',
+                    ],
+                }],
+            ],
+        }],
         ['use_x11 == 1', {
           'sources/': [
             # Cherry-pick files excluded by the broader regular expressions above.

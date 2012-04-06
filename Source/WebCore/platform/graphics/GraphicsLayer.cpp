@@ -95,10 +95,22 @@ GraphicsLayer::GraphicsLayer(GraphicsLayerClient* client)
 
 GraphicsLayer::~GraphicsLayer()
 {
+    ASSERT(!m_parent); // willBeDestroyed should have been called already.
+}
+
+void GraphicsLayer::willBeDestroyed()
+{
 #ifndef NDEBUG
     if (m_client)
         m_client->verifyNotPainting();
 #endif
+
+    if (m_replicaLayer)
+        m_replicaLayer->setReplicatedLayer(0);
+
+    if (m_replicatedLayer)
+        m_replicatedLayer->setReplicatedByLayer(0);
+
     removeAllChildren();
     removeFromParent();
 }
@@ -259,6 +271,12 @@ void GraphicsLayer::noteDeviceOrPageScaleFactorChangedIncludingDescendants()
 
 void GraphicsLayer::setReplicatedByLayer(GraphicsLayer* layer)
 {
+    if (m_replicaLayer == layer)
+        return;
+
+    if (m_replicaLayer)
+        m_replicaLayer->setReplicatedLayer(0);
+
     if (layer)
         layer->setReplicatedLayer(this);
 

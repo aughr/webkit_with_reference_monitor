@@ -318,7 +318,7 @@ static float localZoomForRenderer(RenderObject* renderer)
     return zoomFactor;
 }
 
-static LayoutUnit adjustForLocalZoom(LayoutUnit value, RenderObject* renderer)
+static int adjustForLocalZoom(LayoutUnit value, RenderObject* renderer)
 {
     float zoomFactor = localZoomForRenderer(renderer);
     if (zoomFactor == 1)
@@ -326,38 +326,38 @@ static LayoutUnit adjustForLocalZoom(LayoutUnit value, RenderObject* renderer)
     // Needed because computeLengthInt truncates (rather than rounds) when scaling up.
     if (zoomFactor > 1)
         value++;
-    return static_cast<LayoutUnit>(value / zoomFactor);
+    return static_cast<int>(value / zoomFactor);
 }
 
 int Element::offsetLeft()
 {
     document()->updateLayoutIgnorePendingStylesheets();
-    if (RenderBoxModelObject* rend = renderBoxModelObject())
-        return adjustForLocalZoom(rend->offsetLeft(), rend);
+    if (RenderBoxModelObject* renderer = renderBoxModelObject())
+        return adjustForLocalZoom(renderer->pixelSnappedOffsetLeft(), renderer);
     return 0;
 }
 
 int Element::offsetTop()
 {
     document()->updateLayoutIgnorePendingStylesheets();
-    if (RenderBoxModelObject* rend = renderBoxModelObject())
-        return adjustForLocalZoom(rend->offsetTop(), rend);
+    if (RenderBoxModelObject* renderer = renderBoxModelObject())
+        return adjustForLocalZoom(renderer->pixelSnappedOffsetTop(), renderer);
     return 0;
 }
 
 int Element::offsetWidth()
 {
     document()->updateLayoutIgnorePendingStylesheets();
-    if (RenderBoxModelObject* rend = renderBoxModelObject())
-        return adjustForAbsoluteZoom(rend->offsetWidth(), rend);
+    if (RenderBoxModelObject* renderer = renderBoxModelObject())
+        return adjustForAbsoluteZoom(renderer->pixelSnappedOffsetWidth(), renderer);
     return 0;
 }
 
 int Element::offsetHeight()
 {
     document()->updateLayoutIgnorePendingStylesheets();
-    if (RenderBoxModelObject* rend = renderBoxModelObject())
-        return adjustForAbsoluteZoom(rend->offsetHeight(), rend);
+    if (RenderBoxModelObject* renderer = renderBoxModelObject())
+        return adjustForAbsoluteZoom(renderer->pixelSnappedOffsetHeight(), renderer);
     return 0;
 }
 
@@ -374,8 +374,8 @@ int Element::clientLeft()
 {
     document()->updateLayoutIgnorePendingStylesheets();
 
-    if (RenderBox* rend = renderBox())
-        return adjustForAbsoluteZoom(rend->clientLeft(), rend);
+    if (RenderBox* renderer = renderBox())
+        return adjustForAbsoluteZoom(roundToInt(renderer->clientLeft()), renderer);
     return 0;
 }
 
@@ -383,8 +383,8 @@ int Element::clientTop()
 {
     document()->updateLayoutIgnorePendingStylesheets();
 
-    if (RenderBox* rend = renderBox())
-        return adjustForAbsoluteZoom(rend->clientTop(), rend);
+    if (RenderBox* renderer = renderBox())
+        return adjustForAbsoluteZoom(roundToInt(renderer->clientTop()), renderer);
     return 0;
 }
 
@@ -403,8 +403,8 @@ int Element::clientWidth()
         }
     }
     
-    if (RenderBox* rend = renderBox())
-        return adjustForAbsoluteZoom(rend->clientWidth(), rend);
+    if (RenderBox* renderer = renderBox())
+        return adjustForAbsoluteZoom(renderer->pixelSnappedClientWidth(), renderer);
     return 0;
 }
 
@@ -424,8 +424,8 @@ int Element::clientHeight()
         }
     }
     
-    if (RenderBox* rend = renderBox())
-        return adjustForAbsoluteZoom(rend->clientHeight(), rend);
+    if (RenderBox* renderer = renderBox())
+        return adjustForAbsoluteZoom(renderer->pixelSnappedClientHeight(), renderer);
     return 0;
 }
 
@@ -903,6 +903,8 @@ void Element::insertedIntoDocument()
 
 void Element::removedFromDocument()
 {
+    setSavedLayerScrollOffset(IntSize());
+
     if (m_attributeData) {
         if (hasID()) {
             Attribute* idItem = getAttributeItem(document()->idAttributeName());
@@ -1038,7 +1040,7 @@ PassRefPtr<RenderStyle> Element::styleForRenderer()
 {
     if (hasCustomStyleForRenderer())
         return customStyleForRenderer();
-    return document()->styleSelector()->styleForElement(static_cast<Element*>(this), 0, true/*allowSharing*/);
+    return document()->styleSelector()->styleForElement(static_cast<Element*>(this));
 }
 
 void Element::recalcStyle(StyleChange change)
@@ -1548,8 +1550,6 @@ void Element::focus(bool restorePreviousSelection)
         // If a focus event handler changes the focus to a different node it
         // does not make sense to continue and update appearence.
         protect = this;
-        if (hasShadowRoot() && page->focusController()->transferFocusToElementInShadowRoot(this, restorePreviousSelection))
-            return;
         if (!page->focusController()->setFocusedNode(this, doc->frame()))
             return;
     }
@@ -1751,7 +1751,7 @@ bool Element::webkitMatchesSelector(const String& selector, ExceptionCode& ec)
     }
 
     bool strictParsing = !document()->inQuirksMode();
-    CSSParser p(strictParsing);
+    CSSParser p(strictToCSSParserMode(strictParsing));
 
     CSSSelectorList selectorList;
     p.parseSelector(selector, document(), selectorList);
@@ -2066,6 +2066,18 @@ void Element::updateExtraNamedItemRegistration(const AtomicString& oldId, const 
 HTMLCollection* Element::ensureCachedHTMLCollection(CollectionType type)
 {
     return ensureRareData()->ensureCachedHTMLCollection(this, type);
+}
+
+IntSize Element::savedLayerScrollOffset() const
+{
+    return hasRareData() ? rareData()->m_savedLayerScrollOffset : IntSize();
+}
+
+void Element::setSavedLayerScrollOffset(const IntSize& size)
+{
+    if (size.isZero() && !hasRareData())
+        return;
+    ensureRareData()->m_savedLayerScrollOffset = size;
 }
 
 } // namespace WebCore

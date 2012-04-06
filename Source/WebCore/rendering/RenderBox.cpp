@@ -502,7 +502,7 @@ int RenderBox::scrollWidth() const
     // For objects with visible overflow, this matches IE.
     // FIXME: Need to work right with writing modes.
     if (style()->isLeftToRightDirection())
-        return max(clientWidth(), maxXLayoutOverflow() - borderLeft());
+        return snapSizeToPixel(max(clientWidth(), maxXLayoutOverflow() - borderLeft()), clientLeft());
     return clientWidth() - min(0, minXLayoutOverflow() - borderLeft());
 }
 
@@ -512,7 +512,7 @@ int RenderBox::scrollHeight() const
         return layer()->scrollHeight();
     // For objects with visible overflow, this matches IE.
     // FIXME: Need to work right with writing modes.
-    return max(pixelSnappedClientHeight(), maxYLayoutOverflow() - borderTop());
+    return snapSizeToPixel(max(clientHeight(), maxYLayoutOverflow() - borderTop()), clientTop());
 }
 
 int RenderBox::scrollLeft() const
@@ -554,9 +554,9 @@ void RenderBox::updateLayerTransform()
         layer()->updateTransform();
 }
 
-LayoutRect RenderBox::absoluteContentBox() const
+IntRect RenderBox::absoluteContentBox() const
 {
-    LayoutRect rect = contentBoxRect();
+    IntRect rect = pixelSnappedIntRect(contentBoxRect());
     FloatPoint absPos = localToAbsolute(FloatPoint());
     rect.move(absPos.x(), absPos.y());
     return rect;
@@ -764,7 +764,7 @@ IntSize RenderBox::scrolledContentOffset() const
     // If we have no layer, it means that we have no overflowing content as we lazily
     // allocate it on demand. Thus we don't have any scroll offset.
     ASSERT(!requiresLayerForOverflowClip());
-    return LayoutSize();
+    return IntSize();
 }
 
 typedef HashMap<const RenderBox*, LayoutSize> RendererSizeCache;
@@ -774,7 +774,7 @@ static RendererSizeCache& cachedSizeForOverflowClipMap()
     return cachedSizeForOverflowClipMap;
 }
 
-IntSize RenderBox::cachedSizeForOverflowClip() const
+LayoutSize RenderBox::cachedSizeForOverflowClip() const
 {
     ASSERT(hasOverflowClip());
     if (hasLayer())
@@ -1000,17 +1000,18 @@ void RenderBox::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& pai
     
     // If we have a native theme appearance, paint that before painting our background.
     // The theme will tell us whether or not we should also paint the CSS background.
-    bool themePainted = style()->hasAppearance() && !theme()->paint(this, paintInfo, paintRect);
+    IntRect snappedPaintRect(pixelSnappedIntRect(paintRect));
+    bool themePainted = style()->hasAppearance() && !theme()->paint(this, paintInfo, snappedPaintRect);
     if (!themePainted) {
         paintBackground(paintInfo, paintRect, bleedAvoidance);
 
         if (style()->hasAppearance())
-            theme()->paintDecorations(this, paintInfo, pixelSnappedIntRect(paintRect));
+            theme()->paintDecorations(this, paintInfo, snappedPaintRect);
     }
     paintBoxShadow(paintInfo, paintRect, style(), Inset);
 
     // The theme will tell us whether or not we should also paint the CSS border.
-    if ((!style()->hasAppearance() || (!themePainted && theme()->paintBorderOnly(this, paintInfo, pixelSnappedIntRect(paintRect)))) && style()->hasBorder())
+    if ((!style()->hasAppearance() || (!themePainted && theme()->paintBorderOnly(this, paintInfo, snappedPaintRect))) && style()->hasBorder())
         paintBorder(paintInfo, paintRect, style(), bleedAvoidance);
 
     if (bleedAvoidance == BackgroundBleedUseTransparencyLayer)
@@ -1535,7 +1536,7 @@ void RenderBox::positionLineBox(InlineBox* box)
             RootInlineBox* root = box->root();
             root->block()->setStaticInlinePositionForChild(this, root->lineTopWithLeading(), roundedLayoutUnit(box->logicalLeft()));
             if (style()->hasStaticInlinePosition(box->isHorizontal()))
-                setChildNeedsLayout(true, false); // Just go ahead and mark the positioned object as needing layout, so it will update its position properly.
+                setChildNeedsLayout(true, MarkOnlyThis); // Just go ahead and mark the positioned object as needing layout, so it will update its position properly.
         } else {
             // Our object was a block originally, so we make our normal flow position be
             // just below the line box (as though all the inlines that came before us got
@@ -1543,7 +1544,7 @@ void RenderBox::positionLineBox(InlineBox* box)
             // in flow).  This value was cached in the y() of the box.
             layer()->setStaticBlockPosition(box->logicalTop());
             if (style()->hasStaticBlockPosition(box->isHorizontal()))
-                setChildNeedsLayout(true, false); // Just go ahead and mark the positioned object as needing layout, so it will update its position properly.
+                setChildNeedsLayout(true, MarkOnlyThis); // Just go ahead and mark the positioned object as needing layout, so it will update its position properly.
         }
 
         // Nuke the box.
@@ -1642,18 +1643,6 @@ void RenderBox::computeRectForRepaint(RenderBoxModelObject* repaintContainer, La
 
     if (isWritingModeRoot() && !isPositioned())
         flipForWritingMode(rect);
-
-#if ENABLE(CSS_FILTERS)
-    if (styleToUse->hasFilterOutsets()) {
-        LayoutUnit topOutset;
-        LayoutUnit rightOutset;
-        LayoutUnit bottomOutset;
-        LayoutUnit leftOutset;
-        styleToUse->filter().getOutsets(topOutset, rightOutset, bottomOutset, leftOutset);
-        rect.move(-leftOutset, -topOutset);
-        rect.expand(leftOutset + rightOutset, topOutset + bottomOutset);
-    }
-#endif
 
     LayoutPoint topLeft = rect.location();
     topLeft.move(locationOffset());
@@ -2176,7 +2165,7 @@ LayoutUnit RenderBox::computeContentLogicalHeightUsing(const Length& height)
             logicalHeight = height.value();
         else if (height.isPercent())
             logicalHeight = computePercentageLogicalHeight(height);
-        else if (height.isViewportRelative())
+        else if (height.isViewportPercentage())
             logicalHeight = valueForLength(height, 0, view());
     }
     return logicalHeight;
@@ -2363,9 +2352,9 @@ LayoutUnit RenderBox::computeReplacedLogicalHeightUsing(Length logicalHeight) co
             }
             return computeContentBoxLogicalHeight(valueForLength(logicalHeight, availableHeight));
         }
-        case ViewportRelativeWidth:
-        case ViewportRelativeHeight:
-        case ViewportRelativeMin:
+        case ViewportPercentageWidth:
+        case ViewportPercentageHeight:
+        case ViewportPercentageMin:
             return computeContentBoxLogicalHeight(valueForLength(logicalHeight, 0, view()));
         default:
             return intrinsicLogicalHeight();
@@ -3637,7 +3626,7 @@ bool RenderBox::avoidsFloats() const
 
 void RenderBox::addVisualEffectOverflow()
 {
-    if (!style()->boxShadow() && !style()->hasBorderImageOutsets() && !style()->hasFilterOutsets())
+    if (!style()->boxShadow() && !style()->hasBorderImageOutsets())
         return;
 
     bool isFlipped = style()->isFlippedBlocksWritingMode();
@@ -3680,21 +3669,6 @@ void RenderBox::addVisualEffectOverflow()
         overflowMaxY = max(overflowMaxY, borderBox.maxY() + ((!isFlipped || !isHorizontal) ? borderOutsetBottom : borderOutsetTop));
     }
 
-#if ENABLE(CSS_FILTERS)
-    // Compute any filter outset overflow.
-    if (style()->hasFilterOutsets()) {
-        LayoutUnit filterOutsetLeft;
-        LayoutUnit filterOutsetRight;
-        LayoutUnit filterOutsetTop;
-        LayoutUnit filterOutsetBottom;
-        style()->getFilterOutsets(filterOutsetTop, filterOutsetRight, filterOutsetBottom, filterOutsetLeft);
-        
-        overflowMinX = min(overflowMinX, borderBox.x() - filterOutsetLeft);
-        overflowMaxX = max(overflowMaxX, borderBox.maxX() + filterOutsetRight);
-        overflowMinY = min(overflowMinY, borderBox.y() - filterOutsetTop);
-        overflowMaxY = max(overflowMaxY, borderBox.maxY() + filterOutsetBottom);
-    }
-#endif
     // Add in the final overflow with shadows and outsets combined.
     addVisualOverflow(LayoutRect(overflowMinX, overflowMinY, overflowMaxX - overflowMinX, overflowMaxY - overflowMinY));
 }
@@ -3724,6 +3698,12 @@ void RenderBox::addLayoutOverflow(const LayoutRect& rect)
     if (clientBox.contains(rect) || rect.isEmpty())
         return;
     
+    // Lazily allocate our layer as we will need it to hold our scroll information
+    // and for the clipping logic to work properly. Note that we *do* need a layer
+    // if we have some left overflow on an horizontal writing mode with ltr direction.
+    if (hasOverflowClip())
+        ensureLayer();
+
     // For overflow clip objects, we don't want to propagate overflow into unreachable areas.
     LayoutRect overflowRect(rect);
     if (hasOverflowClip() || isRenderView()) {
@@ -3758,10 +3738,6 @@ void RenderBox::addLayoutOverflow(const LayoutRect& rect)
     if (!m_overflow)
         m_overflow = adoptPtr(new RenderOverflow(clientBox, borderBoxRect()));
     
-    // Lazily allocate our layer as we will need it to hold our scroll information.
-    if (hasOverflowClip())
-        ensureLayer();
-
     m_overflow->addLayoutOverflow(overflowRect);
 }
 

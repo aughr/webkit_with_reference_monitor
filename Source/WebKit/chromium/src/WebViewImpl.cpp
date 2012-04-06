@@ -63,6 +63,7 @@
 #include "FrameTree.h"
 #include "FrameView.h"
 #include "GeolocationClientProxy.h"
+#include "GeolocationController.h"
 #include "GraphicsContext.h"
 #include "GraphicsContext3D.h"
 #include "GraphicsContext3DPrivate.h"
@@ -106,7 +107,8 @@
 #include "Settings.h"
 #include "SharedGraphicsContext3D.h"
 #include "SpeechInputClientImpl.h"
-#include "SpeechRecognitionClient.h"
+#include "SpeechRecognitionClientProxy.h"
+#include "TextFieldDecoratorImpl.h"
 #include "TextIterator.h"
 #include "Timer.h"
 #include "TouchpadFlingPlatformGestureCurve.h"
@@ -136,11 +138,13 @@
 #include "WebViewClient.h"
 #include "WheelEvent.h"
 #include "cc/CCProxy.h"
+#include "painting/GraphicsContextBuilder.h"
 #include "platform/WebDragData.h"
 #include "platform/WebImage.h"
 #include "platform/WebKitPlatformSupport.h"
 #include "platform/WebString.h"
 #include "platform/WebVector.h"
+#include <public/Platform.h>
 #include <public/WebFloatPoint.h>
 #include <public/WebGraphicsContext3D.h>
 #include <public/WebLayer.h>
@@ -318,6 +322,18 @@ void WebViewImpl::setSpellCheckClient(WebSpellCheckClient* spellCheckClient)
     m_spellCheckClient = spellCheckClient;
 }
 
+void WebViewImpl::addTextFieldDecoratorClient(WebTextFieldDecoratorClient* client)
+{
+    ASSERT(client);
+    // We limit the number of decorators because it affects performance of text
+    // field creation. If you'd like to add more decorators, consider moving
+    // your decorator or existing decorators to WebCore.
+    const unsigned maximumNumberOfDecorators = 8;
+    if (m_textFieldDecorators.size() >= maximumNumberOfDecorators)
+        CRASH();
+    m_textFieldDecorators.append(TextFieldDecoratorImpl::create(client));
+}
+
 WebViewImpl::WebViewImpl(WebViewClient* client)
     : m_client(client)
     , m_autofillClient(0)
@@ -354,6 +370,7 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     , m_isTransparent(false)
     , m_tabsToLinks(false)
     , m_dragScrollTimer(adoptPtr(new DragScrollTimer))
+    , m_isCancelingFullScreen(false)
 #if USE(ACCELERATED_COMPOSITING)
     , m_rootGraphicsLayer(0)
     , m_isAcceleratedCompositingActive(false)
@@ -363,8 +380,12 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 #if ENABLE(INPUT_SPEECH)
     , m_speechInputClient(SpeechInputClientImpl::create(client))
 #endif
+#if ENABLE(SCRIPTED_SPEECH)
+    , m_speechRecognitionClient(SpeechRecognitionClientProxy::create(client ? client->speechRecognizer() : 0))
+#endif
     , m_deviceOrientationClientProxy(adoptPtr(new DeviceOrientationClientProxy(client ? client->deviceOrientationClient() : 0)))
     , m_geolocationClientProxy(adoptPtr(new GeolocationClientProxy(client ? client->geolocationClient() : 0)))
+    , m_emulatedTextZoomFactor(1)
 #if ENABLE(MEDIA_STREAM)
     , m_userMediaClientImpl(this)
 #endif
@@ -385,7 +406,6 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     pageClients.editorClient = &m_editorClientImpl;
     pageClients.dragClient = &m_dragClientImpl;
     pageClients.inspectorClient = &m_inspectorClientImpl;
-    pageClients.geolocationClient = m_geolocationClientProxy.get();
     pageClients.backForwardClient = BackForwardListChromium::create(this);
 
     m_page = adoptPtr(new Page(pageClients));
@@ -396,15 +416,16 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     provideSpeechInputTo(m_page.get(), m_speechInputClient.get());
 #endif
 #if ENABLE(SCRIPTED_SPEECH)
-    provideSpeechRecognitionTo(m_page.get(), 0); // FIXME: Provide a real implementation.
+    provideSpeechRecognitionTo(m_page.get(), m_speechRecognitionClient.get());
 #endif
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     provideNotification(m_page.get(), notificationPresenterImpl());
 #endif
 
     provideDeviceOrientationTo(m_page.get(), m_deviceOrientationClientProxy.get());
-    m_geolocationClientProxy->setController(m_page->geolocationController());
-
+    provideGeolocationTo(m_page.get(), m_geolocationClientProxy.get());
+    m_geolocationClientProxy->setController(GeolocationController::from(m_page.get()));
+    
     m_page->setGroupName(pageGroupName);
 
 #if ENABLE(PAGE_VISIBILITY_API)
@@ -1260,8 +1281,11 @@ void WebViewImpl::resize(const WebSize& newSize)
         return;
     m_size = newSize;
 
-    if (mainFrameImpl()->frameView())
-        mainFrameImpl()->frameView()->resize(m_size.width, m_size.height);
+    if (!devToolsAgentPrivate() || !devToolsAgentPrivate()->metricsOverridden()) {
+        WebFrameImpl* webFrame = mainFrameImpl();
+        if (webFrame->frameView())
+            webFrame->frameView()->resize(newSize.width, newSize.height);
+    }
 
     sendResizeEventAndRepaint();
 }
@@ -1313,8 +1337,14 @@ void WebViewImpl::willExitFullScreen()
         return;
 
     if (Document* doc = m_fullScreenFrame->document()) {
-        if (doc->webkitIsFullScreen())
+        if (doc->webkitIsFullScreen()) {
+            // When the client exits from full screen we have to call webkitCancelFullScreen to
+            // notify the document. While doing that, suppress notifications back to the client.
+            m_isCancelingFullScreen = true;
+            doc->webkitCancelFullScreen();
+            m_isCancelingFullScreen = false;
             doc->webkitWillExitFullScreenForElement(0);
+        }
     }
 #endif
 }
@@ -1468,8 +1498,8 @@ void WebViewImpl::paint(WebCanvas* canvas, const WebRect& rect)
             webframe->paint(canvas, rect);
         double paintEnd = currentTime();
         double pixelsPerSec = (rect.width * rect.height) / (paintEnd - paintStart);
-        PlatformSupport::histogramCustomCounts("Renderer4.SoftwarePaintDurationMS", (paintEnd - paintStart) * 1000, 0, 120, 30);
-        PlatformSupport::histogramCustomCounts("Renderer4.SoftwarePaintMegapixPerSecond", pixelsPerSec / 1000000, 10, 210, 30);
+        WebKit::Platform::current()->histogramCustomCounts("Renderer4.SoftwarePaintDurationMS", (paintEnd - paintStart) * 1000, 0, 120, 30);
+        WebKit::Platform::current()->histogramCustomCounts("Renderer4.SoftwarePaintMegapixPerSecond", pixelsPerSec / 1000000, 10, 210, 30);
     }
 }
 
@@ -1549,6 +1579,9 @@ void WebViewImpl::enterFullScreenForElement(WebCore::Element* element)
 
 void WebViewImpl::exitFullScreenForElement(WebCore::Element* element)
 {
+    // The client is exiting full screen, so don't send a notification.
+    if (m_isCancelingFullScreen)
+        return;
     if (m_client)
         m_client->exitFullScreen();
 }
@@ -2218,9 +2251,9 @@ double WebViewImpl::setZoomLevel(bool textOnly, double zoomLevel)
     else {
         float zoomFactor = static_cast<float>(zoomLevelToZoomFactor(m_zoomLevel));
         if (textOnly)
-            frame->setPageAndTextZoomFactors(1, zoomFactor);
+            frame->setPageAndTextZoomFactors(1, zoomFactor * m_emulatedTextZoomFactor);
         else
-            frame->setPageAndTextZoomFactors(zoomFactor, 1);
+            frame->setPageAndTextZoomFactors(zoomFactor, m_emulatedTextZoomFactor);
     }
     return m_zoomLevel;
 }
@@ -2990,6 +3023,14 @@ bool WebViewImpl::useExternalPopupMenus()
     return shouldUseExternalPopupMenus;
 }
 
+void WebViewImpl::setEmulatedTextZoomFactor(float textZoomFactor)
+{
+    m_emulatedTextZoomFactor = textZoomFactor;
+    Frame* frame = mainFrameImpl()->frame();
+    if (frame)
+        frame->setPageAndTextZoomFactors(frame->pageZoomFactor(), m_emulatedTextZoomFactor);
+}
+
 bool WebViewImpl::navigationPolicyFromMouseEvent(unsigned short button,
                                                  bool ctrl, bool shift,
                                                  bool alt, bool meta,
@@ -3235,8 +3276,8 @@ public:
         view->paintContents(&context, contentRect);
         double paintEnd = currentTime();
         double pixelsPerSec = (contentRect.width() * contentRect.height()) / (paintEnd - paintStart);
-        PlatformSupport::histogramCustomCounts("Renderer4.AccelRootPaintDurationMS", (paintEnd - paintStart) * 1000, 0, 120, 30);
-        PlatformSupport::histogramCustomCounts("Renderer4.AccelRootPaintMegapixPerSecond", pixelsPerSec / 1000000, 10, 210, 30);
+        WebKit::Platform::current()->histogramCustomCounts("Renderer4.AccelRootPaintDurationMS", (paintEnd - paintStart) * 1000, 0, 120, 30);
+        WebKit::Platform::current()->histogramCustomCounts("Renderer4.AccelRootPaintMegapixPerSecond", pixelsPerSec / 1000000, 10, 210, 30);
 
         m_webViewImpl->nonCompositedContentHost()->setBackgroundColor(view->documentBackgroundColor());
 
@@ -3253,7 +3294,7 @@ private:
 
 void WebViewImpl::setIsAcceleratedCompositingActive(bool active)
 {
-    PlatformSupport::histogramEnumeration("GPU.setIsAcceleratedCompositingActive", active * 2 + m_isAcceleratedCompositingActive, 4);
+    WebKit::Platform::current()->histogramEnumeration("GPU.setIsAcceleratedCompositingActive", active * 2 + m_isAcceleratedCompositingActive, 4);
 
     if (m_isAcceleratedCompositingActive == active)
         return;
@@ -3431,7 +3472,7 @@ void WebViewImpl::updateLayerTreeViewport()
         layerAdjustX = -view->contentsSize().width() + view->visibleContentRect(false).width();
     }
     m_nonCompositedContentHost->setViewport(visibleRect.size(), view->contentsSize(), scroll, pageScaleFactor(), layerAdjustX);
-    m_layerTreeView.setViewportSize(visibleRect.size());
+    m_layerTreeView.setViewportSize(size());
     m_layerTreeView.setPageScaleFactorAndLimits(pageScaleFactor(), m_minimumPageScaleFactor, m_maximumPageScaleFactor);
 }
 
@@ -3475,14 +3516,15 @@ void WebViewImpl::setVisibilityState(WebPageVisibilityState visibilityState,
 #if ENABLE(PAGE_VISIBILITY_API)
     ASSERT(visibilityState == WebPageVisibilityStateVisible
            || visibilityState == WebPageVisibilityStateHidden
-           || visibilityState == WebPageVisibilityStatePrerender);
+           || visibilityState == WebPageVisibilityStatePrerender
+           || visibilityState == WebPageVisibilityStatePreview);
     m_page->setVisibilityState(static_cast<PageVisibilityState>(static_cast<int>(visibilityState)), isInitialState);
 #endif
 
 #if USE(ACCELERATED_COMPOSITING)
-    if (isAcceleratedCompositingActive()) {
+    if (!m_layerTreeView.isNull()) {
         bool visible = visibilityState == WebPageVisibilityStateVisible;
-        if (!visible)
+        if (!visible && isAcceleratedCompositingActive())
             m_nonCompositedContentHost->protectVisibleTileTextures();
         m_layerTreeView.setVisible(visible);
     }

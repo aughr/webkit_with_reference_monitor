@@ -743,11 +743,11 @@ END
     // Get the proxy corresponding to the DOMWindow if possible to
     // make sure that the constructor function is constructed in the
     // context of the DOMWindow and not in the context of the caller.
-    return V8DOMWrapper::getConstructor(type, V8DOMWindow::toNative(info.Holder()));
+    return V8DOMWrapper::constructorForType(type, V8DOMWindow::toNative(info.Holder()));
 END
     } elsif ($dataNode->extendedAttributes->{"IsWorkerContext"}) {
         push(@implContentDecls, <<END);
-    return V8DOMWrapper::getConstructor(type, V8WorkerContext::toNative(info.Holder()));
+    return V8DOMWrapper::constructorForType(type, V8WorkerContext::toNative(info.Holder()));
 END
     } else {
         push(@implContentDecls, "    return v8::Handle<v8::Value>();");
@@ -1752,7 +1752,13 @@ END
         push(@implContent, "        goto fail;\n");
     }
 
-    my $DOMObject = GetDomWrapperMapName($dataNode, $implClassName);
+    my $DOMObject = "DOMObject";
+    if (IsNodeSubType($dataNode)) {
+        $DOMObject = "DOMNode";
+    } elsif ($dataNode->extendedAttributes->{"ActiveDOMObject"}) {
+        $DOMObject = "ActiveDOMObject";
+    }
+
     push(@implContent, <<END);
 
     V8DOMWrapper::setDOMWrapper(wrapper, &info, impl.get());
@@ -1926,7 +1932,14 @@ END
         push(@implContent, "        goto fail;\n");
     }
 
-    my $DOMObject = GetDomWrapperMapName($dataNode, $implClassName);
+    my $DOMObject = "DOMObject";
+    # A DOMObject that is an ActiveDOMObject and also a DOMNode should be treated as an DOMNode here.
+    # setJSWrapperForDOMNode() will look if node is active and choose correct map to add node to.
+    if (IsNodeSubType($dataNode)) {
+        $DOMObject = "DOMNode";
+    } elsif ($dataNode->extendedAttributes->{"ActiveDOMObject"}) {
+        $DOMObject = "ActiveDOMObject";
+    }
     push(@implContent, <<END);
 
     V8DOMWrapper::setDOMWrapper(wrapper, &V8${implClassName}Constructor::info, impl.get());
@@ -2954,7 +2967,12 @@ END
 
             my @args = ();
             foreach my $param (@params) {
-                push(@args, GetNativeTypeForCallbacks($param->type) . " " . $param->name);
+                my $arrayType = $codeGenerator->GetArrayType($param->type);
+                if ($arrayType) {
+                    push(@args, GetNativeTypeForCallbacks("${arrayType}Array") . " " . $param->name);
+                } else {
+                    push(@args, GetNativeTypeForCallbacks($param->type) . " " . $param->name);
+                }
             }
             push(@headerContent, join(", ", @args));
             push(@headerContent, ");\n");
@@ -3022,18 +3040,33 @@ END
                 next;
             }
 
-            AddIncludesForType($function->signature->type);
-            push(@implContent, "\n" . GetNativeTypeForCallbacks($function->signature->type) . " ${className}::" . $function->signature->name . "(");
+            AddIncludesForType($function->signature->type); 
 
             my @args = ();
+            my @argsCheck;
             foreach my $param (@params) {
-                AddIncludesForType($param->type);
-                push(@args, GetNativeTypeForCallbacks($param->type) . " " . $param->name);
+                my $arrayType = $codeGenerator->GetArrayType($param->type);
+                if ($arrayType) {
+                    AddIncludesForType($arrayType);
+                    my $paramName = $param->name;
+                    push(@implContent, "typedef Vector<RefPtr<${arrayType}> > ${arrayType}Array;\n");
+                    push(@args, GetNativeTypeForCallbacks("${arrayType}Array") . " " . $paramName);
+                    push(@argsCheck, <<END);
+    ASSERT(${paramName});
+    if (!${paramName})
+        return true;
+END
+                } else {
+                    AddIncludesForType($param->type);
+                    push(@args, GetNativeTypeForCallbacks($param->type) . " " . $param->name);
+                }
             }
+            push(@implContent, "\n" . GetNativeTypeForCallbacks($function->signature->type) . " ${className}::" . $function->signature->name . "(");
             push(@implContent, join(", ", @args));
 
             push(@implContent, ")\n");
             push(@implContent, "{\n");
+            push(@implContent, "@argsCheck\n") if @argsCheck;
             push(@implContent, "    if (!canInvokeCallback())\n");
             push(@implContent, "        return true;\n\n");
             push(@implContent, "    v8::HandleScope handleScope;\n\n");
@@ -3045,6 +3078,17 @@ END
             @args = ();
             foreach my $param (@params) {
                 my $paramName = $param->name;
+                my @GenerateEventListenerImpl = ();
+                if ($codeGenerator->GetArrayType($param->type)) {
+                    push(@implContent, <<END);
+    v8::Local<v8::Array> ${paramName}Array = v8::Array::New(${paramName}->size());
+    for (size_t i = 0; i < ${paramName}->size(); ++i)
+        ${paramName}Array->Set(v8::Uint32::New(i), toV8(${paramName}->at(i).get()));
+
+END
+                    push(@args, "        ${paramName}Array");
+                    next;
+                }
                 push(@implContent, "    v8::Handle<v8::Value> ${paramName}Handle = " . NativeToJSValue($param, $paramName) . ";\n");
                 push(@implContent, "    if (${paramName}Handle.IsEmpty()) {\n");
                 push(@implContent, "        if (!isScriptControllerTerminating())\n");
@@ -3062,7 +3106,11 @@ END
                 push(@implContent, "\n    v8::Handle<v8::Value> *argv = 0;\n\n");
             }
             push(@implContent, "    bool callbackReturnValue = false;\n");
-            push(@implContent, "    return !invokeCallback(m_callback, " . scalar(@params) . ", argv, callbackReturnValue, scriptExecutionContext());\n");
+            if ($codeGenerator->IsCallbackWithArrayType($dataNode, @params)) {
+                push(@implContent, "    return !invokeCallback(m_callback, v8::Handle<v8::Object>::Cast(observerHandle), " . scalar(@params) . ", argv, callbackReturnValue, scriptExecutionContext());\n");
+            } else {
+                push(@implContent, "    return !invokeCallback(m_callback, " . scalar(@params) . ", argv, callbackReturnValue, scriptExecutionContext());\n");
+            }
             push(@implContent, "}\n");
         }
     }
@@ -3080,7 +3128,7 @@ sub GenerateToV8Converters
     my $className = shift;
     my $nativeType = shift;
 
-    my $domMapName = GetDomWrapperMapName($dataNode, $interfaceName);
+    my $domMapFunction = GetDomMapFunction($dataNode, $interfaceName);
     my $forceNewObjectInput = IsDOMNodeType($interfaceName) ? ", bool forceNewObject" : "";
     my $forceNewObjectCall = IsDOMNodeType($interfaceName) ? ", forceNewObject" : "";
     my $wrapSlowArgumentType = GetPassRefPtrType($nativeType);
@@ -3169,7 +3217,7 @@ END
 END
     }
     push(@implContent, <<END);
-    V8DOMWrapper::setJSWrapperFor${domMapName}(impl, wrapperHandle);
+    ${domMapFunction}.set(impl.leakRef(), wrapperHandle);
     return wrapper;
 }
 END
@@ -3177,19 +3225,13 @@ END
 
 sub GetDomMapFunction
 {
-    my $mapName = GetDomWrapperMapName(@_);
-    return "get${mapName}Map()";
-}
-
-sub GetDomWrapperMapName
-{
     my $dataNode = shift;
     my $type = shift;
-    return "DOMSVGElementInstance" if $type eq "SVGElementInstance";
-    return "ActiveDOMNode" if (IsNodeSubType($dataNode) && $dataNode->extendedAttributes->{"ActiveDOMObject"});
-    return "DOMNode" if (IsNodeSubType($dataNode));
-    return "ActiveDOMObject" if $dataNode->extendedAttributes->{"ActiveDOMObject"};
-    return "DOMObject";
+    return "getDOMSVGElementInstanceMap()" if $type eq "SVGElementInstance";
+    return "getActiveDOMNodeMap()" if (IsNodeSubType($dataNode) && $dataNode->extendedAttributes->{"ActiveDOMObject"});
+    return "getDOMNodeMap()" if (IsNodeSubType($dataNode));
+    return "getActiveDOMObjectMap()" if $dataNode->extendedAttributes->{"ActiveDOMObject"};
+    return "getDOMObjectMap()";
 }
 
 sub GetNativeTypeForConversions
@@ -3549,8 +3591,9 @@ sub JSValueToNative
         return "V8DOMWrapper::getXPathNSResolver($value)";
     }
 
-    if ($codeGenerator->GetArrayType($type)) {
-        return "toNativeArray($value)";
+    my $arrayType = $codeGenerator->GetArrayType($type);
+    if ($arrayType) {
+        return "toNativeArray<$arrayType>($value)";
     }
 
     AddIncludesForType($type);
@@ -3600,8 +3643,13 @@ sub CreateCustomSignature
                 $result .= "v8::Handle<v8::FunctionTemplate>()";
             } else {
                 my $type = $parameter->type;
-                my $header = GetV8HeaderName($type);
-                AddToImplIncludes($header);
+                my $arrayType = $codeGenerator->GetArrayType($type);
+                if ($arrayType) {
+                    AddToImplIncludes("$arrayType.h");
+                } else {
+                    my $header = GetV8HeaderName($type);
+                    AddToImplIncludes($header);
+                }
                 $result .= "V8${type}::GetRawTemplate()";
             }
         } else {
@@ -3624,6 +3672,9 @@ sub RequiresCustomSignature
     }
     # No signature needed for overloaded function
     if (@{$function->{overloads}} > 1) {
+        return 0;
+    }
+    if ($function->isStatic) {
         return 0;
     }
     # Type checking is performed in the generated code
@@ -3768,8 +3819,10 @@ sub NativeToJSValue
 
     my $arrayType = $codeGenerator->GetArrayType($type);
     if ($arrayType) {
-        AddToImplIncludes("V8$arrayType.h");
-        AddToImplIncludes("$arrayType.h");
+        if ($arrayType ne "String") {
+            AddToImplIncludes("V8$arrayType.h");
+            AddToImplIncludes("$arrayType.h");
+        }
         return "v8Array($value)";
     }
 

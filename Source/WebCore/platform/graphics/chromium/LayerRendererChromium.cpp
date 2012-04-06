@@ -55,6 +55,7 @@
 #include "cc/CCDebugBorderDrawQuad.h"
 #include "cc/CCLayerImpl.h"
 #include "cc/CCLayerTreeHostCommon.h"
+#include "cc/CCMathUtil.h"
 #include "cc/CCProxy.h"
 #include "cc/CCRenderPass.h"
 #include "cc/CCRenderSurfaceDrawQuad.h"
@@ -320,19 +321,6 @@ LayerRendererChromium::~LayerRendererChromium()
     cleanupSharedObjects();
 }
 
-void LayerRendererChromium::clearRenderSurfacesOnCCLayerImplRecursive(CCLayerImpl* layer)
-{
-    for (size_t i = 0; i < layer->children().size(); ++i)
-        clearRenderSurfacesOnCCLayerImplRecursive(layer->children()[i].get());
-    layer->clearRenderSurface();
-}
-
-void LayerRendererChromium::close()
-{
-    if (rootLayer())
-        clearRenderSurfacesOnCCLayerImplRecursive(rootLayer());
-}
-
 GraphicsContext3D* LayerRendererChromium::context()
 {
     return m_context.get();
@@ -349,10 +337,6 @@ void LayerRendererChromium::setVisible(bool visible)
 {
     if (!visible)
         releaseRenderSurfaceTextures();
-
-    // FIXME: Remove this once framebuffer is automatically recreated on first use
-    if (visible)
-        ensureFramebuffer();
 
     // TODO: Replace setVisibilityCHROMIUM with an extension to explicitly manage front/backbuffers
     // crbug.com/116049
@@ -406,7 +390,12 @@ void LayerRendererChromium::clearRenderSurface(CCRenderSurface* renderSurface, C
 void LayerRendererChromium::beginDrawingFrame()
 {
     ASSERT(rootLayer());
+
+    // FIXME: Remove this once framebuffer is automatically recreated on first use
+    ensureFramebuffer();
+
     m_defaultRenderSurface = rootLayer()->renderSurface();
+    ASSERT(m_defaultRenderSurface);
 
     // FIXME: use the frame begin time from the overall compositor scheduler.
     // This value is currently inaccessible because it is up in Chromium's
@@ -576,9 +565,11 @@ static void tileUniformLocation(T program, TileProgramUniforms& uniforms)
     uniforms.edgeLocation = program->fragmentShader().edgeLocation();
 }
 
-static void findTileProgramUniforms(LayerRendererChromium* layerRenderer, const CCTileDrawQuad* quad, TileProgramUniforms& uniforms)
+static void findTileProgramUniforms(LayerRendererChromium* layerRenderer, const CCTileDrawQuad* quad, TileProgramUniforms& uniforms, bool quadIsClipped)
 {
-    if (quad->isAntialiased()) {
+    // For now, we simply skip anti-aliasing with the quad is clipped. This only happens
+    // on perspective transformed layers that go partially behind the camera.
+    if (quad->isAntialiased() && !quadIsClipped) {
         if (quad->swizzleContents()) {
             const CCTiledLayerImpl::ProgramSwizzleAA* program = layerRenderer->tilerProgramSwizzleAA();
             tileUniformLocation(program, uniforms);
@@ -641,8 +632,17 @@ void LayerRendererChromium::drawTileQuad(const CCTileDrawQuad* quad)
     float fragmentTexScaleX = clampRect.width() / textureSize.width();
     float fragmentTexScaleY = clampRect.height() / textureSize.height();
 
+
+    FloatQuad localQuad;
+    TransformationMatrix deviceTransform = TransformationMatrix(windowMatrix() * projectionMatrix() * quad->quadTransform()).to2dTransform();
+    if (!deviceTransform.isInvertible())
+        return;
+
+    bool clipped = false;
+    FloatQuad deviceLayerQuad = CCMathUtil::mapQuad(deviceTransform, FloatQuad(quad->layerRect()), clipped);
+
     TileProgramUniforms uniforms;
-    findTileProgramUniforms(this, quad, uniforms);
+    findTileProgramUniforms(this, quad, uniforms, clipped);
 
     GLC(context(), context()->useProgram(uniforms.program));
     GLC(context(), context()->uniform1i(uniforms.samplerLocation, 0));
@@ -651,13 +651,8 @@ void LayerRendererChromium::drawTileQuad(const CCTileDrawQuad* quad)
     GLC(context(), context()->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_MIN_FILTER, quad->textureFilter()));
     GLC(context(), context()->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_MAG_FILTER, quad->textureFilter()));
 
-    FloatQuad localQuad;
-    if (quad->isAntialiased()) {
-        TransformationMatrix deviceTransform = TransformationMatrix(windowMatrix() * projectionMatrix() * quad->quadTransform()).to2dTransform();
-        if (!deviceTransform.isInvertible())
-            return;
 
-        FloatQuad deviceLayerQuad = deviceTransform.mapQuad(FloatQuad(quad->layerRect()));
+    if (!clipped && quad->isAntialiased()) {
 
         CCLayerQuad deviceLayerBounds = CCLayerQuad(FloatQuad(deviceLayerQuad.boundingBox()));
         deviceLayerBounds.inflateAntiAliasingDistance();
@@ -1073,13 +1068,13 @@ void LayerRendererChromium::finish()
     m_context->finish();
 }
 
-void LayerRendererChromium::swapBuffers(const IntRect& subBuffer)
+bool LayerRendererChromium::swapBuffers(const IntRect& subBuffer)
 {
     // FIXME: Remove this once gpu process supports ignoring swap buffers command while framebuffer is discarded.
     //        Alternatively (preferably?), protect all cc code so as not to attempt a swap after a framebuffer discard.
     if (m_isFramebufferDiscarded) {
         m_client->setFullRootLayerDamage();
-        return;
+        return false;
     }
 
     TRACE_EVENT("LayerRendererChromium::swapBuffers", this, 0);
@@ -1098,6 +1093,7 @@ void LayerRendererChromium::swapBuffers(const IntRect& subBuffer)
         m_context->prepareTexture();
 
     m_headsUpDisplay->onSwapBuffers();
+    return true;
 }
 
 void LayerRendererChromium::onSwapBuffersComplete()

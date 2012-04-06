@@ -1,4 +1,4 @@
-# Copyright (C) 2005, 2006, 2007, 2010, 2012 Apple Inc. All rights reserved.
+# Copyright (C) 2005, 2006, 2007, 2010, 2011, 2012 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 #
@@ -56,6 +56,7 @@ BEGIN {
        &cmakeBasedPortName
        &currentSVNRevision
        &debugSafari
+       &nmPath
        &passedConfiguration
        &printHelpAndExitForRunAndDebugWebKitAppIfNeeded
        &productDir
@@ -81,6 +82,7 @@ my $configurationForVisualStudio;
 my $configurationProductDir;
 my $sourceDir;
 my $currentSVNRevision;
+my $nmPath;
 my $osXVersion;
 my $generateDsym;
 my $isQt;
@@ -965,6 +967,7 @@ sub blackberryCMakeArguments()
     push @includeSystemDirectories, $stageInc;
     push @includeSystemDirectories, File::Spec->catdir($stageInc, "browser", "platform");
     push @includeSystemDirectories, File::Spec->catdir($stageInc, "browser", "qsk");
+    push @includeSystemDirectories, File::Spec->catdir($stageInc, "ots");
 
     my @cxxFlags;
     push @cxxFlags, "-Wl,-rpath-link,$stageLib";
@@ -1305,6 +1308,23 @@ sub isPerianInstalled()
     }
 
     return 0;
+}
+
+sub determineNmPath()
+{
+    return if $nmPath;
+
+    if (isAppleMacWebKit()) {
+        $nmPath = `xcrun -find nm`;
+        chomp $nmPath;
+    }
+    $nmPath = "nm" if !$nmPath;
+}
+
+sub nmPath()
+{
+    determineNmPath();
+    return $nmPath;
 }
 
 sub determineOSXVersion()
@@ -1981,9 +2001,7 @@ sub buildAutotoolsProject($@)
 
     if ($project eq 'WebKit' && !isCrossCompilation()) {
         my @docGenerationOptions = ($runWithJhbuild, "$gtkScriptsPath/generate-gtkdoc", "--skip-html");
-        if ($debug) {
-            push(@docGenerationOptions, "--debug");
-        }
+        push(@docGenerationOptions, productDir());
 
         if (system(@docGenerationOptions)) {
             die "\n gtkdoc did not build without warnings\n";
@@ -2462,7 +2480,7 @@ EOF
 sub argumentsForRunAndDebugMacWebKitApp()
 {
     my @args = @ARGV;
-    push @args, ("-ApplePersistenceIgnoreState", "YES") if isLion() && checkForArgumentAndRemoveFromArrayRef("--no-saved-state", \@args);
+    push @args, ("-ApplePersistenceIgnoreState", "YES") if !isLeopard() && !isSnowLeopard() && checkForArgumentAndRemoveFromArrayRef("--no-saved-state", \@args);
     return @args;
 }
 

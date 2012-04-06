@@ -280,8 +280,8 @@ public:
 
     LayoutRect rect() const { return LayoutRect(location(), size()); }
 
-    int scrollWidth();
-    int scrollHeight();
+    int scrollWidth() const;
+    int scrollHeight() const;
 
     void panScrollFromPoint(const LayoutPoint&);
 
@@ -313,6 +313,9 @@ public:
 
     PassRefPtr<Scrollbar> createScrollbar(ScrollbarOrientation);
     void destroyScrollbar(ScrollbarOrientation);
+
+    bool hasHorizontalScrollbar() const { return horizontalScrollbar(); }
+    bool hasVerticalScrollbar() const { return verticalScrollbar(); }
 
     // ScrollableArea overrides
     virtual Scrollbar* horizontalScrollbar() const { return m_hBar.get(); }
@@ -421,6 +424,12 @@ public:
     RenderLayer* ancestorCompositingLayer() const { return enclosingCompositingLayer(false); }
 #endif
 
+#if ENABLE(CSS_FILTERS)
+    RenderLayer* enclosingFilterLayer(bool includeSelf = true) const;
+    RenderLayer* enclosingFilterRepaintLayer() const;
+    void setFilterBackendNeedsRepaintingInRect(const LayoutRect&, bool immediate);
+#endif
+
     void convertToPixelSnappedLayerCoords(const RenderLayer* ancestorLayer, IntPoint& location) const;
     void convertToPixelSnappedLayerCoords(const RenderLayer* ancestorLayer, IntRect&) const;
     void convertToLayerCoords(const RenderLayer* ancestorLayer, LayoutPoint& location) const;
@@ -479,6 +488,8 @@ public:
     // Pixel snapped bounding box relative to the root.
     IntRect absoluteBoundingBox() const;
 
+    static IntRect calculateLayerBounds(const RenderLayer*, const RenderLayer* ancestorLayer, bool includeSelfTransform = true, bool includeLayerFilterOutsets = true);
+    
     void updateHoverActiveState(const HitTestRequest&, HitTestResult&);
 
     // WARNING: This method returns the offset for the parent as this is what updateLayerPositions expects.
@@ -540,7 +551,7 @@ public:
     bool hasCompositedMask() const;
     RenderLayerBacking* backing() const { return m_backing.get(); }
     RenderLayerBacking* ensureBacking();
-    void clearBacking();
+    void clearBacking(bool layerBeingDestroyed = false);
     virtual GraphicsLayer* layerForHorizontalScrollbar() const;
     virtual GraphicsLayer* layerForVerticalScrollbar() const;
     virtual GraphicsLayer* layerForScrollCorner() const;
@@ -561,7 +572,13 @@ public:
 
 #if ENABLE(CSS_FILTERS)
     bool paintsWithFilters() const;
+    bool requiresFullLayerImageForFilters() const;
     FilterEffectRenderer* filter() const { return m_filter.get(); }
+#endif
+
+#if !ASSERT_DISABLED
+    bool layerListMutationAllowed() const { return m_layerListMutationAllowed; }
+    void setLayerListMutationAllowed(bool flag) { m_layerListMutationAllowed = flag; }
 #endif
 
 private:
@@ -575,6 +592,9 @@ private:
     void restoreClip(GraphicsContext*, const LayoutRect& paintDirtyRect, const ClipRect&);
 
     bool shouldRepaintAfterLayout() const;
+
+    void updateScrollbarsAfterStyleChange(const RenderStyle* oldStyle);
+    void updateScrollbarsAfterLayout();
 
     friend IntSize RenderBox::scrolledContentOffset() const;
     IntSize scrolledContentOffset() const { return scrollOffset() + m_scrollOverflow; }
@@ -640,7 +660,9 @@ private:
     
     bool hitTestContents(const HitTestRequest&, HitTestResult&, const LayoutRect& layerBounds, const LayoutPoint& hitTestPoint, HitTestFilter) const;
     
-    void computeScrollDimensions(bool* needHBar = 0, bool* needVBar = 0);
+    void computeScrollDimensions();
+    bool hasHorizontalOverflow() const;
+    bool hasVerticalOverflow() const;
 
     bool shouldBeNormalFlowOnly() const; 
 
@@ -790,7 +812,9 @@ protected:
 #endif
 
     bool m_containsDirtyOverlayScrollbars : 1;
-
+#if !ASSERT_DISABLED
+    bool m_layerListMutationAllowed : 1;
+#endif
     // This is an optimization added for <table>.
     // Currently cells do not need to update their repaint rectangles when scrolling. This also
     // saves a lot of time when scrolling on a table.
@@ -859,6 +883,7 @@ protected:
   
 #if ENABLE(CSS_FILTERS)
     RefPtr<FilterEffectRenderer> m_filter;
+    LayoutRect m_filterRepaintRect;
 #endif
         
     // Renderers to hold our custom scroll corner and resizer.
@@ -879,6 +904,28 @@ inline void RenderLayer::updateZOrderLists()
         return;
     updateZOrderListsSlowCase();
 }
+
+#if !ASSERT_DISABLED
+class LayerListMutationDetector {
+public:
+    LayerListMutationDetector(RenderLayer* layer)
+        : m_layer(layer)
+        , m_previousMutationAllowedState(layer->layerListMutationAllowed())
+    {
+        m_layer->setLayerListMutationAllowed(false);
+    }
+    
+    ~LayerListMutationDetector()
+    {
+        m_layer->setLayerListMutationAllowed(m_previousMutationAllowedState);
+    }
+
+private:
+    RenderLayer* m_layer;
+    bool m_previousMutationAllowedState;
+};
+#endif
+
 
 } // namespace WebCore
 

@@ -160,7 +160,7 @@ void reportException(ExecState* exec, JSValue exception)
     if (ExceptionBase* exceptionBase = toExceptionBase(exception))
         errorMessage = stringToUString(exceptionBase->message() + ": "  + exceptionBase->description());
 
-    ScriptExecutionContext* scriptExecutionContext = static_cast<JSDOMGlobalObject*>(exec->lexicalGlobalObject())->scriptExecutionContext();
+    ScriptExecutionContext* scriptExecutionContext = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject())->scriptExecutionContext();
 
     // scriptExecutionContext can be null when the relevant global object is a stale inner window object.
     // It's harmless to return here without reporting the exception to the log and the debugger in this case.
@@ -258,7 +258,7 @@ Structure* cacheDOMStructure(JSDOMGlobalObject* globalObject, Structure* structu
 {
     JSDOMStructureMap& structures = globalObject->structures();
     ASSERT(!structures.contains(classInfo));
-    return structures.set(classInfo, WriteBarrier<Structure>(globalObject->globalData(), globalObject, structure)).first->second.get();
+    return structures.set(classInfo, WriteBarrier<Structure>(globalObject->globalData(), globalObject, structure)).iterator->second.get();
 }
 
 JSC::JSObject* toJSSequence(ExecState* exec, JSValue value, unsigned& length)

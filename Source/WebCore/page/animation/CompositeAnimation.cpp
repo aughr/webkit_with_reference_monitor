@@ -30,7 +30,6 @@
 #include "CompositeAnimation.h"
 
 #include "AnimationControllerPrivate.h"
-#include "CSSPropertyLonghand.h"
 #include "CSSPropertyNames.h"
 #include "ImplicitAnimation.h"
 #include "KeyframeAnimation.h"
@@ -94,12 +93,13 @@ void CompositeAnimation::updateTransitions(RenderObject* renderer, RenderStyle* 
             const Animation* anim = targetStyle->transitions()->animation(i);
             bool isActiveTransition = anim->duration() || anim->delay() > 0;
 
-            int prop = anim->property();
-
-            if (prop == cAnimateNone)
+            Animation::AnimationMode mode = anim->animationMode();
+            if (mode == Animation::AnimateNone)
                 continue;
 
-            bool all = prop == cAnimateAll;
+            CSSPropertyID prop = anim->property();
+
+            bool all = mode == Animation::AnimateAll;
 
             // Handle both the 'all' and single property cases. For the single prop case, we make only one pass
             // through the loop.
@@ -112,7 +112,7 @@ void CompositeAnimation::updateTransitions(RenderObject* renderer, RenderStyle* 
                         continue;
                 }
 
-                // ImplicitAnimations are always hashed by actual properties, never cAnimateAll
+                // ImplicitAnimations are always hashed by actual properties, never animateAll.
                 ASSERT(prop >= firstCSSProperty && prop < (firstCSSProperty + numCSSProperties));
 
                 // If there is a running animation for this property, the transition is overridden
@@ -379,7 +379,7 @@ double CompositeAnimation::timeToNextService() const
     return minT;
 }
 
-PassRefPtr<KeyframeAnimation> CompositeAnimation::getAnimationForProperty(int property) const
+PassRefPtr<KeyframeAnimation> CompositeAnimation::getAnimationForProperty(CSSPropertyID property) const
 {
     RefPtr<KeyframeAnimation> retval;
     
@@ -450,7 +450,7 @@ void CompositeAnimation::resumeAnimations()
     }
 }
 
-void CompositeAnimation::overrideImplicitAnimations(int property)
+void CompositeAnimation::overrideImplicitAnimations(CSSPropertyID property)
 {
     CSSPropertyTransitionsMap::const_iterator end = m_transitions.end();
     if (!m_transitions.isEmpty()) {
@@ -462,7 +462,7 @@ void CompositeAnimation::overrideImplicitAnimations(int property)
     }
 }
 
-void CompositeAnimation::resumeOverriddenImplicitAnimations(int property)
+void CompositeAnimation::resumeOverriddenImplicitAnimations(CSSPropertyID property)
 {
     if (!m_transitions.isEmpty()) {
         CSSPropertyTransitionsMap::const_iterator end = m_transitions.end();
@@ -474,7 +474,7 @@ void CompositeAnimation::resumeOverriddenImplicitAnimations(int property)
     }
 }
 
-bool CompositeAnimation::isAnimatingProperty(int property, bool acceleratedOnly, bool isRunningNow) const
+bool CompositeAnimation::isAnimatingProperty(CSSPropertyID property, bool acceleratedOnly, bool isRunningNow) const
 {
     if (!m_keyframeAnimations.isEmpty()) {
         m_keyframeAnimations.checkConsistency();
@@ -517,7 +517,7 @@ bool CompositeAnimation::pauseAnimationAtTime(const AtomicString& name, double t
     return false;
 }
 
-bool CompositeAnimation::pauseTransitionAtTime(int property, double t)
+bool CompositeAnimation::pauseTransitionAtTime(CSSPropertyID property, double t)
 {
     if ((property < firstCSSProperty) || (property >= firstCSSProperty + numCSSProperties))
         return false;
@@ -530,7 +530,7 @@ bool CompositeAnimation::pauseTransitionAtTime(int property, double t)
         bool anyPaused = false;
         HashSet<int>::const_iterator end = shorthandProperties.end();
         for (HashSet<int>::const_iterator it = shorthandProperties.begin(); it != end; ++it) {
-            if (pauseTransitionAtTime(*it, t))
+            if (pauseTransitionAtTime(static_cast<CSSPropertyID>(*it), t))
                 anyPaused = true;
         }
         return anyPaused;

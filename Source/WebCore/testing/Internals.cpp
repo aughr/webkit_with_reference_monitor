@@ -29,6 +29,7 @@
 #include "CachedResourceLoader.h"
 #include "ClientRect.h"
 #include "ClientRectList.h"
+#include "ComposedShadowTreeWalker.h"
 #include "DOMNodeHighlighter.h"
 #include "Document.h"
 #include "DocumentMarker.h"
@@ -50,7 +51,6 @@
 #include "NodeRenderingContext.h"
 #include "Page.h"
 #include "Range.h"
-#include "ReifiedTreeTraversal.h"
 #include "RenderObject.h"
 #include "RenderTreeAsText.h"
 #include "Settings.h"
@@ -58,13 +58,19 @@
 #include "ShadowTree.h"
 #include "SpellChecker.h"
 #include "TextIterator.h"
+#include "TreeScope.h"
 
-#if ENABLE(INPUT_COLOR)
+#if ENABLE(INPUT_TYPE_COLOR)
 #include "ColorChooser.h"
 #endif
 
 #if ENABLE(BATTERY_STATUS)
 #include "BatteryController.h"
+#endif
+
+#if ENABLE(NETWORK_INFO)
+#include "NetworkInfo.h"
+#include "NetworkInfoController.h"
 #endif
 
 #if ENABLE(TOUCH_ADJUSTMENT)
@@ -172,6 +178,16 @@ bool Internals::isValidContentSelect(Element* insertionPoint, ExceptionCode& ec)
     return toInsertionPoint(insertionPoint)->isSelectValid();
 }
 
+Node* Internals::treeScopeRootNode(Node* node, ExceptionCode& ec)
+{
+    if (!node) {
+        ec = INVALID_ACCESS_ERR;
+        return 0;
+    }
+
+    return node->treeScope()->rootNode();
+}
+
 bool Internals::attached(Node* node, ExceptionCode& ec)
 {
     if (!node) {
@@ -182,49 +198,59 @@ bool Internals::attached(Node* node, ExceptionCode& ec)
     return node->attached();
 }
 
-Node* Internals::nextSiblingInReifiedTree(Node* node, ExceptionCode& ec)
+Node* Internals::nextSiblingByWalker(Node* node, ExceptionCode& ec)
 {
     if (!node) {
         ec = INVALID_ACCESS_ERR;
         return 0;
     }
-    return ReifiedTreeTraversal::nextSibling(node);
+    ComposedShadowTreeWalker walker(node);
+    walker.nextSibling();
+    return walker.get();
 }
 
-Node* Internals::firstChildInReifiedTree(Node* node, ExceptionCode& ec)
+Node* Internals::firstChildByWalker(Node* node, ExceptionCode& ec)
 {
     if (!node) {
         ec = INVALID_ACCESS_ERR;
         return 0;
     }
-    return ReifiedTreeTraversal::firstChild(node);
+    ComposedShadowTreeWalker walker(node);
+    walker.firstChild();
+    return walker.get();
 }
 
-Node* Internals::lastChildInReifiedTree(Node* node, ExceptionCode& ec)
+Node* Internals::lastChildByWalker(Node* node, ExceptionCode& ec)
 {
     if (!node) {
         ec = INVALID_ACCESS_ERR;
         return 0;
     }
-    return ReifiedTreeTraversal::lastChild(node);
+    ComposedShadowTreeWalker walker(node);
+    walker.lastChild();
+    return walker.get();
 }
 
-Node* Internals::traverseNextNodeInReifiedTree(Node* node, ExceptionCode& ec)
+Node* Internals::nextNodeByWalker(Node* node, ExceptionCode& ec)
 {
     if (!node) {
         ec = INVALID_ACCESS_ERR;
         return 0;
     }
-    return ReifiedTreeTraversal::traverseNextNode(node);
+    ComposedShadowTreeWalker walker(node);
+    walker.next();
+    return walker.get();
 }
 
-Node* Internals::traversePreviousNodeInReifiedTree(Node* node, ExceptionCode& ec)
+Node* Internals::previousNodeByWalker(Node* node, ExceptionCode& ec)
 {
     if (!node) {
         ec = INVALID_ACCESS_ERR;
         return 0;
     }
-    return ReifiedTreeTraversal::traversePreviousNode(node);
+    ComposedShadowTreeWalker walker(node);
+    walker.previous();
+    return walker.get();
 }
 
 String Internals::elementRenderTreeAsText(Element* element, ExceptionCode& ec)
@@ -353,7 +379,7 @@ String Internals::shadowPseudoId(Element* element, ExceptionCode& ec)
     return element->shadowPseudoId().string();
 }
 
-#if ENABLE(INPUT_COLOR)
+#if ENABLE(INPUT_TYPE_COLOR)
 void Internals::selectColorInColorChooser(Element* element, const String& colorValue)
 {
     if (!element->hasTagName(HTMLNames::inputTag))
@@ -654,6 +680,23 @@ Node* Internals::touchNodeAdjustedToBestClickableNode(long x, long y, long width
     document->frame()->eventHandler()->bestClickableNodeForTouchPoint(point, radius, adjustedPoint, targetNode);
     return targetNode;
 }
+
+PassRefPtr<ClientRect> Internals::bestZoomableAreaForTouchPoint(long x, long y, long width, long height, Document* document, ExceptionCode& ec)
+{
+    if (!document || !document->frame()) {
+        ec = INVALID_ACCESS_ERR;
+        return 0;
+    }
+
+    IntSize radius(width / 2, height / 2);
+    IntPoint point(x + radius.width(), y + radius.height());
+
+
+    Node* targetNode;
+    IntRect zoomableArea;
+    document->frame()->eventHandler()->bestZoomableAreaForTouchPoint(point, radius, zoomableArea, targetNode);
+    return ClientRect::create(zoomableArea);
+}
 #endif
 
 
@@ -771,14 +814,14 @@ unsigned Internals::touchEventHandlerCount(Document* document, ExceptionCode& ec
 }
 
 PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int x, int y, unsigned topPadding, unsigned rightPadding,
-    unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, ExceptionCode& ec) const
+    unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent, ExceptionCode& ec) const
 {
     if (!document || !document->frame() || !document->frame()->view()) {
         ec = INVALID_ACCESS_ERR;
         return 0;
     }
 
-    return document->nodesFromRect(x, y, topPadding, rightPadding, bottomPadding, leftPadding, ignoreClipping);
+    return document->nodesFromRect(x, y, topPadding, rightPadding, bottomPadding, leftPadding, ignoreClipping, allowShadowContent);
 }
 
 void Internals::emitInspectorDidBeginFrame()
@@ -806,6 +849,22 @@ void Internals::setBatteryStatus(Document* document, const String& eventType, bo
     UNUSED_PARAM(chargingTime);
     UNUSED_PARAM(dischargingTime);
     UNUSED_PARAM(level);
+#endif
+}
+
+void Internals::setNetworkInformation(Document* document, const String& eventType, long bandwidth, bool metered, ExceptionCode& ec)
+{
+    if (!document || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+#if ENABLE(NETWORK_INFO)
+    NetworkInfoController::from(document->page())->didChangeNetworkInformation(eventType, NetworkInfo::create(bandwidth, metered));
+#else
+    UNUSED_PARAM(eventType);
+    UNUSED_PARAM(bandwidth);
+    UNUSED_PARAM(metered);
 #endif
 }
 

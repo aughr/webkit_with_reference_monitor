@@ -96,7 +96,7 @@ public:
     virtual const IntSize& viewportSize() const { return m_viewportSize; }
     virtual const CCSettings& settings() const { return m_settings; }
     virtual CCLayerImpl* rootLayer() { return m_rootLayerImpl.get(); }
-    virtual const CCLayerImpl* rootLayer() const  { return m_rootLayerImpl.get(); }
+    virtual const CCLayerImpl* rootLayer() const { return m_rootLayerImpl.get(); }
     virtual void didLoseContext();
     virtual void onSwapBuffersComplete();
     virtual void setFullRootLayerDamage();
@@ -114,7 +114,7 @@ public:
     const LayerRendererCapabilities& layerRendererCapabilities() const;
     TextureAllocator* contentsTextureAllocator() const;
 
-    void swapBuffers();
+    bool swapBuffers();
 
     void readback(void* pixels, const IntRect&);
 
@@ -171,6 +171,7 @@ private:
     void animateLayersRecursive(CCLayerImpl*, double monotonicTime, double wallClockTime, CCAnimationEventsVector*, bool& didAnimate, bool& needsAnimateLayers);
     IntSize contentSize() const;
     void sendDidLoseContextRecursive(CCLayerImpl*);
+    void clearRenderSurfacesOnCCLayerImplRecursive(CCLayerImpl*);
 
     OwnPtr<LayerRendererChromium> m_layerRenderer;
     OwnPtr<CCLayerImpl> m_rootLayerImpl;

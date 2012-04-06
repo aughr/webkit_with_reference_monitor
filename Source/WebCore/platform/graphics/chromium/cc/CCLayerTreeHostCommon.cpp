@@ -37,6 +37,7 @@
 #include "cc/CCLayerImpl.h"
 #include "cc/CCLayerIterator.h"
 #include "cc/CCLayerSorter.h"
+#include "cc/CCMathUtil.h"
 #include "cc/CCRenderSurface.h"
 
 namespace WebCore {
@@ -44,7 +45,7 @@ namespace WebCore {
 IntRect CCLayerTreeHostCommon::calculateVisibleRect(const IntRect& targetSurfaceRect, const IntRect& layerBoundRect, const TransformationMatrix& transform)
 {
     // Is this layer fully contained within the target surface?
-    IntRect layerInSurfaceSpace = transform.mapRect(layerBoundRect);
+    IntRect layerInSurfaceSpace = CCMathUtil::mapClippedRect(transform, layerBoundRect);
     if (targetSurfaceRect.contains(layerInSurfaceSpace))
         return layerBoundRect;
 
@@ -59,7 +60,7 @@ IntRect CCLayerTreeHostCommon::calculateVisibleRect(const IntRect& targetSurface
     // axis-aligned), but is a reasonable filter on the space to consider.
     // Non-invertible transforms will create an empty rect here.
     const TransformationMatrix surfaceToLayer = transform.inverse();
-    IntRect layerRect = surfaceToLayer.projectQuad(FloatQuad(FloatRect(minimalSurfaceRect))).enclosingBoundingBox();
+    IntRect layerRect = enclosingIntRect(CCMathUtil::projectClippedRect(surfaceToLayer, FloatRect(minimalSurfaceRect)));
     layerRect.intersect(layerBoundRect);
     return layerRect;
 }
@@ -70,7 +71,6 @@ static bool isScaleOrTranslation(const TransformationMatrix& m)
            && !m.m21() && !m.m23() && !m.m24()
            && !m.m31() && !m.m32() && !m.m43()
            && m.m44();
-
 }
 
 template<typename LayerType>
@@ -386,6 +386,10 @@ static bool calculateDrawTransformsAndVisibilityInternal(LayerType* layer, Layer
         // surface and is therefore expressed in the parent's coordinate system.
         renderSurface->setClipRect(layer->parent() ? layer->parent()->clipRect() : layer->clipRect());
 
+        // The layer's clipRect can be reset here. The renderSurface will correctly clip the subtree.
+        layer->setUsesLayerClipping(false);
+        layer->setClipRect(IntRect());
+
         if (layer->maskLayer()) {
             renderSurface->setMaskLayer(layer->maskLayer());
             layer->maskLayer()->setTargetRenderSurface(renderSurface);
@@ -405,7 +409,7 @@ static bool calculateDrawTransformsAndVisibilityInternal(LayerType* layer, Layer
         layer->setDrawTransform(combinedTransform);
         layer->setDrawTransformIsAnimating(animatingTransformToTarget);
         layer->setScreenSpaceTransformIsAnimating(animatingTransformToScreen);
-        transformedLayerRect = enclosingIntRect(layer->drawTransform().mapRect(layerRect));
+        transformedLayerRect = enclosingIntRect(CCMathUtil::mapClippedRect(layer->drawTransform(), layerRect));
 
         layer->setDrawOpacity(drawOpacity);
         layer->setDrawOpacityIsAnimating(drawOpacityIsAnimating);
@@ -422,13 +426,18 @@ static bool calculateDrawTransformsAndVisibilityInternal(LayerType* layer, Layer
             // Layers without their own renderSurface will render into the nearest ancestor surface.
             layer->setTargetRenderSurface(layer->parent()->targetRenderSurface());
         }
+    }
 
-        if (layer->masksToBounds()) {
-            IntRect clipRect = transformedLayerRect;
+    if (layer->masksToBounds()) {
+        IntRect clipRect = transformedLayerRect;
+
+        // If the layer already inherited a clipRect, we need to intersect with it before
+        // overriding the layer's clipRect and usesLayerClipping.
+        if (layer->usesLayerClipping())
             clipRect.intersect(layer->clipRect());
-            layer->setClipRect(clipRect);
-            layer->setUsesLayerClipping(true);
-        }
+
+        layer->setClipRect(clipRect);
+        layer->setUsesLayerClipping(true);
     }
 
     // Note that at this point, layer->drawTransform() is not necessarily the same as local variable drawTransform.

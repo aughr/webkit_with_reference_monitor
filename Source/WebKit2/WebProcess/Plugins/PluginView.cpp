@@ -289,7 +289,7 @@ PluginView::~PluginView()
         m_plugin->destroyPlugin();
         m_isBeingDestroyed = false;
 #if PLATFORM(MAC)
-        setComplexTextInputState(PluginComplexTextInputDisabled);
+        pluginFocusOrWindowFocusChanged(false);
 #endif
     }
 
@@ -436,7 +436,7 @@ bool PluginView::sendComplexTextInput(uint64_t pluginComplexTextInputIdentifier,
 
 void PluginView::setLayerHostingMode(LayerHostingMode layerHostingMode)
 {
-    if (!m_plugin)
+    if (!m_isInitialized || !m_plugin)
         return;
 
     m_plugin->setLayerHostingMode(layerHostingMode);
