@@ -2979,14 +2979,14 @@ sub NativeToJSValue
         AddToImplIncludes("KURL.h", $conditional);
         my $conv = $signature->extendedAttributes->{"TreatReturnedNullStringAs"};
         if (defined $conv) {
-            return "jsTaint(jsStringOrNull(exec, $value), exec, $value)" if $conv eq "Null";
-            return "jsTaint(jsStringOrUndefined(exec, $value), exec, $value)" if $conv eq "Undefined";
-            return "jsTaint(jsStringOrFalse(exec, $value), exec, $value)" if $conv eq "False";
+            return "jsStringOrNull(exec, $value)" if $conv eq "Null";
+            return "jsStringOrUndefined(exec, $value)" if $conv eq "Undefined";
+            return "jsStringOrFalse(exec, $value)" if $conv eq "False";
 
             die "Unknown value for TreatReturnedNullStringAs extended attribute";
         }
         AddToImplIncludes("<runtime/JSString.h>", $conditional);
-        return "jsTaint(jsString(exec, $value), exec, $value)";
+        return "jsString(exec, $value)";
     }
 
     my $globalObject;

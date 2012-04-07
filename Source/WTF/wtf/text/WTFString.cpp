@@ -110,6 +110,9 @@ void String::append(const String& str)
             m_impl = newImpl.release();
         } else
             m_impl = str.m_impl;
+        
+        if (str.isTainted())
+            taint();
     }
 }
 
@@ -163,6 +166,8 @@ void String::insert(const String& str, unsigned pos)
             m_impl = str.impl();
         return;
     }
+    if (str.isTainted())
+        taint();
     insert(str.characters(), str.length(), pos);
 }
 
@@ -248,7 +253,7 @@ String String::substring(unsigned pos, unsigned len) const
 {
     if (!m_impl) 
         return String();
-    return m_impl->substring(pos, len);
+    return String(m_impl->substring(pos, len), isTainted());
 }
 
 String String::substringSharingImpl(unsigned offset, unsigned length) const
@@ -261,63 +266,63 @@ String String::substringSharingImpl(unsigned offset, unsigned length) const
 
     if (!offset && length == stringLength)
         return *this;
-    return String(StringImpl::create(m_impl, offset, length));
+    return String(StringImpl::create(m_impl, offset, length), isTainted());
 }
 
 String String::lower() const
 {
     if (!m_impl)
         return String();
-    return m_impl->lower();
+    return String(m_impl->lower(), isTainted());
 }
 
 String String::upper() const
 {
     if (!m_impl)
         return String();
-    return m_impl->upper();
+    return String(m_impl->upper(), isTainted());
 }
 
 String String::stripWhiteSpace() const
 {
     if (!m_impl)
         return String();
-    return m_impl->stripWhiteSpace();
+    return String(m_impl->stripWhiteSpace(), isTainted());
 }
 
 String String::stripWhiteSpace(IsWhiteSpaceFunctionPtr isWhiteSpace) const
 {
     if (!m_impl)
         return String();
-    return m_impl->stripWhiteSpace(isWhiteSpace);
+    return String(m_impl->stripWhiteSpace(isWhiteSpace), isTainted());
 }
 
 String String::simplifyWhiteSpace() const
 {
     if (!m_impl)
         return String();
-    return m_impl->simplifyWhiteSpace();
+    return String(m_impl->simplifyWhiteSpace(), isTainted());
 }
 
 String String::simplifyWhiteSpace(IsWhiteSpaceFunctionPtr isWhiteSpace) const
 {
     if (!m_impl)
         return String();
-    return m_impl->simplifyWhiteSpace(isWhiteSpace);
+    return String(m_impl->simplifyWhiteSpace(isWhiteSpace), isTainted());
 }
 
 String String::removeCharacters(CharacterMatchFunctionPtr findMatch) const
 {
     if (!m_impl)
         return String();
-    return m_impl->removeCharacters(findMatch);
+    return String(m_impl->removeCharacters(findMatch), isTainted());
 }
 
 String String::foldCase() const
 {
     if (!m_impl)
         return String();
-    return m_impl->foldCase();
+    return String(m_impl->foldCase(), isTainted());
 }
 
 bool String::percentage(int& result) const

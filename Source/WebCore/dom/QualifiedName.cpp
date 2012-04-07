@@ -60,6 +60,8 @@ void QualifiedName::init(const AtomicString& p, const AtomicString& l, const Ato
     m_impl = *addResult.iterator;
     if (!addResult.isNewEntry)
         m_impl->ref();
+    if(p.string().isTainted() || l.string().isTainted() | n.string().isTainted())
+        m_isTainted = true;
 }
 
 QualifiedName::QualifiedName(const AtomicString& p, const AtomicString& l, const AtomicString& n)
@@ -93,6 +95,8 @@ void QualifiedName::deref()
 String QualifiedName::toString() const
 {
     String local = localName();
+    if (m_isTainted)
+        local.taint();
     if (hasPrefix()) {
         String result = prefix().string();
         result.append(":");

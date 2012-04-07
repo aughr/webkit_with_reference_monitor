@@ -230,6 +230,7 @@ enum ParameterDefaultPolicy {
     void setDOMException(JSC::ExecState*, ExceptionCode);
 
     JSC::JSValue jsString(JSC::ExecState*, const String&); // empty if the string is null
+    JSC::JSValue jsStringUntainted(JSC::ExecState*, const String&); // empty if the string is null
     JSC::JSValue jsStringSlowCase(JSC::ExecState*, JSStringCache&, StringImpl*);
     JSC::JSValue jsString(JSC::ExecState*, const KURL&); // empty if the URL is null
     inline JSC::JSValue jsString(JSC::ExecState* exec, const AtomicString& s)
@@ -342,7 +343,7 @@ enum ParameterDefaultPolicy {
     void printErrorMessageForFrame(Frame*, const String& message);
     JSC::JSValue objectToStringFunctionGetter(JSC::ExecState*, JSC::JSValue, const JSC::Identifier& propertyName);
 
-    inline JSC::JSValue jsString(JSC::ExecState* exec, const String& s)
+    inline JSC::JSValue jsStringUntainted(JSC::ExecState* exec, const String& s)
     {
         StringImpl* stringImpl = s.impl();
         if (!stringImpl || !stringImpl->length())
@@ -357,6 +358,14 @@ enum ParameterDefaultPolicy {
             return it->second.get();
 
         return jsStringSlowCase(exec, stringCache, stringImpl);
+    }
+    
+    inline JSC::JSValue jsString(JSC::ExecState* exec, const String& s) {
+        JSC::JSValue result = jsStringUntainted(exec, s);
+        if (s.isTainted())
+            result = result.taint(exec);
+        return result;
+            
     }
 
     inline DOMObjectWrapperMap& domObjectWrapperMapFor(JSC::ExecState* exec)

@@ -94,6 +94,8 @@ public:
         if ((offset + length) > string.length())
             return;
 
+        if (string.isTainted())
+            m_isTainted = true;
         if (string.is8Bit())
             append(string.characters8() + offset, length);
         else
@@ -135,6 +137,8 @@ public:
         shrinkToFit();
         if (m_string.isNull())
             reifyString();
+        if (m_isTainted)
+            m_string.taint();
         return m_string;
     }
 
@@ -142,6 +146,8 @@ public:
     {
         if (m_string.isNull())
             reifyString();
+        if (m_isTainted)
+            m_string.taint();
         return m_string;
     }
 
@@ -265,6 +271,7 @@ private:
     unsigned m_length;
     mutable String m_string;
     RefPtr<StringImpl> m_buffer;
+    bool m_isTainted;
     bool m_is8Bit;
     mutable unsigned m_valid16BitShadowLength;
     union {

@@ -85,7 +85,7 @@ public:
         { return m_string.endsWith(s, caseSensitive); }
     
     WTF_EXPORT_PRIVATE AtomicString lower() const;
-    AtomicString upper() const { return AtomicString(impl()->upper()); }
+    AtomicString upper() const { return AtomicString(m_string.upper()); }
     
     int toInt(bool* ok = 0) const { return m_string.toInt(ok); }
     double toDouble(bool* ok = 0) const { return m_string.toDouble(ok); }
