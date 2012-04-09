@@ -163,6 +163,9 @@ public:
     bool hasAttributes() const;
     NamedNodeMap* attributes() const;
 
+    bool isTainted() const { return m_isTainted; }
+    void taint() { m_isTainted = true; }
+
     virtual KURL baseURI() const;
     
     void getSubresourceURLs(ListHashSet<KURL>&) const;
@@ -759,6 +762,7 @@ private:
     Node* m_previous;
     Node* m_next;
     RenderObject* m_renderer;
+    bool m_isTainted;
 
 protected:
     bool isParsingChildrenFinished() const { return getFlag(IsParsingChildrenFinishedFlag); }

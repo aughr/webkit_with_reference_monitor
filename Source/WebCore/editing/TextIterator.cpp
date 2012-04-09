@@ -263,6 +263,7 @@ TextIterator::TextIterator()
     , m_emitsObjectReplacementCharacters(false)
     , m_stopsOnFormControls(false)
     , m_shouldStop(false)
+    , m_seenTainted(false)
 {
 }
 
@@ -286,6 +287,7 @@ TextIterator::TextIterator(const Range* r, TextIteratorBehavior behavior)
     , m_emitsObjectReplacementCharacters(behavior & TextIteratorEmitsObjectReplacementCharacters)
     , m_stopsOnFormControls(behavior & TextIteratorStopsOnFormControls)
     , m_shouldStop(false)
+    , m_seenTainted(false)
 {
     if (!r)
         return;
@@ -411,6 +413,7 @@ void TextIterator::advance()
                     m_handledNode = handleReplacedElement();
                 else
                     m_handledNode = handleNonTextNode();
+                m_seenTainted = m_seenTainted || m_node->isTainted();
                 if (m_positionNode)
                     return;
             }
@@ -2531,7 +2534,7 @@ bool TextIterator::getLocationAndLengthFromRange(Element* scope, const Range* ra
 
 // --------
     
-UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool isDisplayString, TextIteratorBehavior defaultBehavior)
+UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool& isTainted, bool isDisplayString, TextIteratorBehavior defaultBehavior)
 {
     UChar* result = 0;
 
@@ -2559,6 +2562,7 @@ UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, 
         }
         textBuffer.append(it.characters(), it.length());
         bufferLength += it.length();
+        isTainted = isTainted || it.seenTainted();
     }
 
     if (!bufferLength)
@@ -2594,15 +2598,25 @@ exit:
 
     return result;
 }
+    
+UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool isDisplayString, TextIteratorBehavior defaultBehavior) {
+    bool isTainted = false;
+    return plainTextToMallocAllocatedBuffer(r, bufferLength, isTainted, isDisplayString, defaultBehavior);
+}
+    
+
 
 String plainText(const Range* r, TextIteratorBehavior defaultBehavior)
 {
     unsigned length;
-    UChar* buf = plainTextToMallocAllocatedBuffer(r, length, false, defaultBehavior);
+    bool isTainted;
+    UChar* buf = plainTextToMallocAllocatedBuffer(r, length, isTainted, false, defaultBehavior);
     if (!buf)
         return "";
     String result(buf, length);
     free(buf);
+    if (isTainted)
+        result.taint();
     return result;
 }
 

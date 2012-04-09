@@ -1057,11 +1057,16 @@ void replaceChildrenWithText(ContainerNode* container, const String& text, Excep
 #endif
 
     if (hasOneTextChild(containerNode.get())) {
-        toText(containerNode->firstChild())->setData(text, ec);
+        Text* textNode = toText(containerNode->firstChild());
+        textNode->setData(text, ec);
+        if (text.isTainted())
+            textNode->taint();
         return;
     }
 
     RefPtr<Text> textNode = Text::create(containerNode->document(), text);
+    if (text.isTainted())
+        textNode->taint();
 
     if (hasOneChild(containerNode.get())) {
         containerNode->replaceChild(textNode.release(), containerNode->firstChild(), ec);
