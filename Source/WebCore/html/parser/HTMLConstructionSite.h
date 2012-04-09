@@ -159,6 +159,8 @@ private:
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
+    bool shouldTaint() const { return m_attachmentRoot->isTainted(); }
+
     PassRefPtr<Element> createHTMLElementFromSavedElement(Element*);
     PassRefPtr<Element> createElement(AtomicHTMLToken&, const AtomicString& namespaceURI);
 

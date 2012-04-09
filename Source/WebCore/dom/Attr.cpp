@@ -117,7 +117,7 @@ void Attr::setPrefix(const AtomicString& prefix, ExceptionCode& ec)
 
 String Attr::nodeValue() const
 {
-    return value();
+    return String(value().impl(), isTainted());
 }
 
 void Attr::setValue(const AtomicString& value)

@@ -89,7 +89,7 @@ Node::NodeType ProcessingInstruction::nodeType() const
 
 String ProcessingInstruction::nodeValue() const
 {
-    return m_data;
+    return String(m_data.impl(), isTainted());
 }
 
 void ProcessingInstruction::setNodeValue(const String& nodeValue, ExceptionCode& ec)

@@ -997,6 +997,9 @@ PassRefPtr<DocumentFragment> createFragmentFromSource(const String& markup, Elem
     Document* document = contextElement->document();
     RefPtr<DocumentFragment> fragment = DocumentFragment::create(document);
 
+    if (markup.isTainted())
+        fragment->taint();
+
     if (document->isHTMLDocument()) {
         fragment->parseHTML(markup, contextElement);
         return fragment;

@@ -262,20 +262,29 @@ void HTMLConstructionSite::insertDoctype(AtomicHTMLToken& token)
 void HTMLConstructionSite::insertComment(AtomicHTMLToken& token)
 {
     ASSERT(token.type() == HTMLTokenTypes::Comment);
-    attachLater(currentNode(), Comment::create(currentNode()->document(), token.comment()));
+    RefPtr<Comment> comment = Comment::create(currentNode()->document(), token.comment());
+    if (shouldTaint())
+        comment->taint();
+    attachLater(currentNode(), comment.release());
 }
 
 void HTMLConstructionSite::insertCommentOnDocument(AtomicHTMLToken& token)
 {
     ASSERT(token.type() == HTMLTokenTypes::Comment);
-    attachLater(m_attachmentRoot, Comment::create(m_document, token.comment()));
+    RefPtr<Comment> comment = Comment::create(m_document, token.comment());
+    if (shouldTaint())
+        comment->taint();
+    attachLater(m_attachmentRoot, comment.release());
 }
 
 void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomicHTMLToken& token)
 {
     ASSERT(token.type() == HTMLTokenTypes::Comment);
     ContainerNode* parent = m_openElements.rootNode();
-    attachLater(parent, Comment::create(parent->document(), token.comment()));
+    RefPtr<Comment> comment = Comment::create(parent->document(), token.comment());
+    if (shouldTaint())
+        comment->taint();
+    attachLater(parent, comment);
 }
 
 void HTMLConstructionSite::insertHTMLHeadElement(AtomicHTMLToken& token)
@@ -387,6 +396,8 @@ void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMo
             String substring = characters.substring(currentPosition);
             textNode = Text::create(task.parent->document(), shouldUseAtomicString ? AtomicString(substring).string() : substring);
         }
+        if (shouldTaint())
+            textNode->taint();
 
         currentPosition += textNode->length();
         ASSERT(currentPosition <= characters.length());
@@ -399,6 +410,8 @@ PassRefPtr<Element> HTMLConstructionSite::createElement(AtomicHTMLToken& token, 
 {
     QualifiedName tagName(nullAtom, token.name(), namespaceURI);
     RefPtr<Element> element = currentNode()->document()->createElement(tagName, true);
+    if (shouldTaint())
+        element->taint();
     element->parserSetAttributes(token.takeAttributes(), m_fragmentScriptingPermission);
     return element.release();
 }
@@ -410,6 +423,8 @@ PassRefPtr<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken& tok
     // have to pass the current form element.  We should rework form association
     // to occur after construction to allow better code sharing here.
     RefPtr<Element> element = HTMLElementFactory::createHTMLElement(tagName, currentNode()->document(), form(), true);
+    if (shouldTaint())
+        element->taint();
     element->parserSetAttributes(token.takeAttributes(), m_fragmentScriptingPermission);
     ASSERT(element->isHTMLElement());
     return element.release();

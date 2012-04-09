@@ -161,7 +161,7 @@ void CharacterData::replaceData(unsigned offset, unsigned count, const String& d
 
 String CharacterData::nodeValue() const
 {
-    return m_data;
+    return String(m_data.impl(), isTainted());
 }
 
 bool CharacterData::containsOnlyWhitespace() const
