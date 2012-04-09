@@ -71,6 +71,8 @@ void ProcessingInstruction::setData(const String& data, ExceptionCode&)
 {
     int oldLength = m_data.length();
     m_data = data;
+    if (data.isTainted())
+        taint();
     document()->textRemoved(this, 0, oldLength);
     checkStyleSheet();
 }

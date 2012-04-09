@@ -138,6 +138,8 @@ void Attr::setValue(const AtomicString& value, ExceptionCode&)
         m_element->willModifyAttribute(m_attribute->name(), m_attribute->value(), value);
 
     setValue(value);
+    if (value.string().isTainted())
+        taint();
 
     if (m_element)
         m_element->didModifyAttribute(m_attribute.get());

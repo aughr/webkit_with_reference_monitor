@@ -49,7 +49,7 @@ public:
 
 protected:
     CharacterData(Document* document, const String& text, ConstructionType type)
-        : Node(document, type)
+        : Node(document, type, text.isTainted())
         , m_data(!text.isNull() ? text : emptyString())
     {
         ASSERT(type == CreateOther || type == CreateText);

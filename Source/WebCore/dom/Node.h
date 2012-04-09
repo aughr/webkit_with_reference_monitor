@@ -693,7 +693,7 @@ protected:
         CreateSVGElement = CreateStyledElement | IsSVGFlag,
         CreateDocument = CreateContainer | InDocumentFlag
     };
-    Node(Document*, ConstructionType);
+    Node(Document*, ConstructionType, bool isTainted=false);
 
     virtual void didMoveToNewDocument(Document* oldDocument);
     

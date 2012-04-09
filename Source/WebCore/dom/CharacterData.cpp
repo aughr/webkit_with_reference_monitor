@@ -41,6 +41,8 @@ namespace WebCore {
 void CharacterData::setData(const String& data, ExceptionCode&)
 {
     const String& nonNullData = !data.isNull() ? data : emptyString();
+    if (nonNullData.isTainted())
+        taint();
     if (m_data == nonNullData)
         return;
 
