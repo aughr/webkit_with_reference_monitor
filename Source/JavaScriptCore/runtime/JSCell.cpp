@@ -128,6 +128,18 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned ident
     return thisObject->methodTable()->deletePropertyByIndex(thisObject, exec, identifier);
 }
 
+bool JSCell::hasTaintAnywhereCell(const JSCell* cell) {
+    return JSCell::isTaintedCell(cell);
+}
+
+bool JSCell::isTaintedCell(const JSCell* cell) {
+    return cell->m_isTainted;
+}
+
+void JSCell::taintCell(JSCell* cell) {
+    cell->m_isTainted = true;
+}
+
 JSObject* JSCell::toThisObject(JSCell* cell, ExecState* exec)
 {
     return cell->toObject(exec, exec->lexicalGlobalObject());
@@ -210,10 +222,6 @@ bool JSCell::getOwnPropertyDescriptor(JSObject*, ExecState*, const Identifier&, 
 {
     ASSERT_NOT_REACHED();
     return false;
-}
-
-bool JSCell::hasTaintAnywhere() const {
-    return isTainted();
 }
 
 } // namespace JSC

@@ -209,6 +209,24 @@ void JSNode::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.addOpaqueRoot(root(node));
 }
 
+void JSNode::taintCell(JSCell* cell)
+{
+    JSNode* thisObject = jsCast<JSNode*>(cell);
+    thisObject->impl()->taint();
+}
+
+bool JSNode::isTaintedCell(const JSCell* cell)
+{
+    const JSNode* thisObject = jsCast<const JSNode*>(cell);
+    return thisObject->impl()->isTainted();
+}
+
+bool JSNode::hasTaintAnywhereCell(const JSCell* cell)
+{
+    const JSNode* thisObject = jsCast<const JSNode*>(cell);
+    return thisObject->impl()->isTainted();
+}
+
 static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObject* globalObject, Node* node)
 {
     ASSERT(node);

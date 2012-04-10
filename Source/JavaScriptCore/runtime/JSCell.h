@@ -82,6 +82,9 @@ namespace JSC {
         bool isTainted() const;
         bool hasTaintAnywhere() const;
         void taint();
+        JS_EXPORT_PRIVATE static bool isTaintedCell(const JSCell*);
+        JS_EXPORT_PRIVATE static bool hasTaintAnywhereCell(const JSCell*);
+        JS_EXPORT_PRIVATE static void taintCell(JSCell*);
 
         Structure* structure() const;
         void setStructure(JSGlobalData&, Structure*);
@@ -203,14 +206,6 @@ namespace JSC {
     inline void JSCell::visitChildren(JSCell* cell, SlotVisitor& visitor)
     {
         visitor.append(&cell->m_structure);
-    }
-    
-    inline bool JSCell::isTainted() const {
-        return m_isTainted;
-    }
-    
-    inline void JSCell::taint() {
-        m_isTainted = true;
     }
 
     // --- JSValue inlines ----------------------------

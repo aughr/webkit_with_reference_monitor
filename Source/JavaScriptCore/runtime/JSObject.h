@@ -523,6 +523,18 @@ inline const MethodTable* JSCell::methodTable() const
     return &classInfo()->methodTable;
 }
 
+inline bool JSCell::hasTaintAnywhere() const {
+    return methodTable()->hasTaintAnywhereCell(this);
+}
+
+inline bool JSCell::isTainted() const {
+    return methodTable()->isTaintedCell(this);
+}
+
+inline void JSCell::taint() {
+    methodTable()->taintCell(this);
+}
+
 // this method is here to be after the inline declaration of JSCell::inherits
 inline bool JSValue::inherits(const ClassInfo* classInfo) const
 {

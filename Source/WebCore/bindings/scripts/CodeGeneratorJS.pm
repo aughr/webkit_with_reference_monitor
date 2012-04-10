@@ -806,6 +806,13 @@ sub GenerateHeader
         $structureFlags{"JSC::OverridesGetPropertyNames"} = 1;
     }
 
+    # Custom taint functions exist on Node
+    if ($interfaceName eq "Node") {
+        push(@headerContent, "    static void taintCell(JSC::JSCell*);\n");
+        push(@headerContent, "    static bool isTaintedCell(const JSC::JSCell*);\n");
+        push(@headerContent, "    static bool hasTaintAnywhereCell(const JSC::JSCell*);\n");
+    }
+
     # Custom getOwnPropertyNames function
     if ($dataNode->extendedAttributes->{"CustomEnumerateProperty"} || $dataNode->extendedAttributes->{"IndexedGetter"} || $dataNode->extendedAttributes->{"NumericIndexedGetter"}) {
         push(@headerContent, "    static void getOwnPropertyNames(JSC::JSObject*, JSC::ExecState*, JSC::PropertyNameArray&, JSC::EnumerationMode mode = JSC::ExcludeDontEnumProperties);\n");
