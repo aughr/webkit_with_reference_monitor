@@ -70,6 +70,8 @@
 #include "ScopeChainMark.h"
 #include "StringConstructor.h"
 #include "StringPrototype.h"
+#include "SecurityTagConstructor.h"
+#include "SecurityTagPrototype.h"
 #include "Debugger.h"
 
 #include "JSGlobalObject.lut.h"
@@ -242,6 +244,9 @@ void JSGlobalObject::reset(JSValue prototype)
     m_regExpPrototype.set(exec->globalData(), this, RegExpPrototype::create(exec, this, RegExpPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get()), emptyRegex));
     m_regExpStructure.set(exec->globalData(), this, RegExpObject::createStructure(exec->globalData(), this, m_regExpPrototype.get()));
 
+    m_securityTagPrototype.set(exec->globalData(), this, SecurityTagPrototype::create(exec, this, SecurityTagPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get())));
+    m_securityTagStructure.set(exec->globalData(), this, SecurityTagObject::createStructure(exec->globalData(), this, m_securityTagPrototype.get()));
+
     m_methodCallDummy.set(exec->globalData(), this, constructEmptyObject(exec));
 
     ErrorPrototype* errorPrototype = ErrorPrototype::create(exec, this, ErrorPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get()));
@@ -261,6 +266,8 @@ void JSGlobalObject::reset(JSValue prototype)
 
     m_errorConstructor.set(exec->globalData(), this, ErrorConstructor::create(exec, this, ErrorConstructor::createStructure(exec->globalData(), this, m_functionPrototype.get()), errorPrototype));
 
+    m_securityTagConstructor.set(exec->globalData(), this, SecurityTagConstructor::create(exec, this, SecurityTagConstructor::createStructure(exec->globalData(), this, m_functionPrototype.get()), m_securityTagPrototype.get()));
+
     Structure* nativeErrorPrototypeStructure = NativeErrorPrototype::createStructure(exec->globalData(), this, errorPrototype);
     Structure* nativeErrorStructure = NativeErrorConstructor::createStructure(exec->globalData(), this, m_functionPrototype.get());
     m_evalErrorConstructor.set(exec->globalData(), this, NativeErrorConstructor::create(exec, this, nativeErrorStructure, nativeErrorPrototypeStructure, "EvalError"));
@@ -279,6 +286,7 @@ void JSGlobalObject::reset(JSValue prototype)
     m_datePrototype->putDirectWithoutTransition(exec->globalData(), exec->propertyNames().constructor, dateConstructor, DontEnum);
     m_regExpPrototype->putDirectWithoutTransition(exec->globalData(), exec->propertyNames().constructor, m_regExpConstructor.get(), DontEnum);
     errorPrototype->putDirectWithoutTransition(exec->globalData(), exec->propertyNames().constructor, m_errorConstructor.get(), DontEnum);
+    m_securityTagPrototype->putDirectWithoutTransition(exec->globalData(), exec->propertyNames().constructor, m_securityTagConstructor.get(), DontEnum);
 
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "Object"), objectConstructor, DontEnum);
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "Function"), functionConstructor, DontEnum);
@@ -288,6 +296,7 @@ void JSGlobalObject::reset(JSValue prototype)
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "Number"), numberConstructor, DontEnum);
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "Date"), dateConstructor, DontEnum);
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "RegExp"), m_regExpConstructor.get(), DontEnum);
+    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "SecurityTag"), m_securityTagConstructor.get(), DontEnum | DontDelete | ReadOnly);
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "Error"), m_errorConstructor.get(), DontEnum);
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "EvalError"), m_evalErrorConstructor.get(), DontEnum);
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "RangeError"), m_rangeErrorConstructor.get(), DontEnum);
@@ -344,6 +353,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitIfNeeded(visitor, &thisObject->m_methodCallDummy);
 
     visitIfNeeded(visitor, &thisObject->m_regExpConstructor);
+    visitIfNeeded(visitor, &thisObject->m_securityTagConstructor);
     visitIfNeeded(visitor, &thisObject->m_errorConstructor);
     visitIfNeeded(visitor, &thisObject->m_evalErrorConstructor);
     visitIfNeeded(visitor, &thisObject->m_rangeErrorConstructor);
@@ -365,6 +375,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitIfNeeded(visitor, &thisObject->m_numberPrototype);
     visitIfNeeded(visitor, &thisObject->m_datePrototype);
     visitIfNeeded(visitor, &thisObject->m_regExpPrototype);
+    visitIfNeeded(visitor, &thisObject->m_securityTagPrototype);
 
     visitIfNeeded(visitor, &thisObject->m_argumentsStructure);
     visitIfNeeded(visitor, &thisObject->m_arrayStructure);
@@ -383,6 +394,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitIfNeeded(visitor, &thisObject->m_regExpMatchesArrayStructure);
     visitIfNeeded(visitor, &thisObject->m_regExpStructure);
     visitIfNeeded(visitor, &thisObject->m_stringObjectStructure);
+    visitIfNeeded(visitor, &thisObject->m_securityTagStructure);
     visitIfNeeded(visitor, &thisObject->m_internalFunctionStructure);
 
     if (thisObject->m_registerArray) {

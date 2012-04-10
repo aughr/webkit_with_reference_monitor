@@ -55,6 +55,7 @@ all : \
     RegExpPrototype.lut.h \
     RegExpJitTables.h \
     RegExpObject.lut.h \
+	SecurityTagPrototype.lut.h \
     StringConstructor.lut.h \
     StringPrototype.lut.h \
     docs/bytecode.html \

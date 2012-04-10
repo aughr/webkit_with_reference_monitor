@@ -50,6 +50,8 @@ namespace JSC {
     class RegExpConstructor;
     class RegExpPrototype;
     class RegisterFile;
+    class SecurityTagConstructor;
+    class SecurityTagPrototype;
 
     struct ActivationStackNode;
     struct HashTable;
@@ -102,6 +104,7 @@ namespace JSC {
         WriteBarrier<NativeErrorConstructor> m_syntaxErrorConstructor;
         WriteBarrier<NativeErrorConstructor> m_typeErrorConstructor;
         WriteBarrier<NativeErrorConstructor> m_URIErrorConstructor;
+        WriteBarrier<SecurityTagConstructor> m_securityTagConstructor;
 
         WriteBarrier<JSFunction> m_evalFunction;
         WriteBarrier<JSFunction> m_callFunction;
@@ -116,6 +119,7 @@ namespace JSC {
         WriteBarrier<NumberPrototype> m_numberPrototype;
         WriteBarrier<DatePrototype> m_datePrototype;
         WriteBarrier<RegExpPrototype> m_regExpPrototype;
+        WriteBarrier<SecurityTagPrototype> m_securityTagPrototype;
 
         WriteBarrier<Structure> m_argumentsStructure;
         WriteBarrier<Structure> m_arrayStructure;
@@ -134,6 +138,7 @@ namespace JSC {
         WriteBarrier<Structure> m_numberObjectStructure;
         WriteBarrier<Structure> m_regExpMatchesArrayStructure;
         WriteBarrier<Structure> m_regExpStructure;
+        WriteBarrier<Structure> m_securityTagStructure;
         WriteBarrier<Structure> m_stringObjectStructure;
         WriteBarrier<Structure> m_internalFunctionStructure;
 
@@ -228,6 +233,8 @@ namespace JSC {
         NativeErrorConstructor* syntaxErrorConstructor() const { return m_syntaxErrorConstructor.get(); }
         NativeErrorConstructor* typeErrorConstructor() const { return m_typeErrorConstructor.get(); }
         NativeErrorConstructor* URIErrorConstructor() const { return m_URIErrorConstructor.get(); }
+        
+        SecurityTagConstructor* SecurityTagConstructor() const { return m_securityTagConstructor.get(); }
 
         JSFunction* evalFunction() const { return m_evalFunction.get(); }
         JSFunction* callFunction() const { return m_callFunction.get(); }
@@ -247,6 +254,7 @@ namespace JSC {
         NumberPrototype* numberPrototype() const { return m_numberPrototype.get(); }
         DatePrototype* datePrototype() const { return m_datePrototype.get(); }
         RegExpPrototype* regExpPrototype() const { return m_regExpPrototype.get(); }
+        SecurityTagPrototype* securityTagPrototype() const { return m_securityTagPrototype.get(); }
 
         JSObject* methodCallDummy() const { return m_methodCallDummy.get(); }
 
@@ -268,6 +276,7 @@ namespace JSC {
         Structure* internalFunctionStructure() const { return m_internalFunctionStructure.get(); }
         Structure* regExpMatchesArrayStructure() const { return m_regExpMatchesArrayStructure.get(); }
         Structure* regExpStructure() const { return m_regExpStructure.get(); }
+        Structure* securityTagStructure() const { return m_securityTagStructure.get(); }
         Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
 
         void setProfileGroup(unsigned value) { createRareDataIfNeeded(); m_rareData->profileGroup = value; }

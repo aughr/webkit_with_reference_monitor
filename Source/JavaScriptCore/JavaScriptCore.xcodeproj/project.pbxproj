@@ -336,6 +336,13 @@
 		2600B5A7152BAAA70091EE5F /* JSStringJoiner.h in Headers */ = {isa = PBXBuildFile; fileRef = 2600B5A5152BAAA70091EE5F /* JSStringJoiner.h */; };
 		41359CF30FDD89AD00206180 /* DateConversion.h in Headers */ = {isa = PBXBuildFile; fileRef = D21202290AD4310C00ED79B6 /* DateConversion.h */; };
 		451539B912DC994500EF7AC4 /* Yarr.h in Headers */ = {isa = PBXBuildFile; fileRef = 451539B812DC994500EF7AC4 /* Yarr.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		51F8282515348B62006118A6 /* SecurityTagPrototype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F8282415348B62006118A6 /* SecurityTagPrototype.cpp */; };
+		51F8282B15348EC9006118A6 /* SecurityTagPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F8282A15348EC9006118A6 /* SecurityTagPrototype.h */; };
+		51F8282D15348F9A006118A6 /* SecurityTagObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F8282C15348F9A006118A6 /* SecurityTagObject.h */; };
+		51F8282F15349012006118A6 /* SecurityTagObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F8282E15349012006118A6 /* SecurityTagObject.cpp */; };
+		51F828311534917A006118A6 /* SecurityTagConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F828301534917A006118A6 /* SecurityTagConstructor.h */; };
+		51F8283315349251006118A6 /* SecurityTagConstructor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F8283215349251006118A6 /* SecurityTagConstructor.cpp */; };
+		51F828351534A7D4006118A6 /* SecurityTagPrototype.lut.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F828341534A7D4006118A6 /* SecurityTagPrototype.lut.h */; };
 		5D53726F0E1C54880021E549 /* Tracing.h in Headers */ = {isa = PBXBuildFile; fileRef = 5D53726E0E1C54880021E549 /* Tracing.h */; };
 		5D5D8AD10E0D0EBE00F9C692 /* libedit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5D5D8AD00E0D0EBE00F9C692 /* libedit.dylib */; };
 		5DBB151B131D0B310056AD36 /* testapi.js in Copy Support Script */ = {isa = PBXBuildFile; fileRef = 14D857740A4696C80032146C /* testapi.js */; };
@@ -974,6 +981,13 @@
 		45E12D8806A49B0F00E9DF84 /* jsc.cpp */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.cpp.cpp; path = jsc.cpp; sourceTree = "<group>"; tabWidth = 4; };
 		51F0EB6105C86C6B00E6DF1B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		51F0EC0705C86C9A00E6DF1B /* libobjc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjc.dylib; path = /usr/lib/libobjc.dylib; sourceTree = "<absolute>"; };
+		51F8282415348B62006118A6 /* SecurityTagPrototype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityTagPrototype.cpp; sourceTree = "<group>"; };
+		51F8282A15348EC9006118A6 /* SecurityTagPrototype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityTagPrototype.h; sourceTree = "<group>"; };
+		51F8282C15348F9A006118A6 /* SecurityTagObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityTagObject.h; sourceTree = "<group>"; };
+		51F8282E15349012006118A6 /* SecurityTagObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityTagObject.cpp; sourceTree = "<group>"; };
+		51F828301534917A006118A6 /* SecurityTagConstructor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityTagConstructor.h; sourceTree = "<group>"; };
+		51F8283215349251006118A6 /* SecurityTagConstructor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityTagConstructor.cpp; sourceTree = "<group>"; };
+		51F828341534A7D4006118A6 /* SecurityTagPrototype.lut.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityTagPrototype.lut.h; sourceTree = "<group>"; };
 		5D53726D0E1C546B0021E549 /* Tracing.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Tracing.d; sourceTree = "<group>"; };
 		5D53726E0E1C54880021E549 /* Tracing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Tracing.h; sourceTree = "<group>"; };
 		5D53727D0E1C55EC0021E549 /* TracingDtrace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TracingDtrace.h; sourceTree = "<group>"; };
@@ -1728,6 +1742,7 @@
 				BCD202D50E170708002C7E82 /* RegExpConstructor.lut.h */,
 				A718F61A11754A21002465A7 /* RegExpJitTables.h */,
 				BC18C52B0E16FCD200B34460 /* RegExpObject.lut.h */,
+				51F828341534A7D4006118A6 /* SecurityTagPrototype.lut.h */,
 				BC18C5250E16FCA700B34460 /* StringPrototype.lut.h */,
 				5D53727D0E1C55EC0021E549 /* TracingDtrace.h */,
 			);
@@ -1951,6 +1966,12 @@
 				9374D3A8038D9D74008635CE /* ScopeChain.cpp */,
 				9374D3A7038D9D74008635CE /* ScopeChain.h */,
 				7E2C6C980D31C6B6002D44E2 /* ScopeChainMark.h */,
+				51F8282415348B62006118A6 /* SecurityTagPrototype.cpp */,
+				51F8282A15348EC9006118A6 /* SecurityTagPrototype.h */,
+				51F8282C15348F9A006118A6 /* SecurityTagObject.h */,
+				51F8282E15349012006118A6 /* SecurityTagObject.cpp */,
+				51F828301534917A006118A6 /* SecurityTagConstructor.h */,
+				51F8283215349251006118A6 /* SecurityTagConstructor.cpp */,
 				93303FE80E6A72B500786E6A /* SmallStrings.cpp */,
 				93303FEA0E6A72C000786E6A /* SmallStrings.h */,
 				A781E358141970C700094D90 /* StorageBarrier.h */,
@@ -2566,6 +2587,10 @@
 				0F2BDC21151E803B00CD8910 /* DFGInsertionSet.h in Headers */,
 				0F2BDC2C151FDE9100CD8910 /* Operands.h in Headers */,
 				8612E4CD152389EC00C836BE /* MatchResult.h in Headers */,
+				51F8282B15348EC9006118A6 /* SecurityTagPrototype.h in Headers */,
+				51F8282D15348F9A006118A6 /* SecurityTagObject.h in Headers */,
+				51F828311534917A006118A6 /* SecurityTagConstructor.h in Headers */,
+				51F828351534A7D4006118A6 /* SecurityTagPrototype.lut.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3129,6 +3154,9 @@
 				8642C510151C06A90046D4EF /* RegExpCachedResult.cpp in Sources */,
 				8642C512151C083D0046D4EF /* RegExpMatchesArray.cpp in Sources */,
 				863C6D9C1521111A00585E4E /* YarrCanonicalizeUCS2.cpp in Sources */,
+				51F8282515348B62006118A6 /* SecurityTagPrototype.cpp in Sources */,
+				51F8282F15349012006118A6 /* SecurityTagObject.cpp in Sources */,
+				51F8283315349251006118A6 /* SecurityTagConstructor.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
