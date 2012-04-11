@@ -107,7 +107,7 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
     if (numArgs == 0) // new Date() ECMA 15.9.3.3
         value = jsCurrentTime();
     else if (numArgs == 1) {
-        tainted = args.at(0).hasTaintAnywhere();
+        tainted = args.at(0).hasTaintAnywhere(exec);
         if (args.at(0).inherits(&DateInstance::s_info))
             value = asDateInstance(args.at(0))->internalNumber();
         else {
@@ -127,13 +127,13 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
             args.at(5).toNumber(exec), 
             args.at(6).toNumber(exec)
         };
-        tainted = exec->argument(0).hasTaintAnywhere()
-            || exec->argument(1).hasTaintAnywhere()
-            || exec->argument(2).hasTaintAnywhere()
-            || exec->argument(3).hasTaintAnywhere()
-            || exec->argument(4).hasTaintAnywhere()
-            || exec->argument(5).hasTaintAnywhere()
-            || exec->argument(6).hasTaintAnywhere();
+        tainted = exec->argument(0).hasTaintAnywhere(exec)
+            || exec->argument(1).hasTaintAnywhere(exec)
+            || exec->argument(2).hasTaintAnywhere(exec)
+            || exec->argument(3).hasTaintAnywhere(exec)
+            || exec->argument(4).hasTaintAnywhere(exec)
+            || exec->argument(5).hasTaintAnywhere(exec)
+            || exec->argument(6).hasTaintAnywhere(exec);
         if (!isfinite(doubleArguments[0])
             || !isfinite(doubleArguments[1])
             || (numArgs >= 3 && !isfinite(doubleArguments[2]))
@@ -159,7 +159,7 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
 
     JSObject* object = DateInstance::create(exec, globalObject->dateStructure(), value);
     if (tainted)
-        object->taint();
+        object->taint(exec);
     return object;
 }
     
@@ -195,7 +195,7 @@ CallType DateConstructor::getCallData(JSCell*, CallData& callData)
 
 static EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
 {
-    bool tainted = exec->argument(0).hasTaintAnywhere();
+    bool tainted = exec->argument(0).hasTaintAnywhere(exec);
     return JSValue::encode(jsNumber(parseDate(exec, exec->argument(0).toString(exec)->value(exec))), exec, tainted);
 }
 
@@ -215,13 +215,13 @@ static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
         exec->argument(5).toNumber(exec), 
         exec->argument(6).toNumber(exec)
     };
-    bool tainted = exec->argument(0).hasTaintAnywhere()
-                || exec->argument(1).hasTaintAnywhere()
-                || exec->argument(2).hasTaintAnywhere()
-                || exec->argument(3).hasTaintAnywhere()
-                || exec->argument(4).hasTaintAnywhere()
-                || exec->argument(5).hasTaintAnywhere()
-                || exec->argument(6).hasTaintAnywhere();
+    bool tainted = exec->argument(0).hasTaintAnywhere(exec)
+                || exec->argument(1).hasTaintAnywhere(exec)
+                || exec->argument(2).hasTaintAnywhere(exec)
+                || exec->argument(3).hasTaintAnywhere(exec)
+                || exec->argument(4).hasTaintAnywhere(exec)
+                || exec->argument(5).hasTaintAnywhere(exec)
+                || exec->argument(6).hasTaintAnywhere(exec);
     int n = exec->argumentCount();
     if (isnan(doubleArguments[0])
             || isnan(doubleArguments[1])

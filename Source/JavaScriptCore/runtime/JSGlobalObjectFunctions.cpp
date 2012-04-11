@@ -529,7 +529,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
 {
     JSValue value = exec->argument(0);
     JSValue radixValue = exec->argument(1);
-    bool tainted = value.hasTaintAnywhere() || radixValue.hasTaintAnywhere();
+    bool tainted = value.hasTaintAnywhere(exec) || radixValue.hasTaintAnywhere(exec);
 
     // Optimized handling for numbers:
     // If the argument is 0 or a number in range 10^-6 <= n < INT_MAX+1, then parseInt
@@ -559,7 +559,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL globalFuncParseFloat(ExecState* exec)
 {
     JSString *string = exec->argument(0).toString(exec);
-    bool tainted = string->isTainted();
+    bool tainted = string->isTainted(exec);
     return JSValue::encode(jsNumber(parseFloat(string->value(exec))), exec, tainted);
 }
 
@@ -578,7 +578,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsTainted(ExecState* exec)
 {
     JSValue argument = exec->argument(0);
     if (argument.isCell()) {
-        bool result = argument.asCell()->isTainted();
+        bool result = argument.asCell()->isTainted(exec);
         return JSValue::encode(jsBoolean(result));
     } else {
         return JSValue::encode(jsBoolean(false));
@@ -589,7 +589,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsFinite(ExecState* exec)
 {
     JSValue value = exec->argument(0);
     double n = exec->argument(0).toNumber(exec);
-    return JSValue::encode(jsBoolean(isfinite(n)), exec, value.hasTaintAnywhere());
+    return JSValue::encode(jsBoolean(isfinite(n)), exec, value.hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncDecodeURI(ExecState* exec)
@@ -597,13 +597,13 @@ EncodedJSValue JSC_HOST_CALL globalFuncDecodeURI(ExecState* exec)
     static const char do_not_unescape_when_decoding_URI[] =
         "#$&+,/:;=?@";
 
-    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere();
+    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere(exec);
     return JSValue::encode(decode(exec, do_not_unescape_when_decoding_URI, true), exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncDecodeURIComponent(ExecState* exec)
 {
-    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere();
+    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere(exec);
     return JSValue::encode(decode(exec, "", true), exec, tainted);
 }
 
@@ -615,7 +615,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEncodeURI(ExecState* exec)
         "0123456789"
         "!#$&'()*+,-./:;=?@_~";
 
-    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere();
+    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere(exec);
     return JSValue::encode(encode(exec, do_not_escape_when_encoding_URI), exec, tainted);
 }
 
@@ -627,7 +627,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEncodeURIComponent(ExecState* exec)
         "0123456789"
         "!'()*-._~";
 
-    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere();
+    bool tainted = exec->argument(0).toString(exec)->hasTaintAnywhere(exec);
     return JSValue::encode(encode(exec, do_not_escape_when_encoding_URI_component), exec, tainted);
 }
 
@@ -640,7 +640,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
         "*+-./@_";
 
     JSString* string = exec->argument(0).toString(exec);
-    bool tainted = string->isTainted();
+    bool tainted = string->isTainted(exec);
     JSStringBuilder builder;
     UString str = string->value(exec);
     if (str.is8Bit()) {
@@ -681,7 +681,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState* exec)
 {
     JSString* string = exec->argument(0).toString(exec);
-    bool tainted = string->isTainted();
+    bool tainted = string->isTainted(exec);
     UStringBuilder builder;
     UString str = string->value(exec);
     int k = 0;

@@ -242,8 +242,8 @@ namespace JSC {
         JS_EXPORT_PRIVATE bool isValidCallee();
         
         JSValue taint(ExecState*);
-        bool isTainted() const;
-        bool hasTaintAnywhere() const;
+        bool isTainted(ExecState*) const;
+        bool hasTaintAnywhere(ExecState*) const;
 
         char* description();
 

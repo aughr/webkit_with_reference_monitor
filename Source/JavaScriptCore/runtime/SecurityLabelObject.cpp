@@ -18,33 +18,37 @@
  */
 
 #include "config.h"
-#include "SecurityTagObject.h"
+#include "SecurityLabelObject.h"
 
 #include "JSGlobalObject.h"
-#include "SecurityTagPrototype.h"
+#include "SecurityLabelPrototype.h"
 
 namespace JSC {
     
-    ASSERT_CLASS_FITS_IN_CELL(SecurityTagObject);
-    ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagObject);
+    ASSERT_CLASS_FITS_IN_CELL(SecurityLabelObject);
     
-    const ClassInfo SecurityTagObject::s_info = { "SecurityTag", &JSWrapperObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagObject) };
+    void SecurityLabelObject::destroy(JSCell* cell)
+    {
+        SecurityLabelObject* thisObject = jsCast<SecurityLabelObject*>(cell);
+        thisObject->SecurityLabelObject::~SecurityLabelObject();
+    }
+
+    const ClassInfo SecurityLabelObject::s_info = { "SecurityLabel", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityLabelObject) };
     
-    SecurityTagObject::SecurityTagObject(JSGlobalData& globalData, Structure* structure)
-    : JSWrapperObject(globalData, structure)
+    SecurityLabelObject::SecurityLabelObject(JSGlobalData& globalData, Structure* structure)
+    : JSNonFinalObject(globalData, structure)
     {
     }
     
-    void SecurityTagObject::finishCreation(JSGlobalData& globalData)
+    void SecurityLabelObject::finishCreation(JSGlobalData& globalData)
     {
         Base::finishCreation(globalData);
-        setInternalValue(globalData, jsNumber(monotonicallyIncreasingTime()));
         ASSERT(inherits(&s_info));
     }
     
-    SecurityTagObject* constructSecurityTag(ExecState* exec, JSGlobalObject* globalObject)
+    SecurityLabelObject* constructSecurityLabel(ExecState* exec, JSGlobalObject* globalObject)
     {
-        SecurityTagObject* object = SecurityTagObject::create(exec->globalData(), globalObject->securityTagStructure());
+        SecurityLabelObject* object = SecurityLabelObject::create(exec->globalData(), globalObject->securityLabelStructure());
         return object;
     }
     

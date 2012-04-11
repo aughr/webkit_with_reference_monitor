@@ -32,6 +32,7 @@
 #include "SlotVisitor.h"
 #include "WriteBarrier.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/SecurityLabel.h>
 
 namespace JSC {
 
@@ -40,6 +41,7 @@ namespace JSC {
     class PropertyDescriptor;
     class PropertyNameArray;
     class Structure;
+    class SecurityLabelObject;
 
     enum EnumerationMode {
         ExcludeDontEnumProperties,
@@ -79,12 +81,12 @@ namespace JSC {
         bool isGetterSetter() const;
         bool inherits(const ClassInfo*) const;
         bool isAPIValueWrapper() const;
-        bool isTainted() const;
-        bool hasTaintAnywhere() const;
-        void taint();
-        JS_EXPORT_PRIVATE static bool isTaintedCell(const JSCell*);
-        JS_EXPORT_PRIVATE static bool hasTaintAnywhereCell(const JSCell*);
-        JS_EXPORT_PRIVATE static void taintCell(JSCell*);
+        bool isTainted(ExecState* exec) const;
+        bool hasTaintAnywhere(ExecState* exec) const;
+        void taint(ExecState* exec);
+        JS_EXPORT_PRIVATE static bool isTaintedCell(const JSCell*, ExecState*);
+        JS_EXPORT_PRIVATE static bool hasTaintAnywhereCell(const JSCell*, ExecState*);
+        JS_EXPORT_PRIVATE static void taintCell(JSCell*, ExecState*);
 
         Structure* structure() const;
         void setStructure(JSGlobalData&, Structure*);
@@ -173,7 +175,7 @@ namespace JSC {
         friend class LLIntOffsetsExtractor;
         
         const ClassInfo* m_classInfo;
-        bool m_isTainted;
+        WriteBarrier<SecurityLabelObject> m_label;
         WriteBarrier<Structure> m_structure;
     };
 
@@ -189,7 +191,6 @@ namespace JSC {
 #else
         UNUSED_PARAM(globalData);
 #endif
-        m_isTainted = false;
         ASSERT(m_structure);
     }
 

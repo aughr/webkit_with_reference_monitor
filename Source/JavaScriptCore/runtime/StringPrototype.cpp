@@ -443,13 +443,13 @@ static NEVER_INLINE EncodedJSValue removeUsingRegExpSearch(ExecState* exec, JSSt
 
 static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSString* string, JSValue searchValue, JSValue replaceValue)
 {
-    bool tainted = string->isTainted();
+    bool tainted = string->isTainted(exec);
     UString replacementString;
     CallData callData;
     CallType callType = getCallData(replaceValue, callData);
     if (callType == CallTypeNone) {
         JSString *replacementString_obj = replaceValue.toString(exec);
-        tainted = tainted || replacementString_obj->isTainted();
+        tainted = tainted || replacementString_obj->isTainted(exec);
         replacementString = replacementString_obj->value(exec);
     }
 
@@ -458,7 +458,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
     if (exec->hadException())
         return JSValue::encode(JSValue());
     RegExpObject* regExpObject = asRegExpObject(searchValue);
-    tainted = tainted || regExpObject->isTainted();
+    tainted = tainted || regExpObject->isTainted(exec);
     RegExp* regExp = regExpObject->regExp();
     bool global = regExp->global();
 
@@ -508,7 +508,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
                     else {
                         JSString* argument = jsSubstring8(globalData, source, matchStart, matchLen);
                         if (tainted)
-                            argument->taint();
+                            argument->taint(exec);
                         cachedCall.setArgument(i, argument);
                     }
                 }
@@ -522,7 +522,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
                 cachedCall.setThis(jsUndefined());
                 JSValue jsResult = cachedCall.call();
                 JSString* jsResultString = jsResult.toString(cachedCall.newCallFrame(exec));
-                tainted = tainted || jsResultString->isTainted();
+                tainted = tainted || jsResultString->isTainted(exec);
                 replacements.append(jsResultString->value(exec));
                 if (exec->hadException())
                     break;
@@ -556,7 +556,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
                     else {
                         JSString* argument = jsSubstring(globalData, source, matchStart, matchLen);
                         if (tainted)
-                            argument->taint();
+                            argument->taint(exec);
                         cachedCall.setArgument(i, argument);
                     }
                 }
@@ -570,7 +570,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
                 cachedCall.setThis(jsUndefined());
                 JSValue jsResult = cachedCall.call();
                 JSString* jsResultString = jsResult.toString(cachedCall.newCallFrame(exec));
-                tainted = tainted || jsResultString->isTainted();
+                tainted = tainted || jsResultString->isTainted(exec);
                 replacements.append(jsResultString->value(exec));
                 if (exec->hadException())
                     break;
@@ -608,7 +608,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
                     else {
                         JSString* argument = jsSubstring(globalData, source, matchStart, matchLen);
                         if (tainted)
-                            argument->taint();
+                            argument->taint(exec);
                         args.append(argument);
                     }
                 }
@@ -620,7 +620,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
                 args.append(string);
 
                 JSString* resultString = call(exec, replaceValue, callType, callData, jsUndefined(), args).toString(exec);
-                tainted = tainted || resultString->isTainted();
+                tainted = tainted || resultString->isTainted(exec);
                 replacements.append(resultString->value(exec));
                 if (exec->hadException())
                     break;
@@ -659,10 +659,10 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
 
 static NEVER_INLINE EncodedJSValue replaceUsingStringSearch(ExecState* exec, JSString* jsString, JSValue searchValue, JSValue replaceValue)
 {
-    bool tainted = jsString->isTainted();
+    bool tainted = jsString->isTainted(exec);
     const UString& string = jsString->value(exec);
     JSString* searchString_obj = searchValue.toString(exec);
-    tainted = tainted || searchString_obj->isTainted();
+    tainted = tainted || searchString_obj->isTainted(exec);
     UString searchString = searchString_obj->value(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -677,7 +677,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingStringSearch(ExecState* exec, JSS
         MarkedArgumentBuffer args;
         JSString* substring = jsSubstring(exec, string, matchStart, searchString.length());
         if (tainted)
-            substring->taint();
+            substring->taint(exec);
         JSValue number = jsNumber(matchStart);
         if (tainted)
             number = number.taint(exec);
@@ -690,7 +690,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingStringSearch(ExecState* exec, JSS
     }
 
     JSString* replaceString_obj = replaceValue.toString(exec);
-    tainted = tainted || replaceString_obj->isTainted();
+    tainted = tainted || replaceString_obj->isTainted(exec);
     UString replaceString = replaceString_obj->value(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -723,7 +723,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncToString(ExecState* exec)
         return JSValue::encode(thisValue);
 
     if (thisValue.inherits(&StringObject::s_info))
-        return JSValue::encode(asStringObject(thisValue)->internalValue(), exec, thisValue.hasTaintAnywhere());
+        return JSValue::encode(asStringObject(thisValue)->internalValue(), exec, thisValue.hasTaintAnywhere(exec));
 
     return throwVMTypeError(exec);
 }
@@ -740,13 +740,13 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncCharAt(ExecState* exec)
     if (a0.isUInt32()) {
         uint32_t i = a0.asUInt32();
         if (i < len)
-            return JSValue::encode(jsSingleCharacterSubstring(exec, s, i), exec, thisString->isTainted());
-        return JSValue::encode(jsEmptyString(exec), exec, thisString->isTainted());
+            return JSValue::encode(jsSingleCharacterSubstring(exec, s, i), exec, thisString->isTainted(exec));
+        return JSValue::encode(jsEmptyString(exec), exec, thisString->isTainted(exec));
     }
     double dpos = a0.toInteger(exec);
     if (dpos >= 0 && dpos < len)
-        return JSValue::encode(jsSingleCharacterSubstring(exec, s, static_cast<unsigned>(dpos)), exec, a0.hasTaintAnywhere() || thisString->isTainted());
-    return JSValue::encode(jsEmptyString(exec), exec, a0.hasTaintAnywhere() || thisString->isTainted());
+        return JSValue::encode(jsSingleCharacterSubstring(exec, s, static_cast<unsigned>(dpos)), exec, a0.hasTaintAnywhere(exec) || thisString->isTainted(exec));
+    return JSValue::encode(jsEmptyString(exec), exec, a0.hasTaintAnywhere(exec) || thisString->isTainted(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncCharCodeAt(ExecState* exec)
@@ -1277,7 +1277,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncBig(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<big>", s, "</big>"), exec, tainted);
 }
@@ -1288,7 +1288,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSmall(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<small>", s, "</small>"), exec, tainted);
 }
@@ -1299,7 +1299,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncBlink(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<blink>", s, "</blink>"), exec, tainted);
 }
@@ -1310,7 +1310,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncBold(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<b>", s, "</b>"), exec, tainted);
 }
@@ -1321,7 +1321,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncFixed(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<tt>", s, "</tt>"), exec, tainted);
 }
@@ -1332,7 +1332,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncItalics(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<i>", s, "</i>"), exec, tainted);
 }
@@ -1343,7 +1343,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncStrike(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<strike>", s, "</strike>"), exec, tainted);
 }
@@ -1354,7 +1354,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSub(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<sub>", s, "</sub>"), exec, tainted);
 }
@@ -1365,7 +1365,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSup(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<sup>", s, "</sup>"), exec, tainted);
 }
@@ -1376,11 +1376,11 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncFontcolor(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     JSValue a0 = exec->argument(0);
     JSString* a0String = a0.toString(exec);
-    tainted = tainted || a0String->isTainted();
+    tainted = tainted || a0String->isTainted(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<font color=\"", a0String->value(exec), "\">", s, "</font>"), exec, tainted);
 }
 
@@ -1390,7 +1390,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncFontsize(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     JSValue a0 = exec->argument(0);
 
@@ -1429,7 +1429,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncFontsize(ExecState* exec)
     }
 
     JSString* a0String = a0.toString(exec);
-    tainted = tainted || a0String->isTainted();
+    tainted = tainted || a0String->isTainted(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<font size=\"", a0String->value(exec), "\">", s, "</font>"), exec, tainted);
 }
 
@@ -1439,11 +1439,11 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncAnchor(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     JSValue a0 = exec->argument(0);
     JSString* a0String = a0.toString(exec);
-    tainted = tainted || a0String->isTainted();
+    tainted = tainted || a0String->isTainted(exec);
     return JSValue::encode(jsMakeNontrivialString(exec, "<a name=\"", a0.toString(exec)->value(exec), "\">", s, "</a>"), exec, tainted);
 }
 
@@ -1453,11 +1453,11 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncLink(ExecState* exec)
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);
     JSString* thisString = thisValue.toString(exec);
-    bool tainted = thisString->isTainted();
+    bool tainted = thisString->isTainted(exec);
     UString s = thisString->value(exec);
     JSValue a0 = exec->argument(0);
     JSString* a0String = a0.toString(exec);
-    tainted = tainted || a0String->isTainted();
+    tainted = tainted || a0String->isTainted(exec);
     UString linkText = a0String->value(exec);
 
     unsigned linkTextSize = linkText.length();
@@ -1523,19 +1523,19 @@ static inline JSValue trimString(ExecState* exec, JSValue thisValue, int trimKin
 EncodedJSValue JSC_HOST_CALL stringProtoFuncTrim(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
-    return JSValue::encode(trimString(exec, thisValue, TrimLeft | TrimRight), exec, thisValue.toString(exec)->isTainted());
+    return JSValue::encode(trimString(exec, thisValue, TrimLeft | TrimRight), exec, thisValue.toString(exec)->isTainted(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncTrimLeft(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
-    return JSValue::encode(trimString(exec, thisValue, TrimLeft), exec, thisValue.toString(exec)->isTainted());
+    return JSValue::encode(trimString(exec, thisValue, TrimLeft), exec, thisValue.toString(exec)->isTainted(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncTrimRight(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
-    return JSValue::encode(trimString(exec, thisValue, TrimRight), exec, thisValue.toString(exec)->isTainted());
+    return JSValue::encode(trimString(exec, thisValue, TrimRight), exec, thisValue.toString(exec)->isTainted(exec));
 }
     
     

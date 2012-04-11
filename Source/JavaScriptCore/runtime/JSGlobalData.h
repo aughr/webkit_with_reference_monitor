@@ -48,6 +48,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/SimpleStats.h>
+#include <wtf/SecurityLabel.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/WTFThreadData.h>
 #if ENABLE(REGEXP_TRACING)
@@ -172,6 +173,7 @@ namespace JSC {
         const HashTable* regExpTable;
         const HashTable* regExpConstructorTable;
         const HashTable* regExpPrototypeTable;
+        const HashTable* securityLabelPrototypeTable;
         const HashTable* securityTagPrototypeTable;
         const HashTable* stringTable;
         const HashTable* stringConstructorTable;
@@ -319,6 +321,8 @@ namespace JSC {
 #endif
 
         CachedTranscendentalFunction<sin> cachedSin;
+        
+        WTF::SecurityTag taintTag;
 
         JS_EXPORT_PRIVATE void resetDateCache();
 

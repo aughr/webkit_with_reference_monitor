@@ -82,7 +82,7 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
 
     // 1. Let O be the this value.
     JSValue thisValue = exec->hostThisValue();
-    tainted = tainted || thisValue.isTainted();
+    tainted = tainted || thisValue.isTainted(exec);
 
     // 2. If Type(O) is not Object, throw a TypeError exception.
     if (!thisValue.isObject())
@@ -108,7 +108,7 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
         nameString = nameStringValue->value(exec);
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
-        tainted = tainted || nameStringValue->isTainted();
+        tainted = tainted || nameStringValue->isTainted(exec);
     }
 
     // 5. Let msg be the result of calling the [[Get]] internal method of O with argument "message".
@@ -127,7 +127,7 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
         messageString = messageStringValue->value(exec);
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
-        tainted = tainted || messageStringValue->isTainted();
+        tainted = tainted || messageStringValue->isTainted(exec);
     }
 
     // 8. If name is the empty String, return msg.

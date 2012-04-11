@@ -70,6 +70,7 @@
 #include "ScopeChainMark.h"
 #include "StringConstructor.h"
 #include "StringPrototype.h"
+#include "SecurityLabelPrototype.h"
 #include "SecurityTagConstructor.h"
 #include "SecurityTagPrototype.h"
 #include "Debugger.h"
@@ -244,6 +245,9 @@ void JSGlobalObject::reset(JSValue prototype)
     m_regExpPrototype.set(exec->globalData(), this, RegExpPrototype::create(exec, this, RegExpPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get()), emptyRegex));
     m_regExpStructure.set(exec->globalData(), this, RegExpObject::createStructure(exec->globalData(), this, m_regExpPrototype.get()));
 
+    m_securityLabelPrototype.set(exec->globalData(), this, SecurityLabelPrototype::create(exec, this, SecurityLabelPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get())));
+    m_securityLabelStructure.set(exec->globalData(), this, SecurityLabelObject::createStructure(exec->globalData(), this, m_securityLabelPrototype.get()));
+
     m_securityTagPrototype.set(exec->globalData(), this, SecurityTagPrototype::create(exec, this, SecurityTagPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get())));
     m_securityTagStructure.set(exec->globalData(), this, SecurityTagObject::createStructure(exec->globalData(), this, m_securityTagPrototype.get()));
 
@@ -375,6 +379,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitIfNeeded(visitor, &thisObject->m_numberPrototype);
     visitIfNeeded(visitor, &thisObject->m_datePrototype);
     visitIfNeeded(visitor, &thisObject->m_regExpPrototype);
+    visitIfNeeded(visitor, &thisObject->m_securityLabelPrototype);
     visitIfNeeded(visitor, &thisObject->m_securityTagPrototype);
 
     visitIfNeeded(visitor, &thisObject->m_argumentsStructure);
@@ -394,6 +399,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitIfNeeded(visitor, &thisObject->m_regExpMatchesArrayStructure);
     visitIfNeeded(visitor, &thisObject->m_regExpStructure);
     visitIfNeeded(visitor, &thisObject->m_stringObjectStructure);
+    visitIfNeeded(visitor, &thisObject->m_securityLabelStructure);
     visitIfNeeded(visitor, &thisObject->m_securityTagStructure);
     visitIfNeeded(visitor, &thisObject->m_internalFunctionStructure);
 

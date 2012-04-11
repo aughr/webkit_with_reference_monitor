@@ -120,55 +120,55 @@ bool MathObject::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, con
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncAbs(ExecState* exec)
 {
-    return JSValue::encode(jsNumber(fabs(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsNumber(fabs(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncACos(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(acos(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(acos(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncASin(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(asin(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(asin(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncATan(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(atan(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(atan(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncATan2(ExecState* exec)
 {
     double arg0 = exec->argument(0).toNumber(exec);
     double arg1 = exec->argument(1).toNumber(exec);
-    bool tainted = exec->argument(0).hasTaintAnywhere() || exec->argument(1).hasTaintAnywhere();
+    bool tainted = exec->argument(0).hasTaintAnywhere(exec) || exec->argument(1).hasTaintAnywhere(exec);
     return JSValue::encode(jsDoubleNumber(atan2(arg0, arg1)), exec, tainted);
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncCeil(ExecState* exec)
 {
-    return JSValue::encode(jsNumber(ceil(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsNumber(ceil(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncCos(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(cos(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(cos(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncExp(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(exp(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(exp(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncFloor(ExecState* exec)
 {
-    return JSValue::encode(jsNumber(floor(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsNumber(floor(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncLog(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(log(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(log(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncMax(ExecState* exec)
@@ -178,7 +178,7 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncMax(ExecState* exec)
     bool tainted = false;
     for (unsigned k = 0; k < argsCount; ++k) {
         JSValue argument = exec->argument(k);
-        tainted = tainted || argument.hasTaintAnywhere();
+        tainted = tainted || argument.hasTaintAnywhere(exec);
         double val = argument.toNumber(exec);
         if (isnan(val)) {
             result = std::numeric_limits<double>::quiet_NaN();
@@ -197,7 +197,7 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncMin(ExecState* exec)
     bool tainted = false;
     for (unsigned k = 0; k < argsCount; ++k) {
         JSValue argument = exec->argument(k);
-        tainted = tainted || argument.hasTaintAnywhere();
+        tainted = tainted || argument.hasTaintAnywhere(exec);
         double val = argument.toNumber(exec);
         if (isnan(val)) {
             result = std::numeric_limits<double>::quiet_NaN();
@@ -215,7 +215,7 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncPow(ExecState* exec)
 
     double arg = exec->argument(0).toNumber(exec);
     double arg2 = exec->argument(1).toNumber(exec);
-    bool tainted = exec->argument(0).hasTaintAnywhere() || exec->argument(1).hasTaintAnywhere();
+    bool tainted = exec->argument(0).hasTaintAnywhere(exec) || exec->argument(1).hasTaintAnywhere(exec);
 
     if (isnan(arg2))
         return JSValue::encode(jsNaN());
@@ -238,17 +238,17 @@ EncodedJSValue JSC_HOST_CALL mathProtoFuncRound(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncSin(ExecState* exec)
 {
-    return JSValue::encode(exec->globalData().cachedSin(exec->argument(0).toNumber(exec)), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(exec->globalData().cachedSin(exec->argument(0).toNumber(exec)), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncSqrt(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(sqrt(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(sqrt(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL mathProtoFuncTan(ExecState* exec)
 {
-    return JSValue::encode(jsDoubleNumber(tan(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere());
+    return JSValue::encode(jsDoubleNumber(tan(exec->argument(0).toNumber(exec))), exec, exec->argument(0).hasTaintAnywhere(exec));
 }
 
 } // namespace JSC

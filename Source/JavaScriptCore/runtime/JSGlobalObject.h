@@ -33,6 +33,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RandomNumber.h>
+#include <wtf/SecurityLabel.h>
 
 namespace JSC {
 
@@ -50,6 +51,7 @@ namespace JSC {
     class RegExpConstructor;
     class RegExpPrototype;
     class RegisterFile;
+    class SecurityLabelPrototype;
     class SecurityTagConstructor;
     class SecurityTagPrototype;
 
@@ -119,6 +121,7 @@ namespace JSC {
         WriteBarrier<NumberPrototype> m_numberPrototype;
         WriteBarrier<DatePrototype> m_datePrototype;
         WriteBarrier<RegExpPrototype> m_regExpPrototype;
+        WriteBarrier<SecurityLabelPrototype> m_securityLabelPrototype;
         WriteBarrier<SecurityTagPrototype> m_securityTagPrototype;
 
         WriteBarrier<Structure> m_argumentsStructure;
@@ -138,6 +141,7 @@ namespace JSC {
         WriteBarrier<Structure> m_numberObjectStructure;
         WriteBarrier<Structure> m_regExpMatchesArrayStructure;
         WriteBarrier<Structure> m_regExpStructure;
+        WriteBarrier<Structure> m_securityLabelStructure;
         WriteBarrier<Structure> m_securityTagStructure;
         WriteBarrier<Structure> m_stringObjectStructure;
         WriteBarrier<Structure> m_internalFunctionStructure;
@@ -276,6 +280,7 @@ namespace JSC {
         Structure* internalFunctionStructure() const { return m_internalFunctionStructure.get(); }
         Structure* regExpMatchesArrayStructure() const { return m_regExpMatchesArrayStructure.get(); }
         Structure* regExpStructure() const { return m_regExpStructure.get(); }
+        Structure* securityLabelStructure() const { return m_securityLabelStructure.get(); }
         Structure* securityTagStructure() const { return m_securityTagStructure.get(); }
         Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
 

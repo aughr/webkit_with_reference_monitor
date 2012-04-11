@@ -80,20 +80,20 @@ static NEVER_INLINE JSValue stringFromCharCodeSlowCase(ExecState* exec)
     bool tainted = false;
     for (unsigned i = 0; i < length; ++i) {
         JSValue argument = exec->argument(i);
-        tainted = tainted || argument.hasTaintAnywhere();
+        tainted = tainted || argument.hasTaintAnywhere(exec);
         buf[i] = static_cast<UChar>(argument.toUInt32(exec));
     }
     
     JSString* string = jsString(exec, impl);
     if (tainted)
-        string->taint();
+        string->taint(exec);
     return string;
 }
 
 static EncodedJSValue JSC_HOST_CALL stringFromCharCode(ExecState* exec)
 {
     if (LIKELY(exec->argumentCount() == 1))
-        return JSValue::encode(jsSingleCharacterString(exec, exec->argument(0).toUInt32(exec)), exec, exec->argument(0).hasTaintAnywhere());
+        return JSValue::encode(jsSingleCharacterString(exec, exec->argument(0).toUInt32(exec)), exec, exec->argument(0).hasTaintAnywhere(exec));
     return JSValue::encode(stringFromCharCodeSlowCase(exec));
 }
 

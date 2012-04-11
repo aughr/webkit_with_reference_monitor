@@ -523,16 +523,16 @@ inline const MethodTable* JSCell::methodTable() const
     return &classInfo()->methodTable;
 }
 
-inline bool JSCell::hasTaintAnywhere() const {
-    return methodTable()->hasTaintAnywhereCell(this);
+inline bool JSCell::hasTaintAnywhere(ExecState* exec) const {
+    return methodTable()->hasTaintAnywhereCell(this, exec);
 }
 
-inline bool JSCell::isTainted() const {
-    return methodTable()->isTaintedCell(this);
+inline bool JSCell::isTainted(ExecState* exec) const {
+    return methodTable()->isTaintedCell(this, exec);
 }
 
-inline void JSCell::taint() {
-    methodTable()->taintCell(this);
+inline void JSCell::taint(ExecState* exec) {
+    methodTable()->taintCell(this, exec);
 }
 
 // this method is here to be after the inline declaration of JSCell::inherits
@@ -870,16 +870,16 @@ inline JSValue JSValue::taint(ExecState* exec) {
     } else {
         cell = toObject(exec);
     }
-    cell->taint();
+    cell->taint(exec);
     return JSValue(cell);
 }
 
-inline bool JSValue::isTainted() const {
-    return isCell() && asCell()->isTainted();
+inline bool JSValue::isTainted(ExecState* exec) const {
+    return isCell() && asCell()->isTainted(exec);
 }
 
-inline bool JSValue::hasTaintAnywhere() const {
-    return isTainted(); // TODO: make this dig deeper
+inline bool JSValue::hasTaintAnywhere(ExecState* exec) const {
+    return isTainted(exec); // TODO: make this dig deeper
 }
 
 inline EncodedJSValue JSValue::encode(JSValue value, ExecState* exec, bool taint) {

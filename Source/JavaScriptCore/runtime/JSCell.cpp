@@ -27,6 +27,7 @@
 #include "JSString.h"
 #include "JSObject.h"
 #include "NumberObject.h"
+#include "SecurityLabelObject.h"
 #include <wtf/MathExtras.h>
 
 namespace JSC {
@@ -128,16 +129,21 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned ident
     return thisObject->methodTable()->deletePropertyByIndex(thisObject, exec, identifier);
 }
 
-bool JSCell::hasTaintAnywhereCell(const JSCell* cell) {
-    return JSCell::isTaintedCell(cell);
+bool JSCell::hasTaintAnywhereCell(const JSCell* cell, ExecState* exec) {
+    return JSCell::isTaintedCell(cell, exec);
 }
 
-bool JSCell::isTaintedCell(const JSCell* cell) {
-    return cell->m_isTainted;
+bool JSCell::isTaintedCell(const JSCell* cell, ExecState* exec) {
+    if (cell->m_label.get() == NULL)
+        return false;
+    else
+        return cell->m_label->hasTag(exec->globalData().taintTag);
 }
 
-void JSCell::taintCell(JSCell* cell) {
-    cell->m_isTainted = true;
+void JSCell::taintCell(JSCell* cell, ExecState* exec) {
+    if (cell->m_label.get() == NULL)
+        cell->m_label.set(exec->globalData(), cell, constructSecurityLabel(exec, exec->lexicalGlobalObject()));
+    cell->m_label->add(exec->globalData().taintTag);
 }
 
 JSObject* JSCell::toThisObject(JSCell* cell, ExecState* exec)

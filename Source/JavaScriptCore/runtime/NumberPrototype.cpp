@@ -127,7 +127,7 @@ static ALWAYS_INLINE bool getIntegerArgumentInRange(ExecState* exec, int low, in
         return true;
     }
     
-    if (argument0.hasTaintAnywhere())
+    if (argument0.hasTaintAnywhere(exec))
         tainted = true;
 
     double asDouble = argument0.toInteger(exec);
@@ -355,7 +355,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
     // Get the argument. 
     int decimalPlacesInExponent;
     bool isUndefined;
-    bool tainted = exec->hostThisValue().isTainted();
+    bool tainted = exec->hostThisValue().isTainted(exec);
     if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlacesInExponent, isUndefined, tainted))
         return throwVMError(exec, createRangeError(exec, "toExponential() argument must be between 0 and 20"));
 
@@ -387,7 +387,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(ExecState* exec)
     // Get the argument. 
     int decimalPlaces;
     bool isUndefined; // This is ignored; undefined treated as 0.
-    bool tainted = exec->hostThisValue().isTainted();
+    bool tainted = exec->hostThisValue().isTainted(exec);
     if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlaces, isUndefined, tainted))
         return throwVMError(exec, createRangeError(exec, "toFixed() argument must be between 0 and 20"));
 
@@ -421,7 +421,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(ExecState* exec)
     // Get the argument. 
     int significantFigures;
     bool isUndefined;
-    bool tainted = exec->hostThisValue().isTainted();
+    bool tainted = exec->hostThisValue().isTainted(exec);
     if (!getIntegerArgumentInRange(exec, 1, 21, significantFigures, isUndefined, tainted))
         return throwVMError(exec, createRangeError(exec, "toPrecision() argument must be between 1 and 21"));
 
@@ -442,10 +442,10 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
     double x;
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
-    bool tainted = exec->hostThisValue().isTainted();
+    bool tainted = exec->hostThisValue().isTainted(exec);
 
     JSValue radixValue = exec->argument(0);
-    tainted = tainted || radixValue.isTainted();
+    tainted = tainted || radixValue.isTainted(exec);
     int radix;
     if (radixValue.isInt32())
         radix = radixValue.asInt32();
@@ -482,7 +482,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(ExecState* exec)
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
 
-    return JSValue::encode(jsNumber(x).toString(exec), exec, exec->hostThisValue().isTainted());
+    return JSValue::encode(jsNumber(x).toString(exec), exec, exec->hostThisValue().isTainted(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(ExecState* exec)
@@ -490,7 +490,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(ExecState* exec)
     double x;
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
-    return JSValue::encode(jsNumber(x), exec, exec->hostThisValue().isTainted());
+    return JSValue::encode(jsNumber(x), exec, exec->hostThisValue().isTainted(exec));
 }
 
 } // namespace JSC

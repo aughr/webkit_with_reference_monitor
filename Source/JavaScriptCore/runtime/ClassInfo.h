@@ -90,13 +90,13 @@ namespace JSC {
         typedef bool (*GetOwnPropertyDescriptorFunctionPtr)(JSObject*, ExecState*, const Identifier&, PropertyDescriptor&);
         GetOwnPropertyDescriptorFunctionPtr getOwnPropertyDescriptor;
 
-        typedef void (*TaintFunctionPtr)(JSCell*);
+        typedef void (*TaintFunctionPtr)(JSCell*, ExecState* exec);
         TaintFunctionPtr taintCell;
 
-        typedef bool (*IsTaintedFunctionPtr)(const JSCell*);
+        typedef bool (*IsTaintedFunctionPtr)(const JSCell*, ExecState* exec);
         IsTaintedFunctionPtr isTaintedCell;
 
-        typedef bool (*HasTaintAnywhereFunctionPointer)(const JSCell*);
+        typedef bool (*HasTaintAnywhereFunctionPointer)(const JSCell*, ExecState* exec);
         HasTaintAnywhereFunctionPointer hasTaintAnywhereCell;
     };
 

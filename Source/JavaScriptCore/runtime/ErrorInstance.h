@@ -48,7 +48,7 @@ namespace JSC {
             JSGlobalData& globalData = exec->globalData();
             UString messageString = message.isUndefined() ? UString() : message.toString(exec)->value(exec);
             ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(globalData.heap)) ErrorInstance(globalData, structure);
-            instance->finishCreation(exec, messageString, message.hasTaintAnywhere());
+            instance->finishCreation(exec, messageString, message.hasTaintAnywhere(exec));
             return instance;
         }
 

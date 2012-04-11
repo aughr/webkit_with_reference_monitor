@@ -82,7 +82,7 @@ namespace JSC {
 
         for (unsigned i = 0; i < count; ++i) {
             JSValue v = strings[i].jsValue();
-            tainted = tainted || v.isTainted();
+            tainted = tainted || v.isTainted(exec);
             ropeBuilder.append(v.toString(exec));
 
             if (ropeBuilder.length() < oldLength) // True for overflow
