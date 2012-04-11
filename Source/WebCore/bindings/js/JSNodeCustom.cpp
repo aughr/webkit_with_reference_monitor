@@ -209,19 +209,19 @@ void JSNode::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.addOpaqueRoot(root(node));
 }
 
-void JSNode::taintCell(JSCell* cell)
+void JSNode::taintCell(JSCell* cell, ExecState*)
 {
     JSNode* thisObject = jsCast<JSNode*>(cell);
     thisObject->impl()->taint();
 }
 
-bool JSNode::isTaintedCell(const JSCell* cell)
+bool JSNode::isTaintedCell(const JSCell* cell, ExecState*)
 {
     const JSNode* thisObject = jsCast<const JSNode*>(cell);
     return thisObject->impl()->isTainted();
 }
 
-bool JSNode::hasTaintAnywhereCell(const JSCell* cell)
+bool JSNode::hasTaintAnywhereCell(const JSCell* cell, ExecState*)
 {
     const JSNode* thisObject = jsCast<const JSNode*>(cell);
     return thisObject->impl()->isTainted();

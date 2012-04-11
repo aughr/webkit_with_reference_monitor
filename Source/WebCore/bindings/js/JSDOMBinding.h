@@ -437,7 +437,7 @@ enum ParameterDefaultPolicy {
 
         JSC::JSString *jsString = value.toString(exec);
         String string = ustringToString(jsString->value(exec));
-        if (jsString->isTainted())
+        if (jsString->isTainted(exec))
             string.taint();
         return string;
     }

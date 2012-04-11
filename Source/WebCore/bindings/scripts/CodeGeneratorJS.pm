@@ -808,9 +808,9 @@ sub GenerateHeader
 
     # Custom taint functions exist on Node
     if ($interfaceName eq "Node") {
-        push(@headerContent, "    static void taintCell(JSC::JSCell*);\n");
-        push(@headerContent, "    static bool isTaintedCell(const JSC::JSCell*);\n");
-        push(@headerContent, "    static bool hasTaintAnywhereCell(const JSC::JSCell*);\n");
+        push(@headerContent, "    static void taintCell(JSC::JSCell*, JSC::ExecState*);\n");
+        push(@headerContent, "    static bool isTaintedCell(const JSC::JSCell*, JSC::ExecState*);\n");
+        push(@headerContent, "    static bool hasTaintAnywhereCell(const JSC::JSCell*, JSC::ExecState*);\n");
     }
 
     # Custom getOwnPropertyNames function
