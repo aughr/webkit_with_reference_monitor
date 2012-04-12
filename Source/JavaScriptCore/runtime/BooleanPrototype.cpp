@@ -88,10 +88,10 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState* exec)
         return throwVMTypeError(exec);
 
     if (asBooleanObject(thisValue)->internalValue() == jsBoolean(false))
-        return JSValue::encode(jsNontrivialString(exec, "false"), exec, thisValue.isTainted(exec));
+        return JSValue::encode(jsNontrivialString(exec, "false"), exec, thisValue.securityLabel());
 
     ASSERT(asBooleanObject(thisValue)->internalValue() == jsBoolean(true));
-    return JSValue::encode(jsNontrivialString(exec, "true"), exec, thisValue.isTainted(exec));
+    return JSValue::encode(jsNontrivialString(exec, "true"), exec, thisValue.securityLabel());
 }
 
 EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(ExecState* exec)
@@ -103,7 +103,7 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(ExecState* exec)
     if (!thisValue.inherits(&BooleanObject::s_info))
         return throwVMTypeError(exec);
 
-    return JSValue::encode(asBooleanObject(thisValue)->internalValue(), exec, thisValue.isTainted(exec));
+    return JSValue::encode(asBooleanObject(thisValue)->internalValue(), exec, thisValue.securityLabel());
 }
 
 } // namespace JSC

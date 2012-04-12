@@ -523,16 +523,16 @@ inline const MethodTable* JSCell::methodTable() const
     return &classInfo()->methodTable;
 }
 
-inline bool JSCell::hasTaintAnywhere(ExecState* exec) const {
-    return methodTable()->hasTaintAnywhereCell(this, exec);
-}
-
 inline bool JSCell::isTainted(ExecState* exec) const {
     return methodTable()->isTaintedCell(this, exec);
 }
 
-inline void JSCell::taint(ExecState* exec) {
-    methodTable()->taintCell(this, exec);
+inline SecurityLabel JSCell::securityLabel() const {
+    return methodTable()->securityLabelCell(this);
+}
+
+inline void JSCell::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {
+    methodTable()->mergeSecurityLabelCell(this, exec, label);
 }
 
 // this method is here to be after the inline declaration of JSCell::inherits
@@ -861,8 +861,12 @@ inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue 
     }
     asCell()->methodTable()->putByIndex(asCell(), exec, propertyName, value, shouldThrow);
 }
+
+inline bool JSValue::isTainted(ExecState* exec) const {
+    return isCell() && asCell()->isTainted(exec);
+}
     
-inline JSValue JSValue::taint(ExecState* exec) {
+inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {
     JSCell *cell;
     if (isString()) {
         const JSString *string = static_cast<const JSString*>(asCell());
@@ -870,23 +874,22 @@ inline JSValue JSValue::taint(ExecState* exec) {
     } else {
         cell = toObject(exec);
     }
-    cell->taint(exec);
+    cell->mergeSecurityLabel(exec, label);
     return JSValue(cell);
 }
 
-inline bool JSValue::isTainted(ExecState* exec) const {
-    return isCell() && asCell()->isTainted(exec);
+inline SecurityLabel JSValue::securityLabel() const {
+    if (isCell())
+        return asCell()->securityLabel();
+    else
+        return SecurityLabel();
 }
 
-inline bool JSValue::hasTaintAnywhere(ExecState* exec) const {
-    return isTainted(exec); // TODO: make this dig deeper
-}
-
-inline EncodedJSValue JSValue::encode(JSValue value, ExecState* exec, bool taint) {
-    if (taint) {
-        return encode(value.taint(exec));
-    } else {
+inline EncodedJSValue JSValue::encode(JSValue value, ExecState* exec, SecurityLabel label) {
+    if (label.isNull()) {
         return encode(value);
+    } else {
+        return encode(value.mergeSecurityLabel(exec, label));
     }
 }
 

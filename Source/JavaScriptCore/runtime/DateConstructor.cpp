@@ -102,12 +102,12 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
     int numArgs = args.size();
 
     double value;
-    bool tainted = false;
+    SecurityLabel label;
 
     if (numArgs == 0) // new Date() ECMA 15.9.3.3
         value = jsCurrentTime();
     else if (numArgs == 1) {
-        tainted = args.at(0).hasTaintAnywhere(exec);
+        label.merge(args.at(0).securityLabel());
         if (args.at(0).inherits(&DateInstance::s_info))
             value = asDateInstance(args.at(0))->internalNumber();
         else {
@@ -127,13 +127,13 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
             args.at(5).toNumber(exec), 
             args.at(6).toNumber(exec)
         };
-        tainted = exec->argument(0).hasTaintAnywhere(exec)
-            || exec->argument(1).hasTaintAnywhere(exec)
-            || exec->argument(2).hasTaintAnywhere(exec)
-            || exec->argument(3).hasTaintAnywhere(exec)
-            || exec->argument(4).hasTaintAnywhere(exec)
-            || exec->argument(5).hasTaintAnywhere(exec)
-            || exec->argument(6).hasTaintAnywhere(exec);
+        label.merge(exec->argument(0).securityLabel());
+        label.merge(exec->argument(1).securityLabel());
+        label.merge(exec->argument(2).securityLabel());
+        label.merge(exec->argument(3).securityLabel());
+        label.merge(exec->argument(4).securityLabel());
+        label.merge(exec->argument(5).securityLabel());
+        label.merge(exec->argument(6).securityLabel());
         if (!isfinite(doubleArguments[0])
             || !isfinite(doubleArguments[1])
             || (numArgs >= 3 && !isfinite(doubleArguments[2]))
@@ -158,8 +158,7 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
     }
 
     JSObject* object = DateInstance::create(exec, globalObject->dateStructure(), value);
-    if (tainted)
-        object->taint(exec);
+    object->mergeSecurityLabel(exec, label);
     return object;
 }
     
@@ -195,8 +194,9 @@ CallType DateConstructor::getCallData(JSCell*, CallData& callData)
 
 static EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
 {
-    bool tainted = exec->argument(0).hasTaintAnywhere(exec);
-    return JSValue::encode(jsNumber(parseDate(exec, exec->argument(0).toString(exec)->value(exec))), exec, tainted);
+    JSString* string = exec->argument(0).toString(exec);
+    SecurityLabel label = string->securityLabel();
+    return JSValue::encode(jsNumber(parseDate(exec, string->value(exec))), exec, label);
 }
 
 static EncodedJSValue JSC_HOST_CALL dateNow(ExecState*)
@@ -215,13 +215,14 @@ static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
         exec->argument(5).toNumber(exec), 
         exec->argument(6).toNumber(exec)
     };
-    bool tainted = exec->argument(0).hasTaintAnywhere(exec)
-                || exec->argument(1).hasTaintAnywhere(exec)
-                || exec->argument(2).hasTaintAnywhere(exec)
-                || exec->argument(3).hasTaintAnywhere(exec)
-                || exec->argument(4).hasTaintAnywhere(exec)
-                || exec->argument(5).hasTaintAnywhere(exec)
-                || exec->argument(6).hasTaintAnywhere(exec);
+    SecurityLabel label;
+    label.merge(exec->argument(0).securityLabel());
+    label.merge(exec->argument(1).securityLabel());
+    label.merge(exec->argument(2).securityLabel());
+    label.merge(exec->argument(3).securityLabel());
+    label.merge(exec->argument(4).securityLabel());
+    label.merge(exec->argument(5).securityLabel());
+    label.merge(exec->argument(6).securityLabel());
     int n = exec->argumentCount();
     if (isnan(doubleArguments[0])
             || isnan(doubleArguments[1])
@@ -241,7 +242,7 @@ static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
     t.minute = JSC::toInt32(doubleArguments[4]);
     t.second = JSC::toInt32(doubleArguments[5]);
     double ms = (n >= 7) ? doubleArguments[6] : 0;
-    return JSValue::encode(jsNumber(timeClip(gregorianDateTimeToMS(exec, t, ms, true))), exec, tainted);
+    return JSValue::encode(jsNumber(timeClip(gregorianDateTimeToMS(exec, t, ms, true))), exec, label);
 }
 
 } // namespace JSC

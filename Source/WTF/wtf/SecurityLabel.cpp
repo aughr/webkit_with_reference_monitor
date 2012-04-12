@@ -25,16 +25,19 @@
 namespace WTF {
     PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::combine(const RefPtr<SecurityLabelImpl>& other) {
         SecurityTagSet& otherSet = other->m_tagSet;
-        RefPtr<SecurityLabelImpl> result = new SecurityLabelImpl();
-        result->m_tagSet = m_tagSet;
+        RefPtr<SecurityLabelImpl> result = this->duplicate();
+
         for (SecurityTagSet::iterator it = otherSet.begin(); it != otherSet.end(); ++it) {
             result->m_tagSet.add(*it);
         }
         return result.release();
     }
-    
+
     PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::duplicate() {
-        RefPtr<SecurityLabelImpl> result = new SecurityLabelImpl();
+        if (this->refCount() == 1)
+            return this;
+
+        RefPtr<SecurityLabelImpl> result = SecurityLabelImpl::create();
         result->m_tagSet = m_tagSet;
         return result.release();
     }

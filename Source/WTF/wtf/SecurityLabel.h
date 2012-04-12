@@ -84,4 +84,6 @@ namespace WTF {
     }
 }
 
+using WTF::SecurityLabel;
+
 #endif

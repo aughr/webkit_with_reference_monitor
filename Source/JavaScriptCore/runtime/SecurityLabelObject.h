@@ -41,6 +41,14 @@ namespace JSC {
             label->finishCreation(globalData);
             return label;
         }
+
+        static SecurityLabelObject* create(JSGlobalData& globalData, Structure* structure, SecurityLabel label)
+        {
+            SecurityLabelObject* labelObj = new (NotNull, allocateCell<SecurityLabelObject>(globalData.heap)) SecurityLabelObject(globalData, structure);
+            labelObj->finishCreation(globalData);
+            labelObj->m_label = label;
+            return labelObj;
+        }
         
         static const ClassInfo s_info;
         
@@ -53,11 +61,14 @@ namespace JSC {
         void add(const WTF::SecurityTag&);
         bool hasTag(const WTF::SecurityTag&) const;
         void merge(const SecurityLabelObject&);
+        void merge(const SecurityLabel&);
+        SecurityLabel securityLabel() { return m_label; }
     private:
         WTF::SecurityLabel m_label;
     };
     
     SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*);
+    SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*, SecurityLabel);
     
     inline bool SecurityLabelObject::isNull() const {
         return m_label.isNull();
@@ -75,6 +86,9 @@ namespace JSC {
         m_label.merge(other.m_label);
     }
     
+    inline void SecurityLabelObject::merge(const SecurityLabel& other) {
+        m_label.merge(other);
+    }
 } // namespace JSC
 
 #endif // SecurityLabelObject_h

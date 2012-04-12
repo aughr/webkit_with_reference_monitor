@@ -31,6 +31,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/MathExtras.h>
+#include <wtf/SecurityLabel.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -125,7 +126,7 @@ namespace JSC {
 
     public:
         static EncodedJSValue encode(JSValue);
-        static EncodedJSValue encode(JSValue, ExecState*, bool taint);
+        static EncodedJSValue encode(JSValue, ExecState*, SecurityLabel);
         static JSValue decode(EncodedJSValue);
 
         enum JSNullTag { JSNull };
@@ -241,9 +242,9 @@ namespace JSC {
         JSCell* asCell() const;
         JS_EXPORT_PRIVATE bool isValidCallee();
         
-        JSValue taint(ExecState*);
         bool isTainted(ExecState*) const;
-        bool hasTaintAnywhere(ExecState*) const;
+        JSValue mergeSecurityLabel(ExecState*, SecurityLabel);
+        SecurityLabel securityLabel() const;
 
         char* description();
 

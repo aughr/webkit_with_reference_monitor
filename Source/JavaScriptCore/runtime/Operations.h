@@ -78,21 +78,20 @@ namespace JSC {
         JSString::RopeBuilder ropeBuilder(*globalData);
 
         unsigned oldLength = 0;
-        bool tainted = false;
+        SecurityLabel label;
 
         for (unsigned i = 0; i < count; ++i) {
             JSValue v = strings[i].jsValue();
-            tainted = tainted || v.isTainted(exec);
-            ropeBuilder.append(v.toString(exec));
+            JSString* string = v.toString(exec);
+            label.merge(string->securityLabel());
+            ropeBuilder.append(string);
 
             if (ropeBuilder.length() < oldLength) // True for overflow
                 return throwOutOfMemoryError(exec);
         }
 
         JSValue result = ropeBuilder.release();
-        if (tainted) {
-            result = result.taint(exec);
-        }
+        result = result.mergeSecurityLabel(exec, label);
         return result;
     }
 

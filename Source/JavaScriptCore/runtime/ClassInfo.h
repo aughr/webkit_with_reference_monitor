@@ -90,14 +90,14 @@ namespace JSC {
         typedef bool (*GetOwnPropertyDescriptorFunctionPtr)(JSObject*, ExecState*, const Identifier&, PropertyDescriptor&);
         GetOwnPropertyDescriptorFunctionPtr getOwnPropertyDescriptor;
 
-        typedef void (*TaintFunctionPtr)(JSCell*, ExecState* exec);
-        TaintFunctionPtr taintCell;
-
         typedef bool (*IsTaintedFunctionPtr)(const JSCell*, ExecState* exec);
         IsTaintedFunctionPtr isTaintedCell;
 
-        typedef bool (*HasTaintAnywhereFunctionPointer)(const JSCell*, ExecState* exec);
-        HasTaintAnywhereFunctionPointer hasTaintAnywhereCell;
+        typedef SecurityLabel (*SecurityLabelPtr)(const JSCell*);
+        SecurityLabelPtr securityLabelCell;
+        
+        typedef void (*MergeSecurityLabelPtr)(JSCell*, ExecState* exec, SecurityLabel label);
+        MergeSecurityLabelPtr mergeSecurityLabelCell;
     };
 
 #define CREATE_MEMBER_CHECKER(member) \
@@ -139,9 +139,9 @@ struct MemberCheck##member { \
         &ClassName::putDirectVirtual, \
         &ClassName::defineOwnProperty, \
         &ClassName::getOwnPropertyDescriptor, \
-        &ClassName::taintCell, \
         &ClassName::isTaintedCell, \
-        &ClassName::hasTaintAnywhereCell, \
+        &ClassName::securityLabelCell, \
+        &ClassName::mergeSecurityLabelCell, \
     }, \
     sizeof(ClassName), \
     ClassName::TypedArrayStorageType

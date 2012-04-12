@@ -86,8 +86,9 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncTest(ExecState* exec)
         return throwVMTypeError(exec);
 
     JSString* string = exec->argument(0).toString(exec);
-    bool tainted = thisValue.isTainted(exec) || string->isTainted(exec);
-    return JSValue::encode(jsBoolean(asRegExpObject(thisValue)->test(exec, string)), exec, tainted);
+    SecurityLabel label = thisValue.securityLabel();
+    label.merge(string->securityLabel());
+    return JSValue::encode(jsBoolean(asRegExpObject(thisValue)->test(exec, string)), exec, label);
 }
 
 EncodedJSValue JSC_HOST_CALL regExpProtoFuncExec(ExecState* exec)
@@ -96,8 +97,9 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncExec(ExecState* exec)
     if (!thisValue.inherits(&RegExpObject::s_info))
         return throwVMTypeError(exec);
     JSString* string = exec->argument(0).toString(exec);
-    bool tainted = thisValue.isTainted(exec) || string->isTainted(exec);
-    return JSValue::encode(asRegExpObject(thisValue)->exec(exec, string), exec, tainted);
+    SecurityLabel label = thisValue.securityLabel();
+    label.merge(string->securityLabel());
+    return JSValue::encode(asRegExpObject(thisValue)->exec(exec, string), exec, label);
 }
 
 EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(ExecState* exec)
@@ -109,7 +111,8 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(ExecState* exec)
     RegExp* regExp;
     JSValue arg0 = exec->argument(0);
     JSValue arg1 = exec->argument(1);
-    bool tainted = arg0.hasTaintAnywhere(exec) || arg1.hasTaintAnywhere(exec);
+    SecurityLabel label = arg0.securityLabel();
+    label.merge(arg1.securityLabel());
     
     if (arg0.inherits(&RegExpObject::s_info)) {
         if (!arg1.isUndefined())
@@ -136,8 +139,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncCompile(ExecState* exec)
 
     asRegExpObject(thisValue)->setRegExp(exec->globalData(), regExp);
     asRegExpObject(thisValue)->setLastIndex(exec, 0);
-    if (tainted)
-        asRegExpObject(thisValue)->taint(exec);
+    asRegExpObject(thisValue)->mergeSecurityLabel(exec, label);
     return JSValue::encode(jsUndefined());
 }
 
@@ -163,9 +165,10 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncToString(ExecState* exec)
         postfix[index] = 'm';
     JSString *source_string = thisObject->get(exec, exec->propertyNames().source).toString(exec);
     UString source = source_string->value(exec);
-    bool tainted = thisObject->isTainted(exec) || source_string->isTainted(exec);
+    SecurityLabel label = thisObject->securityLabel();
+    label.merge(source_string->securityLabel());
     // If source is empty, use "/(?:)/" to avoid colliding with comment syntax
-    return JSValue::encode(jsMakeNontrivialString(exec, "/", source, postfix), exec, tainted);
+    return JSValue::encode(jsMakeNontrivialString(exec, "/", source, postfix), exec, label);
 }
 
 } // namespace JSC

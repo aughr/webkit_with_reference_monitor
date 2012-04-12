@@ -46,9 +46,10 @@ namespace JSC {
         static ErrorInstance* create(ExecState* exec, Structure* structure, JSValue message)
         {
             JSGlobalData& globalData = exec->globalData();
-            UString messageString = message.isUndefined() ? UString() : message.toString(exec)->value(exec);
+            JSString* string = message.toString(exec);
+            UString messageString = message.isUndefined() ? UString() : string->value(exec);
             ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(globalData.heap)) ErrorInstance(globalData, structure);
-            instance->finishCreation(exec, messageString, message.hasTaintAnywhere(exec));
+            instance->finishCreation(exec, messageString, string->securityLabel());
             return instance;
         }
 
@@ -67,15 +68,14 @@ namespace JSC {
                 putDirect(globalData, globalData.propertyNames->message, jsString(&globalData, message), DontEnum);
         }
 
-        void finishCreation(ExecState* exec, const UString& message, bool tainted)
+        void finishCreation(ExecState* exec, const UString& message, SecurityLabel label)
         {
             JSGlobalData& globalData = exec->globalData();
             Base::finishCreation(globalData);
             ASSERT(inherits(&s_info));
             if (!message.isNull()) {
                 JSValue message_value = jsString(&globalData, message);
-                if (tainted)
-                    message_value = message_value.taint(exec);
+                message_value = message_value.mergeSecurityLabel(exec, label);
                 putDirect(globalData, globalData.propertyNames->message, message_value, DontEnum);
             }
         }

@@ -194,15 +194,14 @@ EncodedJSValue JSC_HOST_CALL objectConstructorKeys(ExecState* exec)
 {
     if (!exec->argument(0).isObject())
         return throwVMError(exec, createTypeError(exec, "Requested keys of a value that is not an object."));
-    bool tainted = exec->argument(0).isTainted(exec);
+    SecurityLabel label = exec->argument(0).securityLabel();
     PropertyNameArray properties(exec);
     asObject(exec->argument(0))->methodTable()->getOwnPropertyNames(asObject(exec->argument(0)), exec, properties, ExcludeDontEnumProperties);
     JSArray* keys = constructEmptyArray(exec);
     size_t numProperties = properties.size();
     for (size_t i = 0; i < numProperties; i++) {
         JSString* string = jsOwnedString(exec, properties[i].ustring());
-        if (tainted)
-            string->taint(exec);
+        string->mergeSecurityLabel(exec, label);
         keys->push(exec, string);
     }
         

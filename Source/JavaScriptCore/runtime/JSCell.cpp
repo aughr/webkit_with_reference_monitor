@@ -129,10 +129,6 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned ident
     return thisObject->methodTable()->deletePropertyByIndex(thisObject, exec, identifier);
 }
 
-bool JSCell::hasTaintAnywhereCell(const JSCell* cell, ExecState* exec) {
-    return JSCell::isTaintedCell(cell, exec);
-}
-
 bool JSCell::isTaintedCell(const JSCell* cell, ExecState* exec) {
     if (cell->m_label.get() == NULL)
         return false;
@@ -140,10 +136,20 @@ bool JSCell::isTaintedCell(const JSCell* cell, ExecState* exec) {
         return cell->m_label->hasTag(exec->globalData().taintTag);
 }
 
-void JSCell::taintCell(JSCell* cell, ExecState* exec) {
+SecurityLabel JSCell::securityLabelCell(const JSCell* cell) {
     if (cell->m_label.get() == NULL)
-        cell->m_label.set(exec->globalData(), cell, constructSecurityLabel(exec, exec->lexicalGlobalObject()));
-    cell->m_label->add(exec->globalData().taintTag);
+        return SecurityLabel();
+    else
+        return cell->m_label.get()->securityLabel();
+}
+
+void JSCell::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::ExecState* exec, SecurityLabel label) {
+    if (label.isNull())
+        return;
+    if (cell->m_label.get() == NULL)
+        cell->m_label.set(exec->globalData(), cell, constructSecurityLabel(exec, exec->lexicalGlobalObject(), label));
+    else
+        cell->m_label->merge(label);
 }
 
 JSObject* JSCell::toThisObject(JSCell* cell, ExecState* exec)

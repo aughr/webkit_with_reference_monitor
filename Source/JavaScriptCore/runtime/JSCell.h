@@ -82,11 +82,11 @@ namespace JSC {
         bool inherits(const ClassInfo*) const;
         bool isAPIValueWrapper() const;
         bool isTainted(ExecState* exec) const;
-        bool hasTaintAnywhere(ExecState* exec) const;
-        void taint(ExecState* exec);
+        void mergeSecurityLabel(ExecState*, SecurityLabel);
+        SecurityLabel securityLabel() const;
         JS_EXPORT_PRIVATE static bool isTaintedCell(const JSCell*, ExecState*);
-        JS_EXPORT_PRIVATE static bool hasTaintAnywhereCell(const JSCell*, ExecState*);
-        JS_EXPORT_PRIVATE static void taintCell(JSCell*, ExecState*);
+        JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
+        JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, ExecState*, SecurityLabel);
 
         Structure* structure() const;
         void setStructure(JSGlobalData&, Structure*);
@@ -207,6 +207,7 @@ namespace JSC {
     inline void JSCell::visitChildren(JSCell* cell, SlotVisitor& visitor)
     {
         visitor.append(&cell->m_structure);
+        visitor.append(&cell->m_label);
     }
 
     // --- JSValue inlines ----------------------------

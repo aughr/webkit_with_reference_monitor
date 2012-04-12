@@ -52,4 +52,10 @@ namespace JSC {
         return object;
     }
     
+    SecurityLabelObject* constructSecurityLabel(ExecState* exec, JSGlobalObject* globalObject, SecurityLabel label)
+    {
+        SecurityLabelObject* object = SecurityLabelObject::create(exec->globalData(), globalObject->securityLabelStructure(), label);
+        return object;
+    }
+    
 } // namespace JSC
