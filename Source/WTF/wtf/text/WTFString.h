@@ -27,6 +27,7 @@
 
 #include <wtf/text/ASCIIFastPath.h>
 #include <wtf/text/StringImpl.h>
+#include <wtf/SecurityLabel.h>
 
 #ifdef __OBJC__
 #include <objc/objc.h>
@@ -127,9 +128,9 @@ public:
     WTF_EXPORT_PRIVATE String(const char* characters);
 
     // Construct a string referencing an existing StringImpl.
-    String(StringImpl* impl, bool tainted=false) : m_impl(impl), m_tainted(tainted) { }
-    String(PassRefPtr<StringImpl> impl, bool tainted=false) : m_impl(impl), m_tainted(tainted) { }
-    String(RefPtr<StringImpl> impl, bool tainted=false) : m_impl(impl), m_tainted(tainted) { }
+    String(StringImpl* impl, SecurityLabel label=SecurityLabel()) : m_impl(impl), m_label(label) { }
+    String(PassRefPtr<StringImpl> impl, SecurityLabel label=SecurityLabel()) : m_impl(impl), m_label(label) { }
+    String(RefPtr<StringImpl> impl, SecurityLabel label=SecurityLabel()) : m_impl(impl), m_label(label) { }
 
     // Inline the destructor.
     ALWAYS_INLINE ~String() { }
@@ -390,8 +391,8 @@ public:
     String(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_impl.isHashTableDeletedValue(); }
 
-    WTF_EXPORT_PRIVATE bool isTainted() const;
-    WTF_EXPORT_PRIVATE void taint();
+    WTF_EXPORT_PRIVATE SecurityLabel securityLabel() const;
+    WTF_EXPORT_PRIVATE void mergeSecurityLabel(const SecurityLabel&);
 
 #ifndef NDEBUG
     void show() const;
@@ -399,7 +400,7 @@ public:
 
 private:
     RefPtr<StringImpl> m_impl;
-    bool m_tainted;
+    SecurityLabel m_label;
 };
 
 #if PLATFORM(QT)

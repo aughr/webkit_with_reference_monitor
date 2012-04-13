@@ -997,8 +997,7 @@ PassRefPtr<DocumentFragment> createFragmentFromSource(const String& markup, Elem
     Document* document = contextElement->document();
     RefPtr<DocumentFragment> fragment = DocumentFragment::create(document);
 
-    if (markup.isTainted())
-        fragment->taint();
+    fragment->mergeSecurityLabel(markup.securityLabel());
 
     if (document->isHTMLDocument()) {
         fragment->parseHTML(markup, contextElement);
@@ -1062,14 +1061,12 @@ void replaceChildrenWithText(ContainerNode* container, const String& text, Excep
     if (hasOneTextChild(containerNode.get())) {
         Text* textNode = toText(containerNode->firstChild());
         textNode->setData(text, ec);
-        if (text.isTainted())
-            textNode->taint();
+        textNode->mergeSecurityLabel(text.securityLabel());
         return;
     }
 
     RefPtr<Text> textNode = Text::create(containerNode->document(), text);
-    if (text.isTainted())
-        textNode->taint();
+    textNode->mergeSecurityLabel(text.securityLabel());
 
     if (hasOneChild(containerNode.get())) {
         containerNode->replaceChild(textNode.release(), containerNode->firstChild(), ec);

@@ -71,8 +71,7 @@ void ProcessingInstruction::setData(const String& data, ExceptionCode&)
 {
     int oldLength = m_data.length();
     m_data = data;
-    if (data.isTainted())
-        taint();
+    mergeSecurityLabel(data.securityLabel());
     document()->textRemoved(this, 0, oldLength);
     checkStyleSheet();
 }
@@ -89,7 +88,7 @@ Node::NodeType ProcessingInstruction::nodeType() const
 
 String ProcessingInstruction::nodeValue() const
 {
-    return String(m_data.impl(), isTainted());
+    return String(m_data.impl(), securityLabel());
 }
 
 void ProcessingInstruction::setNodeValue(const String& nodeValue, ExceptionCode& ec)

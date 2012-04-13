@@ -77,7 +77,6 @@ MarkupAccumulator::MarkupAccumulator(Vector<Node*>* nodes, EAbsoluteURLs resolve
     : m_nodes(nodes)
     , m_range(range)
     , m_resolveURLsMethod(resolveUrlsMethod)
-    , m_isTainted(false)
 {
 }
 
@@ -89,8 +88,7 @@ String MarkupAccumulator::serializeNodes(Node* targetNode, Node* nodeToSkip, ECh
 {
     serializeNodesWithNamespaces(targetNode, nodeToSkip, childrenOnly, 0);
     String result = m_markup.toString();
-    if (m_isTainted)
-        result.taint();
+    result.mergeSecurityLabel(m_label);
     return result;
 }
 
@@ -99,7 +97,7 @@ void MarkupAccumulator::serializeNodesWithNamespaces(Node* targetNode, Node* nod
     if (targetNode == nodeToSkip)
         return;
 
-    m_isTainted = m_isTainted || targetNode->isTainted();
+    m_label.merge(targetNode->securityLabel());
 
     Namespaces namespaceHash;
     if (namespaces)

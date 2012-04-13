@@ -111,7 +111,7 @@ private:
 
     StringBuilder m_markup;
     const EAbsoluteURLs m_resolveURLsMethod;
-    bool m_isTainted;
+    SecurityLabel m_label;
 };
 
 // FIXME: This method should be integrated with MarkupAccumulator.

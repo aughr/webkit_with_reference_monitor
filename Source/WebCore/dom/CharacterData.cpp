@@ -41,8 +41,7 @@ namespace WebCore {
 void CharacterData::setData(const String& data, ExceptionCode&)
 {
     const String& nonNullData = !data.isNull() ? data : emptyString();
-    if (nonNullData.isTainted())
-        taint();
+    mergeSecurityLabel(nonNullData.securityLabel());
     if (m_data == nonNullData)
         return;
 
@@ -161,7 +160,7 @@ void CharacterData::replaceData(unsigned offset, unsigned count, const String& d
 
 String CharacterData::nodeValue() const
 {
-    return String(m_data.impl(), isTainted());
+    return String(m_data.impl(), securityLabel());
 }
 
 bool CharacterData::containsOnlyWhitespace() const

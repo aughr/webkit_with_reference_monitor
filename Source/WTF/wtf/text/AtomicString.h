@@ -48,7 +48,7 @@ public:
     AtomicString(const UChar* s) : m_string(add(s)) { }
     ATOMICSTRING_CONVERSION AtomicString(StringImpl* imp) : m_string(add(imp)) { }
     AtomicString(AtomicStringImpl* imp) : m_string(imp) { }
-    ATOMICSTRING_CONVERSION AtomicString(const String& s) : m_string(add(s.impl()), s.isTainted()) { }
+    ATOMICSTRING_CONVERSION AtomicString(const String& s) : m_string(add(s.impl()), s.securityLabel()) { }
     AtomicString(StringImpl* baseString, unsigned start, unsigned length) : m_string(add(baseString, start, length)) { }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.

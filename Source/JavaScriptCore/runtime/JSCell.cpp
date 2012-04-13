@@ -130,10 +130,7 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned ident
 }
 
 bool JSCell::isTaintedCell(const JSCell* cell, ExecState* exec) {
-    if (cell->m_label.get() == NULL)
-        return false;
-    else
-        return cell->m_label->hasTag(exec->globalData().taintTag);
+    return cell->securityLabel().hasTag(exec->globalData().taintTag);
 }
 
 SecurityLabel JSCell::securityLabelCell(const JSCell* cell) {

@@ -263,8 +263,7 @@ void HTMLConstructionSite::insertComment(AtomicHTMLToken& token)
 {
     ASSERT(token.type() == HTMLTokenTypes::Comment);
     RefPtr<Comment> comment = Comment::create(currentNode()->document(), token.comment());
-    if (shouldTaint())
-        comment->taint();
+    comment->mergeSecurityLabel(securityLabel());
     attachLater(currentNode(), comment.release());
 }
 
@@ -272,8 +271,7 @@ void HTMLConstructionSite::insertCommentOnDocument(AtomicHTMLToken& token)
 {
     ASSERT(token.type() == HTMLTokenTypes::Comment);
     RefPtr<Comment> comment = Comment::create(m_document, token.comment());
-    if (shouldTaint())
-        comment->taint();
+    comment->mergeSecurityLabel(securityLabel());
     attachLater(m_attachmentRoot, comment.release());
 }
 
@@ -282,8 +280,7 @@ void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomicHTMLToken& token
     ASSERT(token.type() == HTMLTokenTypes::Comment);
     ContainerNode* parent = m_openElements.rootNode();
     RefPtr<Comment> comment = Comment::create(parent->document(), token.comment());
-    if (shouldTaint())
-        comment->taint();
+    comment->mergeSecurityLabel(securityLabel());
     attachLater(parent, comment);
 }
 
@@ -396,8 +393,7 @@ void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMo
             String substring = characters.substring(currentPosition);
             textNode = Text::create(task.parent->document(), shouldUseAtomicString ? AtomicString(substring).string() : substring);
         }
-        if (shouldTaint())
-            textNode->taint();
+        textNode->mergeSecurityLabel(securityLabel());
 
         currentPosition += textNode->length();
         ASSERT(currentPosition <= characters.length());
@@ -410,8 +406,7 @@ PassRefPtr<Element> HTMLConstructionSite::createElement(AtomicHTMLToken& token, 
 {
     QualifiedName tagName(nullAtom, token.name(), namespaceURI);
     RefPtr<Element> element = currentNode()->document()->createElement(tagName, true);
-    if (shouldTaint())
-        element->taint();
+    element->mergeSecurityLabel(securityLabel());
     element->parserSetAttributes(token.takeAttributes(), m_fragmentScriptingPermission);
     return element.release();
 }
@@ -423,8 +418,7 @@ PassRefPtr<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken& tok
     // have to pass the current form element.  We should rework form association
     // to occur after construction to allow better code sharing here.
     RefPtr<Element> element = HTMLElementFactory::createHTMLElement(tagName, currentNode()->document(), form(), true);
-    if (shouldTaint())
-        element->taint();
+    element->mergeSecurityLabel(securityLabel());
     element->parserSetAttributes(token.takeAttributes(), m_fragmentScriptingPermission);
     ASSERT(element->isHTMLElement());
     return element.release();

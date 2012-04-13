@@ -159,7 +159,7 @@ private:
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
-    bool shouldTaint() const { return m_attachmentRoot->isTainted(); }
+    SecurityLabel securityLabel() const { return m_attachmentRoot->securityLabel(); }
 
     PassRefPtr<Element> createHTMLElementFromSavedElement(Element*);
     PassRefPtr<Element> createElement(AtomicHTMLToken&, const AtomicString& namespaceURI);

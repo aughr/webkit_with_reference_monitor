@@ -867,6 +867,9 @@ inline bool JSValue::isTainted(ExecState* exec) const {
 }
     
 inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {
+    if (label.isNull())
+        return *this;
+
     JSCell *cell;
     if (isString()) {
         const JSString *string = static_cast<const JSString*>(asCell());

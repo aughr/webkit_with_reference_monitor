@@ -117,7 +117,7 @@ void Attr::setPrefix(const AtomicString& prefix, ExceptionCode& ec)
 
 String Attr::nodeValue() const
 {
-    return String(value().impl(), isTainted());
+    return String(value().impl(), securityLabel());
 }
 
 void Attr::setValue(const AtomicString& value)
@@ -138,8 +138,7 @@ void Attr::setValue(const AtomicString& value, ExceptionCode&)
         m_element->willModifyAttribute(m_attribute->name(), m_attribute->value(), value);
 
     setValue(value);
-    if (value.string().isTainted())
-        taint();
+    mergeSecurityLabel(value.string().securityLabel());
 
     if (m_element)
         m_element->didModifyAttribute(m_attribute.get());

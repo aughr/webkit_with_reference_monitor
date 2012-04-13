@@ -806,11 +806,10 @@ sub GenerateHeader
         $structureFlags{"JSC::OverridesGetPropertyNames"} = 1;
     }
 
-    # Custom taint functions exist on Node
+    # Custom security label functions exist on Node
     if ($interfaceName eq "Node") {
-        push(@headerContent, "    static void taintCell(JSC::JSCell*, JSC::ExecState*);\n");
-        push(@headerContent, "    static bool isTaintedCell(const JSC::JSCell*, JSC::ExecState*);\n");
-        push(@headerContent, "    static bool hasTaintAnywhereCell(const JSC::JSCell*, JSC::ExecState*);\n");
+        push(@headerContent, "    static SecurityLabel securityLabelCell(const JSC::JSCell*);\n");
+        push(@headerContent, "    static void mergeSecurityLabelCell(JSC::JSCell*, JSC::ExecState*, SecurityLabel);\n");
     }
 
     # Custom getOwnPropertyNames function

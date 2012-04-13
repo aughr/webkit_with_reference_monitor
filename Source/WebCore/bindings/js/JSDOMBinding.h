@@ -230,7 +230,7 @@ enum ParameterDefaultPolicy {
     void setDOMException(JSC::ExecState*, ExceptionCode);
 
     JSC::JSValue jsString(JSC::ExecState*, const String&); // empty if the string is null
-    JSC::JSValue jsStringUntainted(JSC::ExecState*, const String&); // empty if the string is null
+    JSC::JSValue jsStringUnlabeled(JSC::ExecState*, const String&); // empty if the string is null
     JSC::JSValue jsStringSlowCase(JSC::ExecState*, JSStringCache&, StringImpl*);
     JSC::JSValue jsString(JSC::ExecState*, const KURL&); // empty if the URL is null
     inline JSC::JSValue jsString(JSC::ExecState* exec, const AtomicString& s)
@@ -251,9 +251,9 @@ enum ParameterDefaultPolicy {
     // object, to let the engine know that collecting the JSString wrapper is unlikely to save memory.
     JSC::JSValue jsOwnedStringOrNull(JSC::ExecState*, const String&); 
 
-    JSC::JSValue jsTaint(JSC::JSValue, JSC::ExecState*, const String&);
-    JSC::JSValue jsTaint(JSC::JSValue, JSC::ExecState*, const KURL&);
-    JSC::JSValue jsTaint(JSC::JSValue, JSC::ExecState*, const JSC::UString&);
+    JSC::JSValue jsLabel(JSC::JSValue, JSC::ExecState*, const String&);
+    JSC::JSValue jsLabel(JSC::JSValue, JSC::ExecState*, const KURL&);
+    JSC::JSValue jsLabel(JSC::JSValue, JSC::ExecState*, const JSC::UString&);
 
     String identifierToString(const JSC::Identifier&);
     String ustringToString(const JSC::UString&);
@@ -343,7 +343,7 @@ enum ParameterDefaultPolicy {
     void printErrorMessageForFrame(Frame*, const String& message);
     JSC::JSValue objectToStringFunctionGetter(JSC::ExecState*, JSC::JSValue, const JSC::Identifier& propertyName);
 
-    inline JSC::JSValue jsStringUntainted(JSC::ExecState* exec, const String& s)
+    inline JSC::JSValue jsStringUnlabeled(JSC::ExecState* exec, const String& s)
     {
         StringImpl* stringImpl = s.impl();
         if (!stringImpl || !stringImpl->length())
@@ -361,9 +361,8 @@ enum ParameterDefaultPolicy {
     }
     
     inline JSC::JSValue jsString(JSC::ExecState* exec, const String& s) {
-        JSC::JSValue result = jsStringUntainted(exec, s);
-        if (s.isTainted())
-            result = result.taint(exec);
+        JSC::JSValue result = jsStringUnlabeled(exec, s);
+        result = result.mergeSecurityLabel(exec, s.securityLabel());
         return result;
             
     }
@@ -416,18 +415,15 @@ enum ParameterDefaultPolicy {
         return result;
     }
 
-    inline JSC::JSValue jsTaint(JSC::JSValue value, JSC::ExecState* exec, const String& string) {
-        if (string.isTainted())
-            return value.taint(exec);
-        else
-            return value;
+    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState* exec, const String& string) {
+        return value.mergeSecurityLabel(exec, string.securityLabel());
     }
 
-    inline JSC::JSValue jsTaint(JSC::JSValue value, JSC::ExecState* exec, const KURL& url) {
-        return jsTaint(value, exec, url.string());
+    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState* exec, const KURL& url) {
+        return jsLabel(value, exec, url.string());
     }
 
-    inline JSC::JSValue jsTaint(JSC::JSValue value, JSC::ExecState*, const JSC::UString&) {
+    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState*, const JSC::UString&) {
         return value;
     }
 
@@ -437,8 +433,7 @@ enum ParameterDefaultPolicy {
 
         JSC::JSString *jsString = value.toString(exec);
         String string = ustringToString(jsString->value(exec));
-        if (jsString->isTainted(exec))
-            string.taint();
+        string.mergeSecurityLabel(jsString->securityLabel());
         return string;
     }
 } // namespace WebCore

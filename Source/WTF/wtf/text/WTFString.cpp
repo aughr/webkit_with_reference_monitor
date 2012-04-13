@@ -43,13 +43,11 @@ using namespace std;
 // Construct a string with UTF-16 data.
 String::String(const UChar* characters, unsigned length)
     : m_impl(characters ? StringImpl::create(characters, length) : 0)
-    , m_tainted(false)
 {
 }
 
 // Construct a string with UTF-16 data, from a null-terminated source.
 String::String(const UChar* str)
-    : m_tainted(false)
 {
     if (!str)
         return;
@@ -67,26 +65,22 @@ String::String(const UChar* str)
 // Construct a string with latin1 data.
 String::String(const LChar* characters, unsigned length)
     : m_impl(characters ? StringImpl::create(characters, length) : 0)
-    , m_tainted(false)
 {
 }
 
 String::String(const char* characters, unsigned length)
     : m_impl(characters ? StringImpl::create(reinterpret_cast<const LChar*>(characters), length) : 0)
-    , m_tainted(false)
 {
 }
 
 // Construct a string with latin1 data, from a null-terminated source.
 String::String(const LChar* characters)
     : m_impl(characters ? StringImpl::create(characters) : 0)
-    , m_tainted(false)
 {
 }
 
 String::String(const char* characters)
     : m_impl(characters ? StringImpl::create(reinterpret_cast<const LChar*>(characters)) : 0)
-    , m_tainted(false)
 {
 }
 
@@ -111,8 +105,7 @@ void String::append(const String& str)
         } else
             m_impl = str.m_impl;
         
-        if (str.isTainted())
-            taint();
+        mergeSecurityLabel(str.securityLabel());
     }
 }
 
@@ -166,8 +159,7 @@ void String::insert(const String& str, unsigned pos)
             m_impl = str.impl();
         return;
     }
-    if (str.isTainted())
-        taint();
+    mergeSecurityLabel(str.securityLabel());
     insert(str.characters(), str.length(), pos);
 }
 
@@ -253,7 +245,7 @@ String String::substring(unsigned pos, unsigned len) const
 {
     if (!m_impl) 
         return String();
-    return String(m_impl->substring(pos, len), isTainted());
+    return String(m_impl->substring(pos, len), securityLabel());
 }
 
 String String::substringSharingImpl(unsigned offset, unsigned length) const
@@ -266,63 +258,63 @@ String String::substringSharingImpl(unsigned offset, unsigned length) const
 
     if (!offset && length == stringLength)
         return *this;
-    return String(StringImpl::create(m_impl, offset, length), isTainted());
+    return String(StringImpl::create(m_impl, offset, length), securityLabel());
 }
 
 String String::lower() const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->lower(), isTainted());
+    return String(m_impl->lower(), securityLabel());
 }
 
 String String::upper() const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->upper(), isTainted());
+    return String(m_impl->upper(), securityLabel());
 }
 
 String String::stripWhiteSpace() const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->stripWhiteSpace(), isTainted());
+    return String(m_impl->stripWhiteSpace(), securityLabel());
 }
 
 String String::stripWhiteSpace(IsWhiteSpaceFunctionPtr isWhiteSpace) const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->stripWhiteSpace(isWhiteSpace), isTainted());
+    return String(m_impl->stripWhiteSpace(isWhiteSpace), securityLabel());
 }
 
 String String::simplifyWhiteSpace() const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->simplifyWhiteSpace(), isTainted());
+    return String(m_impl->simplifyWhiteSpace(), securityLabel());
 }
 
 String String::simplifyWhiteSpace(IsWhiteSpaceFunctionPtr isWhiteSpace) const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->simplifyWhiteSpace(isWhiteSpace), isTainted());
+    return String(m_impl->simplifyWhiteSpace(isWhiteSpace), securityLabel());
 }
 
 String String::removeCharacters(CharacterMatchFunctionPtr findMatch) const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->removeCharacters(findMatch), isTainted());
+    return String(m_impl->removeCharacters(findMatch), securityLabel());
 }
 
 String String::foldCase() const
 {
     if (!m_impl)
         return String();
-    return String(m_impl->foldCase(), isTainted());
+    return String(m_impl->foldCase(), securityLabel());
 }
 
 bool String::percentage(int& result) const
@@ -825,12 +817,12 @@ String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
     return utf8;
 }
     
-bool String::isTainted() const {
-    return m_tainted;
+SecurityLabel String::securityLabel() const {
+    return m_label;
 }
 
-void String::taint() {
-    m_tainted = true;
+void String::mergeSecurityLabel(const SecurityLabel& label) {
+    m_label.merge(label);
 }
 
 // String Operations

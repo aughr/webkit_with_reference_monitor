@@ -335,7 +335,7 @@ AtomicString AtomicString::lower() const
     RefPtr<StringImpl> newImpl = impl->lower();
     if (LIKELY(newImpl == impl))
         return *this;
-    return AtomicString(String(newImpl, m_string.isTainted()));
+    return AtomicString(String(newImpl, m_string.securityLabel()));
 }
 
 AtomicString AtomicString::fromUTF8Internal(const char* charactersStart, const char* charactersEnd)

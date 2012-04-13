@@ -1484,13 +1484,13 @@ inline bool Node::isDocumentNode() const
     return this == m_document;
 }
 
-inline Node::Node(Document* document, ConstructionType type, bool isTainted)
+inline Node::Node(Document* document, ConstructionType type, SecurityLabel label)
     : m_nodeFlags(type)
     , m_document(document)
     , m_previous(0)
     , m_next(0)
     , m_renderer(0)
-    , m_isTainted(isTainted)
+    , m_label(label)
 {
     if (document)
         document->guardRef();

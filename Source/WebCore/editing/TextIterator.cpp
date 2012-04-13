@@ -263,7 +263,6 @@ TextIterator::TextIterator()
     , m_emitsObjectReplacementCharacters(false)
     , m_stopsOnFormControls(false)
     , m_shouldStop(false)
-    , m_seenTainted(false)
 {
 }
 
@@ -287,7 +286,6 @@ TextIterator::TextIterator(const Range* r, TextIteratorBehavior behavior)
     , m_emitsObjectReplacementCharacters(behavior & TextIteratorEmitsObjectReplacementCharacters)
     , m_stopsOnFormControls(behavior & TextIteratorStopsOnFormControls)
     , m_shouldStop(false)
-    , m_seenTainted(false)
 {
     if (!r)
         return;
@@ -413,7 +411,7 @@ void TextIterator::advance()
                     m_handledNode = handleReplacedElement();
                 else
                     m_handledNode = handleNonTextNode();
-                m_seenTainted = m_seenTainted || m_node->isTainted();
+                m_label.merge(m_node->securityLabel());
                 if (m_positionNode)
                     return;
             }
@@ -2534,7 +2532,7 @@ bool TextIterator::getLocationAndLengthFromRange(Element* scope, const Range* ra
 
 // --------
     
-UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool& isTainted, bool isDisplayString, TextIteratorBehavior defaultBehavior)
+UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, SecurityLabel& label, bool isDisplayString, TextIteratorBehavior defaultBehavior)
 {
     UChar* result = 0;
 
@@ -2549,7 +2547,8 @@ UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, 
     if (!isDisplayString)
         behavior = static_cast<TextIteratorBehavior>(behavior | TextIteratorEmitsTextsWithoutTranscoding);
     
-    for (TextIterator it(r, behavior); !it.atEnd(); it.advance()) {
+    TextIterator it(r, behavior);
+    for (; !it.atEnd(); it.advance()) {
         if (textBuffer.size() && textBuffer.size() + it.length() > cMaxSegmentSize) {
             UChar* newSegmentBuffer = static_cast<UChar*>(malloc(textBuffer.size() * sizeof(UChar)));
             if (!newSegmentBuffer)
@@ -2562,8 +2561,8 @@ UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, 
         }
         textBuffer.append(it.characters(), it.length());
         bufferLength += it.length();
-        isTainted = isTainted || it.seenTainted();
     }
+    label = it.securityLabel();
 
     if (!bufferLength)
         return 0;
@@ -2600,8 +2599,8 @@ exit:
 }
     
 UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool isDisplayString, TextIteratorBehavior defaultBehavior) {
-    bool isTainted = false;
-    return plainTextToMallocAllocatedBuffer(r, bufferLength, isTainted, isDisplayString, defaultBehavior);
+    SecurityLabel label;
+    return plainTextToMallocAllocatedBuffer(r, bufferLength, label, isDisplayString, defaultBehavior);
 }
     
 
@@ -2609,14 +2608,13 @@ UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, 
 String plainText(const Range* r, TextIteratorBehavior defaultBehavior)
 {
     unsigned length;
-    bool isTainted;
-    UChar* buf = plainTextToMallocAllocatedBuffer(r, length, isTainted, false, defaultBehavior);
+    SecurityLabel label;
+    UChar* buf = plainTextToMallocAllocatedBuffer(r, length, label, false, defaultBehavior);
     if (!buf)
         return "";
     String result(buf, length);
     free(buf);
-    if (isTainted)
-        result.taint();
+    result.mergeSecurityLabel(label);
     return result;
 }
 

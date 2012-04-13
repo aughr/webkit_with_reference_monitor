@@ -451,6 +451,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
     if (callType == CallTypeNone) {
         JSString *replacementString_obj = replaceValue.toString(exec);
         label.merge(replacementString_obj->securityLabel());
+        replacementString = replacementString_obj->value(exec);
     }
 
     const UString& source = string->value(exec);

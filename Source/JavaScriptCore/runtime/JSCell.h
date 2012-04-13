@@ -207,7 +207,8 @@ namespace JSC {
     inline void JSCell::visitChildren(JSCell* cell, SlotVisitor& visitor)
     {
         visitor.append(&cell->m_structure);
-        visitor.append(&cell->m_label);
+        if (cell->m_label)
+            visitor.append(&cell->m_label);
     }
 
     // --- JSValue inlines ----------------------------

@@ -67,7 +67,7 @@ public:
     QualifiedName() : m_impl(0) { }
 #endif
 
-    QualifiedName(const QualifiedName& other) : m_impl(other.m_impl), m_isTainted(other.m_isTainted) { ref(); }
+    QualifiedName(const QualifiedName& other) : m_impl(other.m_impl), m_label(other.m_label) { ref(); }
     const QualifiedName& operator=(const QualifiedName& other) { other.ref(); deref(); m_impl = other.m_impl; return *this; }
 
     bool operator==(const QualifiedName& other) const { return m_impl == other.m_impl; }
@@ -100,7 +100,7 @@ private:
     static QualifiedNameImpl* hashTableDeletedValue() { return RefPtr<QualifiedNameImpl>::hashTableDeletedValue(); }
     
     QualifiedNameImpl* m_impl;
-    bool m_isTainted;
+    SecurityLabel m_label;
 };
 
 #ifndef WEBCORE_QUALIFIEDNAME_HIDE_GLOBALS

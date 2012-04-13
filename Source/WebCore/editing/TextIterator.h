@@ -29,6 +29,7 @@
 #include "FindOptions.h"
 #include "Range.h"
 #include <wtf/Vector.h>
+#include <wtf/SecurityLabel.h>
 
 namespace WebCore {
 
@@ -61,7 +62,7 @@ inline bool isCollapsibleWhitespace(UChar c)
 }
 
 String plainText(const Range*, TextIteratorBehavior defaultBehavior = TextIteratorDefaultBehavior);
-UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool& isTainted, bool isDisplayString, TextIteratorBehavior defaultBehavior);
+UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, SecurityLabel& label, bool isDisplayString, TextIteratorBehavior defaultBehavior);
 UChar* plainTextToMallocAllocatedBuffer(const Range*, unsigned& bufferLength, bool isDisplayString, TextIteratorBehavior = TextIteratorDefaultBehavior);
 PassRefPtr<Range> findPlainText(const Range*, const String&, FindOptions);
 
@@ -97,7 +98,7 @@ public:
     int length() const { return m_textLength; }
     const UChar* characters() const { return m_textCharacters; }
     
-    bool seenTainted() const { return m_seenTainted; }
+    SecurityLabel securityLabel() const { return m_label; }
     
     PassRefPtr<Range> range() const;
     Node* node() const;
@@ -194,8 +195,8 @@ private:
     // Used when m_stopsOnFormControls is set to determine if the iterator should keep advancing.
     bool m_shouldStop;
 
-    // Used when we want to see if any text was tainted.
-    bool m_seenTainted;
+    // Used when we want to see the merged labels of all the text inserted.
+    SecurityLabel m_label;
 };
 
 // Iterates through the DOM range, returning all the text, and 0-length boundaries

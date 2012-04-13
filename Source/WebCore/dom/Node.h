@@ -36,6 +36,7 @@
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/text/AtomicString.h>
+#include <wtf/SecurityLabel.h>
 
 #if USE(JSC)
 namespace JSC {
@@ -163,8 +164,8 @@ public:
     bool hasAttributes() const;
     NamedNodeMap* attributes() const;
 
-    bool isTainted() const { return m_isTainted; }
-    void taint() { m_isTainted = true; }
+    SecurityLabel securityLabel() const { return m_label; }
+    void mergeSecurityLabel(SecurityLabel other) { m_label.merge(other); }
 
     virtual KURL baseURI() const;
     
@@ -693,7 +694,7 @@ protected:
         CreateSVGElement = CreateStyledElement | IsSVGFlag,
         CreateDocument = CreateContainer | InDocumentFlag
     };
-    Node(Document*, ConstructionType, bool isTainted=false);
+    Node(Document*, ConstructionType, SecurityLabel label=SecurityLabel());
 
     virtual void didMoveToNewDocument(Document* oldDocument);
     
@@ -762,7 +763,7 @@ private:
     Node* m_previous;
     Node* m_next;
     RenderObject* m_renderer;
-    bool m_isTainted;
+    SecurityLabel m_label;
 
 protected:
     bool isParsingChildrenFinished() const { return getFlag(IsParsingChildrenFinishedFlag); }

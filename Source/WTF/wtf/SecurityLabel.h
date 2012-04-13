@@ -68,7 +68,7 @@ namespace WTF {
 
         void add(const SecurityTag& tag);        
         bool hasTag(const SecurityTag& tag) const;
-        void merge(const SecurityLabel& other);
+        WTF_EXPORT_PRIVATE void merge(const SecurityLabel& other);
     private:
         void duplicateOrInit();
 

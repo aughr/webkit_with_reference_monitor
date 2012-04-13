@@ -208,23 +208,15 @@ void JSNode::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     visitor.addOpaqueRoot(root(node));
 }
-
-void JSNode::taintCell(JSCell* cell, ExecState*)
-{
+    
+SecurityLabel JSNode::securityLabelCell(const JSC::JSCell* cell) {
+    const JSNode* thisObject = jsCast<const JSNode*>(cell);
+    return thisObject->impl()->securityLabel();
+}
+    
+void JSNode::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::ExecState*, SecurityLabel label) {
     JSNode* thisObject = jsCast<JSNode*>(cell);
-    thisObject->impl()->taint();
-}
-
-bool JSNode::isTaintedCell(const JSCell* cell, ExecState*)
-{
-    const JSNode* thisObject = jsCast<const JSNode*>(cell);
-    return thisObject->impl()->isTainted();
-}
-
-bool JSNode::hasTaintAnywhereCell(const JSCell* cell, ExecState*)
-{
-    const JSNode* thisObject = jsCast<const JSNode*>(cell);
-    return thisObject->impl()->isTainted();
+    thisObject->impl()->mergeSecurityLabel(label);
 }
 
 static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObject* globalObject, Node* node)
