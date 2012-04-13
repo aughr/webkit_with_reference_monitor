@@ -117,13 +117,15 @@ JSValue JSXMLHttpRequest::send(ExecState* exec)
     InspectorInstrumentation::willSendXMLHttpRequest(impl()->scriptExecutionContext(), impl()->url());
 
     JSValue val = exec->argument(0);
-    DOMWindow* window = activeDOMWindow(exec);
-    if (window) {
-        RefPtr<Event> event = Event::create(eventNames().xmlhttpsendEvent, false, true);
-        window->dispatchEvent(event);
-        if (event->defaultPrevented()) {
-            reportException(exec, jsString(exec, requestDenied));
-            return jsUndefined();
+    if (impl()->scriptExecutionContext()->isDocument()) {
+        DOMWindow* window = activeDOMWindow(exec);
+        if (window) {
+            RefPtr<Event> event = Event::create(eventNames().xmlhttpsendEvent, false, true);
+            window->dispatchEvent(event);
+            if (event->defaultPrevented()) {
+                reportException(exec, jsString(exec, requestDenied));
+                return jsUndefined();
+            }
         }
     }
 
