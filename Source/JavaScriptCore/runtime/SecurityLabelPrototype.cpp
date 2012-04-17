@@ -26,7 +26,6 @@
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include <wtf/Assertions.h>
-#include <wtf/CurrentTime.h>
 
 namespace JSC {
     

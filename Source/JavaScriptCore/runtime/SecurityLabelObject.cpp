@@ -46,6 +46,15 @@ namespace JSC {
         ASSERT(inherits(&s_info));
     }
     
+    SecurityLabel SecurityLabelObject::securityLabelCell(const JSCell* cell) {
+        const SecurityLabelObject* obj = jsCast<const SecurityLabelObject*>(cell);
+        return obj->securityLabel();
+    }
+    
+    void SecurityLabelObject::mergeSecurityLabelCell(JSC::JSCell*, JSC::ExecState*, SecurityLabel) {
+        return;
+    }
+    
     SecurityLabelObject* constructSecurityLabel(ExecState* exec, JSGlobalObject* globalObject)
     {
         SecurityLabelObject* object = SecurityLabelObject::create(exec->globalData(), globalObject->securityLabelStructure());

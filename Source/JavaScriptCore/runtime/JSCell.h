@@ -81,10 +81,8 @@ namespace JSC {
         bool isGetterSetter() const;
         bool inherits(const ClassInfo*) const;
         bool isAPIValueWrapper() const;
-        bool isTainted(ExecState* exec) const;
         void mergeSecurityLabel(ExecState*, SecurityLabel);
         SecurityLabel securityLabel() const;
-        JS_EXPORT_PRIVATE static bool isTaintedCell(const JSCell*, ExecState*);
         JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
         JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, ExecState*, SecurityLabel);
 

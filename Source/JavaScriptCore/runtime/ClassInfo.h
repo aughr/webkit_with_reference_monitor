@@ -90,9 +90,6 @@ namespace JSC {
         typedef bool (*GetOwnPropertyDescriptorFunctionPtr)(JSObject*, ExecState*, const Identifier&, PropertyDescriptor&);
         GetOwnPropertyDescriptorFunctionPtr getOwnPropertyDescriptor;
 
-        typedef bool (*IsTaintedFunctionPtr)(const JSCell*, ExecState* exec);
-        IsTaintedFunctionPtr isTaintedCell;
-
         typedef SecurityLabel (*SecurityLabelPtr)(const JSCell*);
         SecurityLabelPtr securityLabelCell;
         
@@ -139,7 +136,6 @@ struct MemberCheck##member { \
         &ClassName::putDirectVirtual, \
         &ClassName::defineOwnProperty, \
         &ClassName::getOwnPropertyDescriptor, \
-        &ClassName::isTaintedCell, \
         &ClassName::securityLabelCell, \
         &ClassName::mergeSecurityLabelCell, \
     }, \

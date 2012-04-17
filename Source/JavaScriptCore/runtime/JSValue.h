@@ -242,7 +242,6 @@ namespace JSC {
         JSCell* asCell() const;
         JS_EXPORT_PRIVATE bool isValidCallee();
         
-        bool isTainted(ExecState*) const;
         JSValue mergeSecurityLabel(ExecState*, SecurityLabel);
         SecurityLabel securityLabel() const;
 

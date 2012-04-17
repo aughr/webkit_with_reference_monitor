@@ -62,7 +62,10 @@ namespace JSC {
         bool hasTag(const WTF::SecurityTag&) const;
         void merge(const SecurityLabelObject&);
         void merge(const SecurityLabel&);
-        SecurityLabel securityLabel() { return m_label; }
+        SecurityLabel securityLabel() const { return m_label; }
+        
+        JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
+        JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, ExecState*, SecurityLabel);
     private:
         WTF::SecurityLabel m_label;
     };

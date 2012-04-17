@@ -532,10 +532,6 @@ inline const MethodTable* JSCell::methodTable() const
     return &classInfo()->methodTable;
 }
 
-inline bool JSCell::isTainted(ExecState* exec) const {
-    return methodTable()->isTaintedCell(this, exec);
-}
-
 inline SecurityLabel JSCell::securityLabel() const {
     return methodTable()->securityLabelCell(this);
 }
@@ -874,10 +870,6 @@ inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue 
         return;
     }
     asCell()->methodTable()->putByIndex(asCell(), exec, propertyName, value, shouldThrow);
-}
-
-inline bool JSValue::isTainted(ExecState* exec) const {
-    return isCell() && asCell()->isTainted(exec);
 }
     
 inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {

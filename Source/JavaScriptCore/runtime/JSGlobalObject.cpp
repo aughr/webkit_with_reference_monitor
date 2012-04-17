@@ -95,8 +95,6 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = { &all
   decodeURIComponent    globalFuncDecodeURIComponent    DontEnum|Function 1
   encodeURI             globalFuncEncodeURI             DontEnum|Function 1
   encodeURIComponent    globalFuncEncodeURIComponent    DontEnum|Function 1
-  taint                 globalFuncTaint                 DontEnum|Function 1
-  isTainted             globalFuncIsTainted             DontEnum|Function 1
 @end
 */
 
@@ -291,6 +289,7 @@ void JSGlobalObject::reset(JSValue prototype)
     m_regExpPrototype->putDirectWithoutTransition(exec->globalData(), exec->propertyNames().constructor, m_regExpConstructor.get(), DontEnum);
     errorPrototype->putDirectWithoutTransition(exec->globalData(), exec->propertyNames().constructor, m_errorConstructor.get(), DontEnum);
     m_securityTagPrototype->putDirectWithoutTransition(exec->globalData(), exec->propertyNames().constructor, m_securityTagConstructor.get(), DontEnum);
+    m_securityTagPrototype->freeze(exec->globalData());
 
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "Object"), objectConstructor, DontEnum);
     putDirectWithoutTransition(exec->globalData(), Identifier(exec, "Function"), functionConstructor, DontEnum);

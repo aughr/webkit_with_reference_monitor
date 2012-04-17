@@ -569,25 +569,6 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsNaN(ExecState* exec)
     return JSValue::encode(jsBoolean(isnan(exec->argument(0).toNumber(exec))));
 }
 
-EncodedJSValue JSC_HOST_CALL globalFuncTaint(ExecState* exec)
-{
-    JSValue argument = exec->argument(0);
-    SecurityLabel label;
-    label.add(exec->globalData().taintTag);
-    return JSValue::encode(argument, exec, label);
-}
-
-EncodedJSValue JSC_HOST_CALL globalFuncIsTainted(ExecState* exec)
-{
-    JSValue argument = exec->argument(0);
-    if (argument.isCell()) {
-        bool result = argument.asCell()->isTainted(exec);
-        return JSValue::encode(jsBoolean(result));
-    } else {
-        return JSValue::encode(jsBoolean(false));
-    }
-}
-
 EncodedJSValue JSC_HOST_CALL globalFuncIsFinite(ExecState* exec)
 {
     JSValue value = exec->argument(0);

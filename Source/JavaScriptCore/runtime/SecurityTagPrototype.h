@@ -44,12 +44,9 @@ namespace JSC {
         
     protected:
         void finishCreation(ExecState*, JSGlobalObject*);
-        static const unsigned StructureFlags = OverridesGetOwnPropertySlot | SecurityTagObject::StructureFlags;
         
     private:
         SecurityTagPrototype(ExecState*, Structure*);
-        static bool getOwnPropertySlot(JSCell*, ExecState*, const Identifier&, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, const Identifier&, PropertyDescriptor&);
     };
     
 } // namespace JSC

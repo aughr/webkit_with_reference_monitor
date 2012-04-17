@@ -28,17 +28,16 @@ namespace JSC {
     ASSERT_CLASS_FITS_IN_CELL(SecurityTagObject);
     ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagObject);
     
-    const ClassInfo SecurityTagObject::s_info = { "SecurityTag", &JSWrapperObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagObject) };
+    const ClassInfo SecurityTagObject::s_info = { "SecurityTag", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagObject) };
     
     SecurityTagObject::SecurityTagObject(JSGlobalData& globalData, Structure* structure)
-    : JSWrapperObject(globalData, structure)
+    : JSNonFinalObject(globalData, structure)
     {
     }
     
     void SecurityTagObject::finishCreation(JSGlobalData& globalData)
     {
         Base::finishCreation(globalData);
-        setInternalValue(globalData, jsNumber(monotonicallyIncreasingTime()));
         ASSERT(inherits(&s_info));
     }
     

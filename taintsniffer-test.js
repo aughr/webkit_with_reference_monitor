@@ -6,6 +6,20 @@ function assertFunc(a, b, label, desc) {
   }
 }
 
+var taint, isTainted;
+
+(function () {
+  var tag = new SecurityTag();
+
+  taint = function(obj) {
+    return tag.addTo(obj);
+  }
+
+  isTainted = function(obj) {
+    return tag.isOn(obj);
+  }
+})();
+
 // Basic taint functionality
 var a = taint(1);
 assertFunc(isTainted(a), true, "Taint", "Simple variable tainted");

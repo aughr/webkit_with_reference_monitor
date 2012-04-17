@@ -6,6 +6,20 @@ function assertTaint(obj, bool, label, desc) {
   }
 }
 
+var taint, isTainted;
+
+(function () {
+  var tag = new SecurityTag();
+
+  taint = function(obj) {
+    return tag.addTo(obj);
+  }
+
+  isTainted = function(obj) {
+    return tag.isOn(obj);
+  }
+})();
+
 function runTest() {
 
   var tainted = taint("foo");

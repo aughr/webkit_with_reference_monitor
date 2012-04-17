@@ -174,7 +174,6 @@ namespace JSC {
         const HashTable* regExpConstructorTable;
         const HashTable* regExpPrototypeTable;
         const HashTable* securityLabelPrototypeTable;
-        const HashTable* securityTagPrototypeTable;
         const HashTable* stringTable;
         const HashTable* stringConstructorTable;
         
@@ -322,8 +321,6 @@ namespace JSC {
 
         CachedTranscendentalFunction<sin> cachedSin;
         
-        WTF::SecurityTag taintTag;
-
         JS_EXPORT_PRIVATE void resetDateCache();
 
         JS_EXPORT_PRIVATE void startSampling();

@@ -414,6 +414,8 @@ void MarkupAccumulator::appendAttribute(StringBuilder& result, Element* element,
 {
     bool documentIsHTML = element->document()->isHTMLDocument();
 
+    m_label.merge(attribute.name().securityLabel());
+    m_label.merge(attribute.value().string().securityLabel());
     result.append(' ');
 
     if (documentIsHTML)

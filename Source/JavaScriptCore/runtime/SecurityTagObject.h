@@ -24,13 +24,13 @@
 
 namespace JSC {
     
-    class SecurityTagObject : public JSWrapperObject {
+    class SecurityTagObject : public JSNonFinalObject {
     protected:
         SecurityTagObject(JSGlobalData&, Structure*);
         void finishCreation(JSGlobalData&);
         
     public:
-        typedef JSWrapperObject Base;
+        typedef JSNonFinalObject Base;
         
         static SecurityTagObject* create(JSGlobalData& globalData, Structure* structure)
         {
@@ -43,11 +43,23 @@ namespace JSC {
         
         static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::freezeTransition(globalData, Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info));
         }
+        
+        WTF::SecurityTag tag() const { return m_tag; };
+    private:
+        WTF::SecurityTag m_tag;
     };
     
     SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*);
+    
+    SecurityTagObject* asSecurityTagObject(JSValue);
+    
+    inline SecurityTagObject* asSecurityTagObject(JSValue value)
+    {
+        ASSERT(asObject(value)->inherits(&SecurityTagObject::s_info));
+        return static_cast<SecurityTagObject*>(asObject(value));
+    }
     
 } // namespace JSC
 

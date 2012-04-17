@@ -89,6 +89,8 @@ public:
 
     QualifiedNameImpl* impl() const { return m_impl; }
     
+    const SecurityLabel& securityLabel() const { return m_label; }
+    
     // Init routine for globals
     static void init();
     
