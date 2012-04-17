@@ -2339,7 +2339,7 @@ RuleSet::RuleSet()
 static inline void collectFeaturesFromSelector(CSSStyleSelector::Features& features, const CSSSelector* selector)
 {
     if (selector->m_match == CSSSelector::Id)
-        features.idsInRules.add(selector->value().impl());
+        features.idsInRules.add(selector->value());
     if (selector->isAttributeSelector())
         features.attrsInRules.add(selector->attribute().localName().impl());
     switch (selector->pseudoType()) {
@@ -2396,15 +2396,15 @@ void RuleSet::addRule(StyleRule* rule, CSSSelector* selector, bool hasDocumentSe
     collectFeaturesFromRuleData(m_features, ruleData);
 
     if (selector->m_match == CSSSelector::Id) {
-        addToRuleSet(selector->value().impl(), m_idRules, ruleData);
+        addToRuleSet(selector->value(), m_idRules, ruleData);
         return;
     }
     if (selector->m_match == CSSSelector::Class) {
-        addToRuleSet(selector->value().impl(), m_classRules, ruleData);
+        addToRuleSet(selector->value(), m_classRules, ruleData);
         return;
     }
     if (selector->isUnknownPseudoElement()) {
-        addToRuleSet(selector->value().impl(), m_shadowPseudoElementRules, ruleData);
+        addToRuleSet(selector->value(), m_shadowPseudoElementRules, ruleData);
         return;
     }
     if (SelectorChecker::isCommonPseudoClassSelector(selector)) {

@@ -221,7 +221,7 @@ inline bool SelectorChecker::checkExactAttribute(const Element* element, const Q
 inline bool SelectorChecker::fastCheckRightmostAttributeSelector(const Element* element, const CSSSelector* selector)
 {
     if (selector->m_match == CSSSelector::Exact || selector->m_match == CSSSelector::Set)
-        return checkExactAttribute(element, selector->attribute(), selector->value().impl());
+        return checkExactAttribute(element, selector->attribute(), selector->value());
     ASSERT(!selector->isAttributeSelector());
     return true;
 }

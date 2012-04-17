@@ -153,14 +153,15 @@ void SelectorChecker::pushParent(Element* parent)
 
 static inline void collectDescendantSelectorIdentifierHashes(const CSSSelector* selector, unsigned*& hash, const unsigned* end)
 {
+    AtomicString valueString = selector->value();
     switch (selector->m_match) {
     case CSSSelector::Id:
-        if (!selector->value().isEmpty())
-            (*hash++) = selector->value().impl()->existingHash() * IdAttributeSalt;
+        if (!valueString.isEmpty())
+            (*hash++) = valueString.impl()->existingHash() * IdAttributeSalt;
         break;
     case CSSSelector::Class:
-        if (!selector->value().isEmpty())
-            (*hash++) = selector->value().impl()->existingHash() * ClassAttributeSalt;
+        if (!valueString.isEmpty())
+            (*hash++) = valueString.impl()->existingHash() * ClassAttributeSalt;
         break;
     default:
         break;
@@ -276,7 +277,7 @@ namespace {
 template <bool checkValue(const Element*, AtomicStringImpl*, const QualifiedName&), bool initAttributeName>
 inline bool fastCheckSingleSelector(const CSSSelector*& selector, const Element*& element, const CSSSelector*& topChildOrSubselector, const Element*& topChildOrSubselectorMatchElement)
 {
-    AtomicStringImpl* value = selector->value().impl();
+    AtomicStringImpl* value = selector->value();
     const QualifiedName& attribute = initAttributeName ? selector->attribute() : anyQName();
     for (; element; element = element->parentElement()) {
         if (checkValue(element, value, attribute) && SelectorChecker::tagMatches(element, selector)) {
@@ -341,12 +342,12 @@ inline bool SelectorChecker::fastCheckRightmostSelector(const CSSSelector* selec
     case CSSSelector::None:
         return true;
     case CSSSelector::Class:
-        return checkClassValue(element, selector->value().impl(), anyQName());
+        return checkClassValue(element, selector->value(), anyQName());
     case CSSSelector::Id:
-        return checkIDValue(element, selector->value().impl(), anyQName());
+        return checkIDValue(element, selector->value(), anyQName());
     case CSSSelector::Exact:
     case CSSSelector::Set:
-        return checkExactAttributeValue(element, selector->value().impl(), selector->attribute());
+        return checkExactAttributeValue(element, selector->value(), selector->attribute());
     case CSSSelector::PseudoClass:
         return commonPseudoClassSelectorMatches(element, selector, visitedMatchType);
     default:
@@ -711,8 +712,10 @@ bool SelectorChecker::checkOneSelector(const SelectorCheckingContext& context, P
     if (selector->m_match == CSSSelector::Class)
         return element->hasClass() && static_cast<StyledElement*>(element)->classNames().contains(selector->value());
 
-    if (selector->m_match == CSSSelector::Id)
-        return element->hasID() && element->idForStyleResolution() == selector->value();
+    if (selector->m_match == CSSSelector::Id) {
+        AtomicString value = selector->value();
+        return element->hasID() && element->idForStyleResolution() == value;
+    }
 
     if (selector->isAttributeSelector()) {
         const QualifiedName& attr = selector->attribute();
@@ -1174,7 +1177,8 @@ bool SelectorChecker::checkOneSelector(const SelectorCheckingContext& context, P
 
         if (selector->isUnknownPseudoElement()) {
             m_hasUnknownPseudoElements = true;
-            return element->shadowPseudoId() == selector->value();
+            AtomicString value = selector->value();
+            return element->shadowPseudoId() == value;
         }
 
         PseudoId pseudoId = CSSSelector::pseudoId(selector->pseudoType());
@@ -1375,9 +1379,9 @@ bool SelectorChecker::determineSelectorScopes(const CSSSelectorList& selectorLis
             return false;
         ASSERT(scopeSelector->m_match == CSSSelector::Class || scopeSelector->m_match == CSSSelector::Id);
         if (scopeSelector->m_match == CSSSelector::Id)
-            idScopes.add(scopeSelector->value().impl());
+            idScopes.add(scopeSelector->value());
         else
-            classScopes.add(scopeSelector->value().impl());
+            classScopes.add(scopeSelector->value());
     }
     return true;
 }

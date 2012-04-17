@@ -56,6 +56,14 @@ namespace WTF {
         {
             return adoptRef(new SecurityLabelImpl());
         }
+
+    private:
+        SecurityLabelImpl() {}
+        SecurityLabelImpl(SecurityTagSet set) : m_tagSet(set) {}
+        static inline PassRefPtr<SecurityLabelImpl> create(SecurityTagSet set)
+        {
+            return adoptRef(new SecurityLabelImpl(set));
+        }
     private:
         SecurityTagSet m_tagSet;
     };

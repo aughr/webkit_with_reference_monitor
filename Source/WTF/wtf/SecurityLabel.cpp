@@ -25,7 +25,7 @@
 namespace WTF {
     PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::combine(const RefPtr<SecurityLabelImpl>& other) {
         SecurityTagSet& otherSet = other->m_tagSet;
-        RefPtr<SecurityLabelImpl> result = this->duplicate();
+        RefPtr<SecurityLabelImpl> result = duplicate();
 
         for (SecurityTagSet::iterator it = otherSet.begin(); it != otherSet.end(); ++it) {
             result->m_tagSet.add(*it);
@@ -34,12 +34,10 @@ namespace WTF {
     }
 
     PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::duplicate() {
-        if (this->refCount() == 1)
+        if (refCount() == 1)
             return this;
 
-        RefPtr<SecurityLabelImpl> result = SecurityLabelImpl::create();
-        result->m_tagSet = m_tagSet;
-        return result.release();
+        return SecurityLabelImpl::create(m_tagSet);
     }
     
     void SecurityLabel::add(const SecurityTag& tag) {
@@ -55,7 +53,7 @@ namespace WTF {
     }
     
     void SecurityLabel::merge(const SecurityLabel& other) {
-        if (other.isNull())
+        if (other.isNull() || m_impl == other.m_impl)
             return;
         
         if (isNull())
