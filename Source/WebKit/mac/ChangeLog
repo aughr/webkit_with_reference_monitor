@@ -1,3 +1,117 @@
+2012-04-16  Anders Carlsson  <andersca@apple.com>
+
+        Use a MIG call when creating a plug-in property list file
+        https://bugs.webkit.org/show_bug.cgi?id=84084
+        <rdar://problem/11197341>
+
+        Reviewed by Sam Weinig.
+
+        * Plugins/Hosted/NetscapePluginHostManager.mm:
+        (WebKit::NetscapePluginHostManager::createPropertyListFile):
+        Get a plug-in host and call _WKPHCreatePluginMIMETypesPreferences instead.
+
+        * Plugins/Hosted/WebKitPluginHost.defs:
+        Add PHCreatePluginMIMETypesPreferences.
+
+        * Plugins/WebNetscapePluginPackage.mm:
+        (-[WebNetscapePluginPackage createPropertyListFile]):
+        NetscapePluginHostManager::createPropertyListFile is no longer a static member function.
+
+2012-04-12  Andy Estes  <aestes@apple.com>
+
+        REGRESSION (r102262): iAd Producer relies on CSSStyleDeclaration property setters respecting '!important'
+        https://bugs.webkit.org/show_bug.cgi?id=83832
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Misc/WebKitVersionChecks.h: Indicate that 535.13.0 was the first
+        version of WebKit.framework to ignore '!important' in
+        CSSStyleDeclaration property setters.
+        * WebView/WebView.mm:
+        (shouldRespectPriorityInCSSAttributeSetters):
+        (-[WebView _commonInitializationWithFrameName:groupName:]): Enable a
+        quirk to restore pre-r102262 behavior if the application is iAd Producer
+        and was linked against a version of WebKit.framework that had the old behavior.
+
+2012-04-12  Andy Estes  <aestes@apple.com>
+
+        Remove unused WebKit1 SPI for suppressing incremental rendering.
+        https://bugs.webkit.org/show_bug.cgi?id=83801
+
+        Reviewed by Simon Fraser.
+
+        This SPI is unused and has been replaced by API ([setS|s]uppressesIncrementalRendering).
+
+        * WebView/WebPreferences.mm:
+        * WebView/WebPreferencesPrivate.h:
+
+2012-04-08  Dan Bernstein  <mitz@apple.com>
+
+        [mac] REGRESSION (r113467): Some canvas tests are failing in WebKit1 when run after compositing/tiled-layers-hidpi.html
+        https://bugs.webkit.org/show_bug.cgi?id=83453
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        (-[WebView _setCustomBackingScaleFactor:]): When the scale factor parameter was 0, meaning
+        no custom scale factor, this method was setting the Page scale factor to 0, and that value
+        was used by canvas. Changed it to correctly set the Page scale factor back to the device
+        scale factor.
+
+2012-04-06  Alexey Proskuryakov  <ap@apple.com>
+
+        [Mac] Adopt a different method of telling AppKit when inline input isn't supported
+        https://bugs.webkit.org/show_bug.cgi?id=83408
+        <rdar://problem/9205734>
+
+        Reviewed by Adele Peterson.
+
+        * Plugins/Hosted/WebTextInputWindowController.m:
+        (-[WebTextInputView validAttributesForMarkedText]):
+        (-[WebTextInputPanel init]):
+        (-[WebTextInputPanel _interpretKeyEvent:string:]): Added a comment about old approach.
+
+2012-04-06  Enrica Casucci  <enrica@apple.com>
+
+        Provide Obj-C private API to simplify markup.
+        https://bugs.webkit.org/show_bug.cgi?id=83334
+        <rdar://problem/11033861>
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        (-[WebView _simplifyMarkup:endNode:]): Added.
+        * WebView/WebViewPrivate.h:
+
+2012-04-06  Tim Horton  <timothy_horton@apple.com>
+
+        Add autodetection of image orientation from EXIF information
+        https://bugs.webkit.org/show_bug.cgi?id=19688
+        <rdar://problem/4126979> and <rdar://problem/11091578>
+
+        Original patch by David Carson and Eric Seidel.
+
+        Reviewed by Simon Fraser.
+
+        Add a preference, ShouldRespectImageOrientation, which will cause WebCore to respect EXIF orientation in all images.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences setShouldRespectImageOrientation:]):
+        (-[WebPreferences shouldRespectImageOrientation]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2012-04-06  Dan Bernstein  <mitz@apple.com>
+
+        <rdar://problem/10912476> HiDPI: Have canvas use a hidpi backing store, but downsample upon access
+
+        Reviewed by Sam Weinig.
+
+        * Configurations/FeatureDefines.xcconfig: Added ENABLE_HIGH_DPI_CANVAS.
+
 2012-04-05  Jia Pu  <jpu@apple.com>
 
         Move correction panel related functions from EditorClient into separated AlternativeTextClient class.

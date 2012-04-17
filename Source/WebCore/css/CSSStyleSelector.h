@@ -80,6 +80,7 @@ class StyleRulePage;
 class StyleRuleRegion;
 class StyleShader;
 class StyleSheet;
+class StyleSheetInternal;
 class StyleSheetList;
 class StyledElement;
 class WebKitCSSFilterValue;
@@ -145,9 +146,9 @@ public:
     RenderStyle* rootElementStyle() const { return m_rootElementStyle; }
     Element* element() const { return m_element; }
     Document* document() const { return m_checker.document(); }
-    FontDescription fontDescription() { return style()->fontDescription(); }
-    FontDescription parentFontDescription() {return parentStyle()->fontDescription(); }
-    void setFontDescription(FontDescription fontDescription) { m_fontDirty |= style()->setFontDescription(fontDescription); }
+    const FontDescription& fontDescription() { return style()->fontDescription(); }
+    const FontDescription& parentFontDescription() { return parentStyle()->fontDescription(); }
+    void setFontDescription(const FontDescription& fontDescription) { m_fontDirty |= style()->setFontDescription(fontDescription); }
     void setZoom(float f) { m_fontDirty |= style()->setZoom(f); }
     void setEffectiveZoom(float f) { m_fontDirty |= style()->setEffectiveZoom(f); }
     void setTextSizeAdjust(bool b) { m_fontDirty |= style()->setTextSizeAdjust(b); }
@@ -156,7 +157,7 @@ public:
     void appendAuthorStylesheets(unsigned firstNew, const Vector<RefPtr<StyleSheet> >&);
     
     // Find the ids or classes the selectors on a stylesheet are scoped to. The selectors only apply to elements in subtrees where the root element matches the scope.
-    static bool determineStylesheetSelectorScopes(CSSStyleSheet*, HashSet<AtomicStringImpl*>& idScopes, HashSet<AtomicStringImpl*>& classScopes);
+    static bool determineStylesheetSelectorScopes(StyleSheetInternal*, HashSet<AtomicStringImpl*>& idScopes, HashSet<AtomicStringImpl*>& classScopes);
 
 private:
     void initForStyleResolve(Element*, RenderStyle* parentStyle = 0, PseudoId = NOPSEUDO);
@@ -399,7 +400,7 @@ public:
 private:
     static RenderStyle* s_styleNotYetAvailable;
 
-    void addAuthorRulesAndCollectUserRulesFromSheets(const Vector<RefPtr<CSSStyleSheet> >*, RuleSet& userStyle);
+    void addAuthorRulesAndCollectUserRulesFromSheets(const Vector<RefPtr<StyleSheetInternal> >*, RuleSet& userStyle);
 
     void cacheBorderAndBackground();
 
@@ -466,7 +467,7 @@ private:
 
     RefPtr<StaticCSSRuleList> m_ruleList;
 
-    HashSet<int> m_pendingImageProperties; // Hash of CSSPropertyIDs
+    HashSet<CSSPropertyID> m_pendingImageProperties;
 
     OwnPtr<MediaQueryEvaluator> m_medium;
     RefPtr<RenderStyle> m_rootDefaultStyle;
@@ -496,13 +497,14 @@ private:
     const CSSStyleApplyProperty& m_applyProperty;
     
     HashMap<StyleRule*, RefPtr<CSSStyleRule> > m_styleRuleToCSSOMWrapperMap;
+    HashSet<RefPtr<CSSStyleSheet> > m_styleSheetCSSOMWrapperSet;
 
 #if ENABLE(CSS_SHADERS)
     bool m_hasPendingShaders;
 #endif
 
 #if ENABLE(STYLE_SCOPED)
-    static const ContainerNode* determineScope(const CSSStyleSheet*);
+    static const ContainerNode* determineScope(const StyleSheetInternal*);
 
     typedef HashMap<const ContainerNode*, OwnPtr<RuleSet> > ScopedRuleSetMap;
 

@@ -549,8 +549,18 @@ namespace WebCore {
         void setThreadedAnimationEnabled(bool enabled) { m_threadedAnimationEnabled = enabled; }
         bool threadedAnimationEnabled() const { return m_threadedAnimationEnabled; }
 
+        void setShouldRespectImageOrientation(bool enabled) { m_shouldRespectImageOrientation = enabled; }
+        bool shouldRespectImageOrientation() const { return m_shouldRespectImageOrientation; }
+        
+#if USE(JSC)
+        static void setShouldRespectPriorityInCSSAttributeSetters(bool);
+        static bool shouldRespectPriorityInCSSAttributeSetters();
+#endif
+
     private:
         Settings(Page*);
+
+        void initializeDefaultFontFamilies();
 
         Page* m_page;
 
@@ -703,6 +713,7 @@ namespace WebCore {
         bool m_touchEventEmulationEnabled : 1;
 #endif
         bool m_threadedAnimationEnabled : 1;
+        bool m_shouldRespectImageOrientation : 1;
 
         Timer<Settings> m_loadsImagesAutomaticallyTimer;
         void loadsImagesAutomaticallyTimerFired(Timer<Settings>*);
@@ -717,6 +728,9 @@ namespace WebCore {
 #endif
 #if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(WX))
         static bool gShouldUseHighResolutionTimers;
+#endif
+#if USE(JSC)
+        static bool gShouldRespectPriorityInCSSAttributeSetters;
 #endif
     };
 

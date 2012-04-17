@@ -25,6 +25,9 @@
 #include "BackingStoreClient.h"
 #include "BackingStoreCompositingSurface.h"
 #include "BackingStore_p.h"
+#if ENABLE(BATTERY_STATUS)
+#include "BatteryClientBlackBerry.h"
+#endif
 #include "CString.h"
 #include "CachedImage.h"
 #include "Chrome.h"
@@ -398,7 +401,7 @@ WebPagePrivate::~WebPagePrivate()
 
 WebPage::~WebPage()
 {
-    delete d;
+    deleteGuardedObject(d);
     d = 0;
 }
 
@@ -448,6 +451,10 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     WebCore::provideDeviceMotionTo(m_page, new DeviceMotionClientBlackBerry(this));
 #if ENABLE(VIBRATION)
     WebCore::provideVibrationTo(m_page, new VibrationClientBlackBerry());
+#endif
+
+#if ENABLE(BATTERY_STATUS)
+    WebCore::provideBatteryTo(m_page, new WebCore::BatteryClientBlackBerry);
 #endif
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
@@ -2021,6 +2028,11 @@ bool WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSp
     WebString username;
     WebString password;
 
+#if ENABLE_DRT
+    if (m_dumpRenderTree)
+        return m_dumpRenderTree->didReceiveAuthenticationChallenge(inputCredential);
+#endif
+
 #if ENABLE(BLACKBERRY_CREDENTIAL_PERSIST)
     if (!m_webSettings->isPrivateBrowsingEnabled())
         credentialManager().autofillAuthenticationChallenge(protectionSpace, username, password);
@@ -2899,7 +2911,7 @@ void WebPage::destroy()
     if (loader)
         loader->detachFromParent();
 
-    delete this;
+    deleteGuardedObject(this);
 }
 
 WebPageClient* WebPage::client() const
@@ -5191,7 +5203,7 @@ void WebPage::disablePasswordEcho()
 
 void WebPage::dispatchInspectorMessage(const std::string& message)
 {
-    String stringMessage(message.c_str(), message.length());
+    String stringMessage = String::fromUTF8(message.data(), message.length());
     d->m_page->inspectorController()->dispatchMessageFromFrontend(stringMessage);
 }
 
@@ -5415,7 +5427,7 @@ void WebPagePrivate::rootLayerCommitTimerFired(Timer<WebPagePrivate>*)
     // backing store, doing a one shot drawing synchronization with the
     // backing store is never necessary, because the backing store draws
     // nothing.
-    if (compositorDrawsRootLayer()) {
+    if (!compositorDrawsRootLayer()) {
         bool isSingleTargetWindow = SurfacePool::globalSurfacePool()->compositingSurface()
             || m_backingStore->d->isOpenGLCompositing();
 

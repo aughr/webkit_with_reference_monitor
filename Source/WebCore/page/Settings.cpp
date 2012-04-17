@@ -64,7 +64,9 @@ static inline void setGenericFontFamilyMap(ScriptFontFamilyMap& fontMap, const A
         return;
     else
         fontMap.set(static_cast<int>(script), family);
-    page->setNeedsRecalcStyleInAllFrames();
+
+    if (page)
+        page->setNeedsRecalcStyleInAllFrames();
 }
 
 static inline const AtomicString& getGenericFontFamilyForScript(const ScriptFontFamilyMap& fontMap, UScriptCode script)
@@ -90,6 +92,10 @@ bool Settings::gMockScrollbarsEnabled = false;
 #if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(WX))
 bool Settings::gShouldUseHighResolutionTimers = true;
 #endif
+    
+#if USE(JSC)
+bool Settings::gShouldRespectPriorityInCSSAttributeSetters = false;
+#endif
 
 // NOTEs
 //  1) EditingMacBehavior comprises Tiger, Leopard, SnowLeopard and iOS builds, as well QtWebKit and Chromium when built on Mac;
@@ -113,7 +119,7 @@ static EditingBehaviorType editingBehaviorTypeForPlatform()
 }
 
 Settings::Settings(Page* page)
-    : m_page(page)
+    : m_page(0)
     , m_editableLinkBehavior(EditableLinkDefaultBehavior)
     , m_textDirectionSubmenuInclusionBehavior(TextDirectionSubmenuAutomaticallyIncluded)
     , m_passwordEchoDurationInSeconds(1)
@@ -254,17 +260,27 @@ Settings::Settings(Page* page)
     , m_touchEventEmulationEnabled(false)
 #endif
     , m_threadedAnimationEnabled(false)
+    , m_shouldRespectImageOrientation(false)
     , m_loadsImagesAutomaticallyTimer(this, &Settings::loadsImagesAutomaticallyTimerFired)
 {
     // A Frame may not have been created yet, so we initialize the AtomicString 
     // hash before trying to use it.
     AtomicString::init();
+    initializeDefaultFontFamilies();
+    m_page = page; // Page is not yet fully initialized wen constructing Settings, so keeping m_page null over initializeDefaultFontFamilies() call.
 }
 
 PassOwnPtr<Settings> Settings::create(Page* page)
 {
     return adoptPtr(new Settings(page));
 } 
+
+#if !PLATFORM(MAC) && !PLATFORM(BLACKBERRY)
+void Settings::initializeDefaultFontFamilies()
+{
+    // Other platforms can set up fonts from a client, but on Mac, we want it in WebCore to share code between WebKit1 and WebKit2.
+}
+#endif
 
 const AtomicString& Settings::standardFontFamily(UScriptCode script) const
 {
@@ -880,5 +896,17 @@ bool Settings::mockScrollbarsEnabled()
 {
     return gMockScrollbarsEnabled;
 }
+
+#if USE(JSC)
+void Settings::setShouldRespectPriorityInCSSAttributeSetters(bool flag)
+{
+    gShouldRespectPriorityInCSSAttributeSetters = flag;
+}
+
+bool Settings::shouldRespectPriorityInCSSAttributeSetters()
+{
+    return gShouldRespectPriorityInCSSAttributeSetters;
+}
+#endif
 
 } // namespace WebCore

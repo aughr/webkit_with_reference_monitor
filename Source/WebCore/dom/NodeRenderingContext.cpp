@@ -27,6 +27,7 @@
 #include "NodeRenderingContext.h"
 
 #include "ContainerNode.h"
+#include "FlowThreadController.h"
 #include "HTMLContentElement.h"
 #include "HTMLContentSelector.h"
 #include "HTMLNames.h"
@@ -326,7 +327,9 @@ void NodeRenderingContext::moveToFlowThreadIfNeeded()
 
     m_flowThread = m_style->flowThread();
     ASSERT(m_node->document()->renderView());
-    m_parentFlowRenderer = m_node->document()->renderView()->ensureRenderFlowThreadWithName(m_flowThread);
+    FlowThreadController* flowThreadController = m_node->document()->renderView()->flowThreadController();
+    m_parentFlowRenderer = flowThreadController->ensureRenderFlowThreadWithName(m_flowThread);
+    flowThreadController->registerNamedFlowContentNode(m_node, m_parentFlowRenderer);
 }
 
 NodeRendererFactory::NodeRendererFactory(Node* node)

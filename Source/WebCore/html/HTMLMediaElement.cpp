@@ -58,6 +58,8 @@
 #include "MediaDocument.h"
 #include "MediaError.h"
 #include "MediaFragmentURIParser.h"
+#include "MediaKeyError.h"
+#include "MediaKeyEvent.h"
 #include "MediaList.h"
 #include "MediaPlayer.h"
 #include "MediaQueryEvaluator.h"
@@ -175,6 +177,23 @@ static void removeElementFromDocumentMap(HTMLMediaElement* element, Document* do
         map.add(document, set);
 }
 
+#if ENABLE(ENCRYPTED_MEDIA)
+static ExceptionCode exceptionCodeForMediaKeyException(MediaPlayer::MediaKeyException exception)
+{
+    switch (exception) {
+    case MediaPlayer::NoError:
+        return 0;
+    case MediaPlayer::InvalidPlayerState:
+        return INVALID_STATE_ERR;
+    case MediaPlayer::KeySystemNotSupported:
+        return NOT_SUPPORTED_ERR;
+    }
+
+    ASSERT_NOT_REACHED();
+    return INVALID_STATE_ERR;
+}
+#endif
+
 HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document* document, bool createdByParser)
     : HTMLElement(tagName, document)
     , ActiveDOMObject(document, this)
@@ -250,8 +269,10 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document* docum
     document->registerForMediaVolumeCallbacks(this);
     document->registerForPrivateBrowsingStateChangedCallbacks(this);
     
-    if (document->settings() && document->settings()->mediaPlaybackRequiresUserGesture())
+    if (document->settings() && document->settings()->mediaPlaybackRequiresUserGesture()) {
         addBehaviorRestriction(RequireUserGestureForRateChangeRestriction);
+        addBehaviorRestriction(RequireUserGestureForLoadRestriction);
+    }
 
 #if ENABLE(MEDIA_SOURCE)
     m_mediaSourceURL.setProtocol(mediaSourceURLProtocol);
@@ -476,11 +497,13 @@ void HTMLMediaElement::insertedIntoDocument()
     HTMLElement::insertedIntoDocument();
     if (!getAttribute(srcAttr).isEmpty() && m_networkState == NETWORK_EMPTY)
         scheduleLoad(MediaResource);
+    configureMediaControls();
 }
 
 void HTMLMediaElement::removedFromDocument()
 {
     LOG(Media, "HTMLMediaElement::removedFromDocument");
+    configureMediaControls();
     if (m_networkState > NETWORK_EMPTY)
         pause();
     if (m_isFullscreen)
@@ -588,9 +611,9 @@ HTMLMediaElement::NetworkState HTMLMediaElement::networkState() const
     return m_networkState;
 }
 
-String HTMLMediaElement::canPlayType(const String& mimeType) const
+String HTMLMediaElement::canPlayType(const String& mimeType, const String& keySystem) const
 {
-    MediaPlayer::SupportsType support = MediaPlayer::supportsType(ContentType(mimeType));
+    MediaPlayer::SupportsType support = MediaPlayer::supportsType(ContentType(mimeType), keySystem);
     String canPlay;
 
     // 4.8.10.3
@@ -607,7 +630,7 @@ String HTMLMediaElement::canPlayType(const String& mimeType) const
             break;
     }
     
-    LOG(Media, "HTMLMediaElement::canPlayType(%s) -> %s", mimeType.utf8().data(), canPlay.utf8().data());
+    LOG(Media, "HTMLMediaElement::canPlayType(%s, %s) -> %s", mimeType.utf8().data(), keySystem.utf8().data(), canPlay.utf8().data());
 
     return canPlay;
 }
@@ -617,16 +640,17 @@ void HTMLMediaElement::load(ExceptionCode& ec)
     RefPtr<HTMLMediaElement> protect(this); // loadInternal may result in a 'beforeload' event, which can make arbitrary DOM mutations.
     
     LOG(Media, "HTMLMediaElement::load()");
-
-    if (userGestureRequiredForLoad() && !ScriptController::processingUserGesture())
+    
+    if (userGestureRequiredForLoad() && !ScriptController::processingUserGesture()) {
         ec = INVALID_STATE_ERR;
-    else {
-        m_loadInitiatedByUserGesture = ScriptController::processingUserGesture();
-        if (m_loadInitiatedByUserGesture)
-            removeBehaviorsRestrictionsAfterFirstUserGesture();
-        prepareForLoad();
-        loadInternal();
+        return;
     }
+    
+    m_loadInitiatedByUserGesture = ScriptController::processingUserGesture();
+    if (m_loadInitiatedByUserGesture)
+        removeBehaviorsRestrictionsAfterFirstUserGesture();
+    prepareForLoad();
+    loadInternal();
     prepareToPlay();
 }
 
@@ -817,10 +841,11 @@ void HTMLMediaElement::selectMediaResource()
             return;
         }
 
-        // No type information is available when the url comes from the 'src' attribute so MediaPlayer
+        // No type or key system information is available when the url comes
+        // from the 'src' attribute so MediaPlayer
         // will have to pick a media engine based on the file extension.
-        ContentType contentType("");
-        loadResource(mediaURL, contentType);
+        ContentType contentType((String()));
+        loadResource(mediaURL, contentType, String());
         LOG(Media, "HTMLMediaElement::selectMediaResource, using 'src' attribute url");
         return;
     }
@@ -831,8 +856,9 @@ void HTMLMediaElement::selectMediaResource()
 
 void HTMLMediaElement::loadNextSourceChild()
 {
-    ContentType contentType("");
-    KURL mediaURL = selectNextSourceChild(&contentType, Complain);
+    ContentType contentType((String()));
+    String keySystem;
+    KURL mediaURL = selectNextSourceChild(&contentType, &keySystem, Complain);
     if (!mediaURL.isValid()) {
         waitForSourceChange();
         return;
@@ -844,7 +870,7 @@ void HTMLMediaElement::loadNextSourceChild()
 #endif
 
     m_loadState = LoadingFromSourceElement;
-    loadResource(mediaURL, contentType);
+    loadResource(mediaURL, contentType, keySystem);
 }
 
 #if !PLATFORM(CHROMIUM)
@@ -869,11 +895,11 @@ static KURL createFileURLForApplicationCacheResource(const String& path)
 }
 #endif
 
-void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& contentType)
+void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& contentType, const String& keySystem)
 {
     ASSERT(isSafeToLoadURL(initialURL, Complain));
 
-    LOG(Media, "HTMLMediaElement::loadResource(%s, %s)", urlForLogging(initialURL).utf8().data(), contentType.raw().utf8().data());
+    LOG(Media, "HTMLMediaElement::loadResource(%s, %s, %s)", urlForLogging(initialURL).utf8().data(), contentType.raw().utf8().data(), keySystem.utf8().data());
 
     Frame* frame = document()->frame();
     if (!frame) {
@@ -944,7 +970,7 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
         m_muted = true;
     updateVolume();
 
-    if (!m_player->load(url, contentType))
+    if (!m_player->load(url, contentType, keySystem))
         mediaLoadingFailed(MediaPlayer::FormatError);
 
     // If there is no poster to display, allow the media engine to render video frames as soon as
@@ -1161,18 +1187,23 @@ void HTMLMediaElement::updateActiveTextTrackCues(float movieTime)
     nonCopyingSort(affectedTracks.begin(), affectedTracks.end(), trackIndexCompare);
 
     // 15 - For each text track in affected tracks, in the list order, queue a
-    // task to fire a simple event named cuechange at the TextTrack object, and,
-    // if the text track has a corresponding track element, to then fire a
-    // simple event named cuechange at the track element as well.
+    // task to fire a simple event named cuechange at the TextTrack object, and, ...
     for (size_t i = 0; i < affectedTracks.size(); ++i) {
         RefPtr<Event> event = Event::create(eventNames().cuechangeEvent, false, false);
         event->setTarget(affectedTracks[i]);
 
         m_asyncEventQueue->enqueueEvent(event.release());
 
-        // Fire syncronous cue change event for track elements.
-        if (affectedTracks[i]->trackType() == TextTrack::TrackElement)
-            affectedTracks[i]->fireCueChangeEvent();
+        // ... if the text track has a corresponding track element, to then fire a
+        // simple event named cuechange at the track element as well.
+        if (affectedTracks[i]->trackType() == TextTrack::TrackElement) {
+            RefPtr<Event> event = Event::create(eventNames().cuechangeEvent, false, false);
+            HTMLTrackElement* trackElement = static_cast<LoadableTextTrack*>(affectedTracks[i])->trackElement();
+            ASSERT(trackElement);
+            event->setTarget(trackElement);
+            
+            m_asyncEventQueue->enqueueEvent(event.release());
+        }
     }
 
     // 16 - Set the text track cue active flag of all the cues in the current
@@ -1233,8 +1264,12 @@ void HTMLMediaElement::textTrackModeChanged(TextTrack* track)
             
             // Mark this track as "configured" so configureNewTextTracks won't change the mode again.
             trackElement->setHasBeenConfigured(true);
-            if (track->mode() != TextTrack::DISABLED && trackElement->readyState() == HTMLTrackElement::NONE)
-                trackElement->scheduleLoad();
+            if (track->mode() != TextTrack::DISABLED) {
+                if (trackElement->readyState() == HTMLTrackElement::LOADED)
+                    textTrackAddCues(track, track->cues());
+                else if (trackElement->readyState() == HTMLTrackElement::NONE)
+                    trackElement->scheduleLoad();
+            }
             break;
         }
     }
@@ -1658,6 +1693,86 @@ void HTMLMediaElement::mediaPlayerSourceOpened()
 String HTMLMediaElement::mediaPlayerSourceURL() const
 {
     return m_mediaSourceURL.string();
+}
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA)
+void HTMLMediaElement::mediaPlayerKeyAdded(MediaPlayer*, const String& keySystem, const String& sessionId)
+{
+    MediaKeyEventInit initializer;
+    initializer.keySystem = keySystem;
+    initializer.sessionId = sessionId;
+    initializer.bubbles = false;
+    initializer.cancelable = false;
+
+    RefPtr<Event> event = MediaKeyEvent::create(eventNames().webkitkeyaddedEvent, initializer);
+    event->setTarget(this);
+    m_asyncEventQueue->enqueueEvent(event.release());
+}
+
+void HTMLMediaElement::mediaPlayerKeyError(MediaPlayer*, const String& keySystem, const String& sessionId, MediaPlayerClient::MediaKeyErrorCode errorCode, unsigned short systemCode)
+{
+    MediaKeyError::Code mediaKeyErrorCode = MediaKeyError::MEDIA_KEYERR_UNKNOWN;
+    switch (errorCode) {
+    case MediaPlayerClient::UnknownError:
+        mediaKeyErrorCode = MediaKeyError::MEDIA_KEYERR_UNKNOWN;
+        break;
+    case MediaPlayerClient::ClientError:
+        mediaKeyErrorCode = MediaKeyError::MEDIA_KEYERR_CLIENT;
+        break;
+    case MediaPlayerClient::ServiceError:
+        mediaKeyErrorCode = MediaKeyError::MEDIA_KEYERR_SERVICE;
+        break;
+    case MediaPlayerClient::OutputError:
+        mediaKeyErrorCode = MediaKeyError::MEDIA_KEYERR_OUTPUT;
+        break;
+    case MediaPlayerClient::HardwareChangeError:
+        mediaKeyErrorCode = MediaKeyError::MEDIA_KEYERR_HARDWARECHANGE;
+        break;
+    case MediaPlayerClient::DomainError:
+        mediaKeyErrorCode = MediaKeyError::MEDIA_KEYERR_DOMAIN;
+        break;
+    }
+
+    MediaKeyEventInit initializer;
+    initializer.keySystem = keySystem;
+    initializer.sessionId = sessionId;
+    initializer.errorCode = MediaKeyError::create(mediaKeyErrorCode);
+    initializer.systemCode = systemCode;
+    initializer.bubbles = false;
+    initializer.cancelable = false;
+
+    RefPtr<Event> event = MediaKeyEvent::create(eventNames().webkitkeyerrorEvent, initializer);
+    event->setTarget(this);
+    m_asyncEventQueue->enqueueEvent(event.release());
+}
+
+void HTMLMediaElement::mediaPlayerKeyMessage(MediaPlayer*, const String& keySystem, const String& sessionId, const unsigned char* message, unsigned messageLength)
+{
+    MediaKeyEventInit initializer;
+    initializer.keySystem = keySystem;
+    initializer.sessionId = sessionId;
+    initializer.message = Uint8Array::create(message, messageLength);
+    initializer.bubbles = false;
+    initializer.cancelable = false;
+
+    RefPtr<Event> event = MediaKeyEvent::create(eventNames().webkitkeymessageEvent, initializer);
+    event->setTarget(this);
+    m_asyncEventQueue->enqueueEvent(event.release());
+}
+
+void HTMLMediaElement::mediaPlayerKeyNeeded(MediaPlayer*, const String& keySystem, const String& sessionId, const unsigned char* initData, unsigned initDataLength)
+{
+    MediaKeyEventInit initializer;
+    initializer.keySystem = keySystem;
+    initializer.sessionId = sessionId;
+    initializer.initData = Uint8Array::create(initData, initDataLength);
+    initializer.bubbles = false;
+    initializer.cancelable = false;
+
+    RefPtr<Event> event = MediaKeyEvent::create(eventNames().webkitneedkeyEvent, initializer);
+    event->setTarget(this);
+    m_asyncEventQueue->enqueueEvent(event.release());
 }
 #endif
 
@@ -2237,6 +2352,86 @@ void HTMLMediaElement::setSourceState(SourceState state)
 }
 #endif
 
+#if ENABLE(ENCRYPTED_MEDIA)
+void HTMLMediaElement::webkitGenerateKeyRequest(const String& keySystem, PassRefPtr<Uint8Array> initData, ExceptionCode& ec)
+{
+    if (keySystem.isEmpty()) {
+        ec = SYNTAX_ERR;
+        return;
+    }
+
+    if (!m_player) {
+        ec = INVALID_STATE_ERR;
+        return;
+    }
+
+    const unsigned char* initDataPointer = 0;
+    unsigned initDataLength = 0;
+    if (initData) {
+        initDataPointer = initData->data();
+        initDataLength = initData->length();
+    }
+
+    MediaPlayer::MediaKeyException result = m_player->generateKeyRequest(keySystem, initDataPointer, initDataLength);
+    ec = exceptionCodeForMediaKeyException(result);
+}
+
+void HTMLMediaElement::webkitGenerateKeyRequest(const String& keySystem, ExceptionCode& ec)
+{
+    webkitGenerateKeyRequest(keySystem, Uint8Array::create(0), ec);
+}
+
+void HTMLMediaElement::webkitAddKey(const String& keySystem, PassRefPtr<Uint8Array> key, PassRefPtr<Uint8Array> initData, const String& sessionId, ExceptionCode& ec)
+{
+    if (keySystem.isEmpty()) {
+        ec = SYNTAX_ERR;
+        return;
+    }
+
+    if (!key->length()) {
+        ec = TYPE_MISMATCH_ERR;
+        return;
+    }
+
+    if (!m_player) {
+        ec = INVALID_STATE_ERR;
+        return;
+    }
+
+    const unsigned char* initDataPointer = 0;
+    unsigned initDataLength = 0;
+    if (initData) {
+        initDataPointer = initData->data();
+        initDataLength = initData->length();
+    }
+
+    MediaPlayer::MediaKeyException result = m_player->addKey(keySystem, key->data(), key->length(), initDataPointer, initDataLength, sessionId);
+    ec = exceptionCodeForMediaKeyException(result);
+}
+
+void HTMLMediaElement::webkitAddKey(const String& keySystem, PassRefPtr<Uint8Array> key, ExceptionCode& ec)
+{
+    webkitAddKey(keySystem, key, Uint8Array::create(0), String(), ec);
+}
+
+void HTMLMediaElement::webkitCancelKeyRequest(const String& keySystem, const String& sessionId, ExceptionCode& ec)
+{
+    if (keySystem.isEmpty()) {
+        ec = SYNTAX_ERR;
+        return;
+    }
+
+    if (!m_player) {
+        ec = INVALID_STATE_ERR;
+        return;
+    }
+
+    MediaPlayer::MediaKeyException result = m_player->cancelKeyRequest(keySystem, sessionId);
+    ec = exceptionCodeForMediaKeyException(result);
+}
+
+#endif
+
 bool HTMLMediaElement::loop() const
 {
     return fastHasAttribute(loopAttr);
@@ -2741,7 +2936,7 @@ bool HTMLMediaElement::havePotentialSourceChild()
     RefPtr<HTMLSourceElement> currentSourceNode = m_currentSourceNode;
     RefPtr<Node> nextNode = m_nextChildNodeToConsider;
 
-    KURL nextURL = selectNextSourceChild(0, DoNothing);
+    KURL nextURL = selectNextSourceChild(0, 0, DoNothing);
 
     m_currentSourceNode = currentSourceNode;
     m_nextChildNodeToConsider = nextNode;
@@ -2749,7 +2944,7 @@ bool HTMLMediaElement::havePotentialSourceChild()
     return nextURL.isValid();
 }
 
-KURL HTMLMediaElement::selectNextSourceChild(ContentType *contentType, InvalidURLAction actionIfInvalid)
+KURL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* keySystem, InvalidURLAction actionIfInvalid)
 {
 #if !LOG_DISABLED
     // Don't log if this was just called to find out if there are any valid <source> elements.
@@ -2770,6 +2965,7 @@ KURL HTMLMediaElement::selectNextSourceChild(ContentType *contentType, InvalidUR
     Node* node;
     HTMLSourceElement* source = 0;
     String type;
+    String system;
     bool lookingForStartNode = m_nextChildNodeToConsider;
     bool canUseSourceElement = false;
     bool okToLoadSourceURL;
@@ -2811,14 +3007,15 @@ KURL HTMLMediaElement::selectNextSourceChild(ContentType *contentType, InvalidUR
         }
 
         type = source->type();
+        // FIXME(82965): Add support for keySystem in <source> and set system from source.
         if (type.isEmpty() && mediaURL.protocolIsData())
             type = mimeTypeFromDataURL(mediaURL);
-        if (!type.isEmpty()) {
+        if (!type.isEmpty() || !system.isEmpty()) {
 #if !LOG_DISABLED
             if (shouldLog)
-                LOG(Media, "HTMLMediaElement::selectNextSourceChild - 'type' is %s", type.utf8().data());
+                LOG(Media, "HTMLMediaElement::selectNextSourceChild - 'type' is '%s' - key system is '%s'", type.utf8().data(), system.utf8().data());
 #endif
-            if (!MediaPlayer::supportsType(ContentType(type)))
+            if (!MediaPlayer::supportsType(ContentType(type), system))
                 goto check_again;
         }
 
@@ -2846,6 +3043,8 @@ check_again:
     if (canUseSourceElement) {
         if (contentType)
             *contentType = ContentType(type);
+        if (keySystem)
+            *keySystem = system;
         m_currentSourceNode = source;
         m_nextChildNodeToConsider = source->nextSibling();
     } else {
@@ -3544,7 +3743,7 @@ void HTMLMediaElement::getPluginProxyParams(KURL& url, Vector<String>& names, Ve
 
     url = src();
     if (!isSafeToLoadURL(url, Complain))
-        url = selectNextSourceChild(0, DoNothing);
+        url = selectNextSourceChild(0, 0, DoNothing);
 
     m_currentSrc = url;
     if (url.isValid() && frame && frame->loader()->willLoadMediaElementURL(url)) {
@@ -3822,7 +4021,7 @@ bool HTMLMediaElement::createMediaControls()
 void HTMLMediaElement::configureMediaControls()
 {
 #if !ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    if (!controls()) {
+    if (!controls() || !inDocument()) {
         if (hasMediaControls())
             mediaControls()->hide();
         return;

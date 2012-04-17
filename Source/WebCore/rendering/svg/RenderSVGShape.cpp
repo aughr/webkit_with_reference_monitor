@@ -129,7 +129,7 @@ bool RenderSVGShape::fillContains(const FloatPoint& point, bool requiresFill, co
 
 bool RenderSVGShape::strokeContains(const FloatPoint& point, bool requiresStroke)
 {
-    if (!m_strokeAndMarkerBoundingBox.contains(point))
+    if (!strokeBoundingBox().contains(point))
         return false;
 
     Color fallbackColor;
@@ -152,7 +152,7 @@ bool RenderSVGShape::strokeContains(const FloatPoint& point, bool requiresStroke
     }
 
     if (!svgStyle->strokeDashArray().isEmpty() || svgStyle->strokeMiterLimit() != svgStyle->initialStrokeMiterLimit()
-        || svgStyle->joinStyle() != svgStyle->initialJoinStyle() || svgStyle->capStyle() != svgStyle->initialCapStyle() || static_cast<SVGElement*>(node())->isStyled()) {
+        || svgStyle->joinStyle() != svgStyle->initialJoinStyle() || svgStyle->capStyle() != svgStyle->initialCapStyle()) {
         if (!m_path)
             RenderSVGShape::createShape();
         return RenderSVGShape::shapeDependentStrokeContains(point);

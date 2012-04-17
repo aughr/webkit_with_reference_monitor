@@ -37,6 +37,7 @@ modules = [
         "target_name": "util",
         "dependencies": [],
         "sources": [
+            "DOMExtension.js",
             "utilities.js",
             "treeoutline.js",
         ]
@@ -45,9 +46,7 @@ modules = [
         "target_name": "common",
         "dependencies": ["util"],
         "sources": [
-            "BinarySearch.js",
             "Object.js",
-            "PartialQuickSort.js",
             "Settings.js",
             "UserMetrics.js",
             "HandlerRegistry.js",
@@ -63,6 +62,7 @@ modules = [
             "Color.js",
             "CompilerScriptMapping.js",
             "ConsoleModel.js",
+            "ContentProvider.js",
             "ContentProviders.js",
             "CookieParser.js",
             "CSSCompletions.js",
@@ -87,11 +87,12 @@ modules = [
             "RawSourceCode.js",
             "RemoteObject.js",
             "Resource.js",
-            "ResourceCategory.js",
             "ResourceScriptMapping.js",
             "ResourceTreeModel.js",
+            "ResourceType.js",
             "ResourceUtils.js",
             "NetworkManager.js",
+            "NetworkRequest.js",
             "UISourceCode.js",
             "UserAgentSupport.js",
         ]
@@ -174,13 +175,14 @@ modules = [
             "FontView.js",
             "ImageView.js",
             "NetworkItemView.js",
-            "ResourceCookiesView.js",
-            "ResourceHeadersView.js",
-            "ResourceHTMLView.js",
-            "ResourceJSONView.js",
-            "ResourcePreviewView.js",
-            "ResourceResponseView.js",
-            "ResourceTimingView.js",
+            "RequestCookiesView.js",
+            "RequestHeadersView.js",
+            "RequestHTMLView.js",
+            "RequestJSONView.js",
+            "RequestPreviewView.js",
+            "RequestResponseView.js",
+            "RequestTimingView.js",
+            "RequestView.js",
             "ResourceView.js",
             "NetworkPanel.js",
         ]
@@ -270,6 +272,25 @@ modules = [
             "TestController.js",
         ]
     },
+    {
+        "target_name": "profiler",
+        "dependencies": ["components"],
+        "sources": [
+            "BottomUpProfileDataGridTree.js",
+            "CSSSelectorProfileView.js",
+            "HeapSnapshot.js",
+            "HeapSnapshotGridNodes.js",
+            "HeapSnapshotProxy.js",
+            "HeapSnapshotView.js",
+            "HeapSnapshotWorker.js",
+            "HeapSnapshotWorkerDispatcher.js",
+            "ProfileDataGridTree.js",
+            "ProfilesPanel.js",
+            "ProfileLauncherView.js",
+            "ProfileView.js",
+            "TopDownProfileDataGridTree.js",
+        ]
+    },
 #    {
 #        "target_name": "tokenizers",
 #        "dependencies": ["components"],
@@ -282,20 +303,6 @@ modules = [
 ]
 
 # To be compiled...
-#
-# [Profiler]
-# CSSSelectorProfileView
-# BottomUpProfileDataGridTree
-# DetailedHeapshotGridNodes
-# DetailedHeapshotView
-# HeapSnapshot
-# HeapSnapshotProxy
-# HeapSnapshotWorker
-# HeapSnapshotWorkerDispatcher
-# ProfileDataGridTree
-# ProfilesPanel
-# ProfileView
-# TopDownProfileDataGridTree
 #
 # [Misc]
 # inspector

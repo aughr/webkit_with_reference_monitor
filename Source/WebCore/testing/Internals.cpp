@@ -78,6 +78,13 @@
 #include "WebKitPoint.h"
 #endif
 
+#if PLATFORM(CHROMIUM)
+#include "FilterOperations.h"
+#include "GraphicsLayer.h"
+#include "LayerChromium.h"
+#include "RenderLayerBacking.h"
+#endif
+
 namespace WebCore {
 
 static bool markerTypesFrom(const String& markerType, DocumentMarker::MarkerTypes& result)
@@ -102,6 +109,8 @@ static bool markerTypesFrom(const String& markerType, DocumentMarker::MarkerType
         result =  DocumentMarker::SpellCheckingExemption;
     else if (equalIgnoringCase(markerType, "DeletedAutocorrection"))
         result =  DocumentMarker::DeletedAutocorrection;
+    else if (equalIgnoringCase(markerType, "DictationAlternatives"))
+        result =  DocumentMarker::DictationAlternatives;
     else
         return false;
 
@@ -423,6 +432,48 @@ PassRefPtr<ClientRectList> Internals::inspectorHighlightRects(Document* document
 #endif
 }
 
+#if PLATFORM(CHROMIUM)
+void Internals::setBackgroundBlurOnNode(Node* node, int blurLength, ExceptionCode& ec)
+{
+    if (!node) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    RenderObject* renderObject = node->renderer();
+    if (!renderObject) {
+        ec = INVALID_NODE_TYPE_ERR;
+        return;
+    }
+
+    RenderLayer* renderLayer = renderObject->enclosingLayer();
+    if (!renderLayer || !renderLayer->isComposited()) {
+        ec = INVALID_STATE_ERR;
+        return;
+    }
+
+    GraphicsLayer* graphicsLayer = renderLayer->backing()->graphicsLayer();
+    if (!graphicsLayer) {
+        ec = INVALID_NODE_TYPE_ERR;
+        return;
+    }
+
+    PlatformLayer* platformLayer = graphicsLayer->platformLayer();
+    if (!platformLayer) {
+        ec = INVALID_NODE_TYPE_ERR;
+        return;
+    }
+
+    FilterOperations filters;
+    filters.operations().append(BlurFilterOperation::create(Length(blurLength, Fixed), FilterOperation::BLUR));
+    platformLayer->setBackgroundFilters(filters);
+}
+#else
+void Internals::setBackgroundBlurOnNode(Node*, int, ExceptionCode&)
+{
+}
+#endif
+
 unsigned Internals::markerCountForNode(Node* node, const String& markerType, ExceptionCode& ec)
 {
     if (!node) {
@@ -526,8 +577,12 @@ void Internals::reset(Document* document)
     if (m_settings)
         m_settings->restoreTo(document->page()->settings());
     m_settings = InternalSettings::create(document->frame());
-    if (Page* page = document->page())
+    if (Page* page = document->page()) {
         page->setPagination(Page::Pagination());
+
+        if (document->frame() == page->mainFrame())
+            setUserPreferredLanguages(Vector<String>());
+    }
 }
 
 bool Internals::wasLastChangeUserEdit(Element* textField, ExceptionCode& ec)
@@ -647,6 +702,16 @@ String Internals::rangeAsText(const Range* range, ExceptionCode& ec)
     return range->text();
 }
 
+void Internals::setDelegatesScrolling(bool enabled, Document* document, ExceptionCode& ec)
+{
+    // Delegate scrolling is valid only on mainframe's view.
+    if (!document || !document->view() || !document->page() || document->page()->mainFrame() != document->frame()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    document->view()->setDelegatesScrolling(enabled);
+}
 
 #if ENABLE(TOUCH_ADJUSTMENT)
 PassRefPtr<WebKitPoint> Internals::touchPositionAdjustedToBestClickableNode(long x, long y, long width, long height, Document* document, ExceptionCode& ec)
@@ -662,6 +727,9 @@ PassRefPtr<WebKitPoint> Internals::touchPositionAdjustedToBestClickableNode(long
     Node* targetNode;
     IntPoint adjustedPoint;
     document->frame()->eventHandler()->bestClickableNodeForTouchPoint(point, radius, adjustedPoint, targetNode);
+    if (targetNode)
+        adjustedPoint = targetNode->document()->view()->contentsToWindow(adjustedPoint);
+
     return WebKitPoint::create(adjustedPoint.x(), adjustedPoint.y());
 }
 
@@ -691,10 +759,12 @@ PassRefPtr<ClientRect> Internals::bestZoomableAreaForTouchPoint(long x, long y, 
     IntSize radius(width / 2, height / 2);
     IntPoint point(x + radius.width(), y + radius.height());
 
-
     Node* targetNode;
     IntRect zoomableArea;
     document->frame()->eventHandler()->bestZoomableAreaForTouchPoint(point, radius, zoomableArea, targetNode);
+    if (targetNode)
+        zoomableArea = targetNode->document()->view()->contentsToWindow(zoomableArea);
+
     return ClientRect::create(zoomableArea);
 }
 #endif
@@ -722,16 +792,6 @@ int Internals::lastSpellCheckProcessedSequence(Document* document, ExceptionCode
     }
 
     return checker->lastProcessedSequence();
-}
-
-void Internals::setMediaPlaybackRequiresUserGesture(Document* document, bool enabled, ExceptionCode& ec)
-{
-    if (!document || !document->settings()) {
-        ec = INVALID_ACCESS_ERR;
-        return;
-    }
-
-    document->settings()->setMediaPlaybackRequiresUserGesture(enabled);
 }
 
 Vector<String> Internals::userPreferredLanguages() const
@@ -894,6 +954,21 @@ bool Internals::hasGrammarMarker(Document* document, int from, int length, Excep
         return 0;
 
     return document->frame()->editor()->selectionStartHasMarkerFor(DocumentMarker::Grammar, from, length);
+}
+
+unsigned Internals::numberOfScrollableAreas(Document* document, ExceptionCode&)
+{
+    unsigned count = 0;
+    Frame* frame = document->frame();
+    if (frame->view()->scrollableAreas())
+        count += frame->view()->scrollableAreas()->size();
+
+    for (Frame* child = frame->tree()->firstChild(); child; child = child->tree()->nextSibling()) {
+        if (child->view() && child->view()->scrollableAreas())
+            count += child->view()->scrollableAreas()->size();
+    }
+
+    return count;
 }
 
 }

@@ -86,8 +86,6 @@ SET(WebCore_INCLUDE_DIRECTORIES
     "${JAVASCRIPTCORE_DIR}/runtime"
     "${JAVASCRIPTCORE_DIR}/yarr"
     "${WTF_DIR}"
-    "${WTF_DIR}/wtf"
-    "${WTF_DIR}/wtf/unicode"
     "${DERIVED_SOURCES_WEBCORE_DIR}"
     "${CMAKE_SOURCE_DIR}/Source"
     "${CMAKE_BINARY_DIR}"
@@ -636,6 +634,7 @@ SET(WebCore_SOURCES
     dom/TransformSourceLibxslt.cpp
     dom/Traversal.cpp
     dom/TreeScope.cpp
+    dom/TreeScopeAdjuster.cpp
     dom/TreeScopeAdopter.cpp
     dom/TreeWalker.cpp
     dom/UIEvent.cpp
@@ -663,6 +662,8 @@ SET(WebCore_SOURCES
     editing/DeleteButtonController.cpp
     editing/DeleteFromTextNodeCommand.cpp
     editing/DeleteSelectionCommand.cpp
+    editing/DictationAlternative.cpp
+    editing/DictationCommand.cpp
     editing/EditCommand.cpp
     editing/EditingStyle.cpp
     editing/Editor.cpp
@@ -698,6 +699,7 @@ SET(WebCore_SOURCES
     editing/SplitTextNodeCommand.cpp
     editing/SplitTextNodeContainingElementCommand.cpp
     editing/TextCheckingHelper.cpp
+    editing/TextInsertionBaseCommand.cpp
     editing/TextIterator.cpp
     editing/TypingCommand.cpp
     editing/UnlinkCommand.cpp
@@ -961,6 +963,7 @@ SET(WebCore_SOURCES
     loader/DocumentLoader.cpp
     loader/DocumentThreadableLoader.cpp
     loader/DocumentWriter.cpp
+    loader/EmptyClients.cpp
     loader/FTPDirectoryParser.cpp
     loader/FormState.cpp
     loader/FormSubmission.cpp
@@ -1146,6 +1149,7 @@ SET(WebCore_SOURCES
     platform/graphics/GraphicsTypes.cpp
     platform/graphics/Image.cpp
     platform/graphics/ImageBuffer.cpp
+    platform/graphics/ImageOrientation.cpp
     platform/graphics/IntRect.cpp
     platform/graphics/Path.cpp
     platform/graphics/PathTraversalState.cpp
@@ -1183,6 +1187,7 @@ SET(WebCore_SOURCES
     platform/graphics/filters/FETile.cpp
     platform/graphics/filters/FETurbulence.cpp
     platform/graphics/filters/FilterEffect.cpp
+    platform/graphics/filters/FilterOperation.cpp
     platform/graphics/filters/FilterOperations.cpp
     platform/graphics/filters/LightSource.cpp
     platform/graphics/filters/PointLightSource.cpp
@@ -1283,6 +1288,7 @@ SET(WebCore_SOURCES
     rendering/EllipsisBox.cpp
     rendering/FilterEffectRenderer.cpp
     rendering/FixedTableLayout.cpp
+    rendering/FlowThreadController.cpp
     rendering/HitTestingTransformState.cpp
     rendering/HitTestResult.cpp
     rendering/InlineBox.cpp
@@ -1548,22 +1554,32 @@ IF (ENABLE_INDEXED_DATABASE)
     LIST(APPEND WebCore_SOURCES
         Modules/indexeddb/DOMWindowIndexedDatabase.cpp
         Modules/indexeddb/IDBAny.cpp
-        Modules/indexeddb/IDBDatabase.cpp
-        Modules/indexeddb/IDBDatabaseBackendImpl.cpp
         Modules/indexeddb/IDBCursor.cpp
         Modules/indexeddb/IDBCursorBackendImpl.cpp
+        Modules/indexeddb/IDBCursorWithValue.cpp
+        Modules/indexeddb/IDBDatabase.cpp
+        Modules/indexeddb/IDBDatabaseBackendImpl.cpp
+        Modules/indexeddb/IDBDatabaseCallbacksImpl.cpp
         Modules/indexeddb/IDBDatabaseException.cpp
         Modules/indexeddb/IDBEventDispatcher.cpp
+        Modules/indexeddb/IDBFactory.cpp
+        Modules/indexeddb/IDBFactoryBackendImpl.cpp
+        Modules/indexeddb/IDBFactoryBackendInterface.cpp
         Modules/indexeddb/IDBIndex.cpp
         Modules/indexeddb/IDBIndexBackendImpl.cpp
         Modules/indexeddb/IDBKey.cpp
         Modules/indexeddb/IDBKeyRange.cpp
-        Modules/indexeddb/IDBRequest.cpp
+        Modules/indexeddb/IDBKeyPath.cpp
+        Modules/indexeddb/IDBKeyPathBackendImpl.cpp
         Modules/indexeddb/IDBObjectStore.cpp
         Modules/indexeddb/IDBObjectStoreBackendImpl.cpp
-        Modules/indexeddb/IDBFactory.cpp
-        Modules/indexeddb/IDBFactoryBackendInterface.cpp
-        Modules/indexeddb/IDBFactoryBackendImpl.cpp
+        Modules/indexeddb/IDBPendingTransactionMonitor.cpp
+        Modules/indexeddb/IDBRequest.cpp
+        Modules/indexeddb/IDBTransaction.cpp
+        Modules/indexeddb/IDBTransactionBackendImpl.cpp
+        Modules/indexeddb/IDBTransactionCoordinator.cpp
+        Modules/indexeddb/IDBVersionChangeEvent.cpp
+        Modules/indexeddb/IDBVersionChangeRequest.cpp
         Modules/indexeddb/PageGroupIndexedDatabase.cpp
     )
 
@@ -1571,8 +1587,9 @@ IF (ENABLE_INDEXED_DATABASE)
         Modules/indexeddb/DOMWindowIndexedDatabase.idl
         Modules/indexeddb/IDBAny.idl
         Modules/indexeddb/IDBCursor.idl
-        Modules/indexeddb/IDBDatabaseException.idl
+        Modules/indexeddb/IDBCursorWithValue.idl
         Modules/indexeddb/IDBDatabase.idl
+        Modules/indexeddb/IDBDatabaseException.idl
         Modules/indexeddb/IDBFactory.idl
         Modules/indexeddb/IDBIndex.idl
         Modules/indexeddb/IDBKey.idl
@@ -1580,6 +1597,8 @@ IF (ENABLE_INDEXED_DATABASE)
         Modules/indexeddb/IDBObjectStore.idl
         Modules/indexeddb/IDBRequest.idl
         Modules/indexeddb/IDBTransaction.idl
+        Modules/indexeddb/IDBVersionChangeEvent.idl
+        Modules/indexeddb/IDBVersionChangeRequest.idl
     )
 ENDIF ()
 
@@ -1595,6 +1614,8 @@ ENDIF ()
 
 IF (WTF_USE_LEVELDB)
     LIST(APPEND WebCore_SOURCES
+        Modules/indexeddb/IDBLevelDBBackingStore.cpp
+        Modules/indexeddb/IDBLevelDBCoding.cpp
         platform/leveldb/LevelDBDatabase.cpp
         platform/leveldb/LevelDBTransaction.cpp
         platform/leveldb/LevelDBWriteBatch.cpp
@@ -2566,8 +2587,16 @@ IF (ENABLE_MATHML)
     LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/MathMLElementFactory.cpp)
 ENDIF ()
 
+# SVG extra defines need to map to a numerical value for correct preprocessing of svgtags.in.
+SET(SVG_EXTRA_DEFINES "")
+IF (ENABLE_FILTERS)
+    LIST(APPEND SVG_EXTRA_DEFINES "ENABLE_FILTERS=1")
+ENDIF ()
+IF (ENABLE_SVG_FONTS)
+    LIST(APPEND SVG_EXTRA_DEFINES "ENABLE_SVG_FONTS=1")
+ENDIF ()
 
-GENERATE_DOM_NAMES(SVG ${WEBCORE_DIR}/svg/svgattrs.in ${WEBCORE_DIR}/svg/svgtags.in "ENABLE_FILTERS=${ENABLE_FILTERS} ENABLE_SVG_FONTS=${ENABLE_SVG_FONTS}")
+GENERATE_DOM_NAMES(SVG ${WEBCORE_DIR}/svg/svgattrs.in ${WEBCORE_DIR}/svg/svgtags.in "${SVG_EXTRA_DEFINES}")
 LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/SVGNames.cpp)
 IF (ENABLE_SVG)
     LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/SVGElementFactory.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/JSSVGElementWrapperFactory.cpp)
@@ -2600,9 +2629,11 @@ ADD_DEFINITIONS(-DBUILDING_WebCore)
 INCLUDE_DIRECTORIES(${WebCore_INCLUDE_DIRECTORIES} ${WebCoreTestSupport_INCLUDE_DIRECTORIES})
 
 ADD_LIBRARY(${WebCore_LIBRARY_NAME} ${WebCore_LIBRARY_TYPE} ${WebCore_SOURCES})
+SET_TARGET_PROPERTIES(${WebCore_LIBRARY_NAME} PROPERTIES FOLDER "WebCore")
 SET_TARGET_PROPERTIES(${WebCore_LIBRARY_NAME} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ADD_LIBRARY(${WebCoreTestSupport_LIBRARY_NAME} ${WebCoreTestSupport_LIBRARY_TYPE} ${WebCoreTestSupport_SOURCES})
+SET_TARGET_PROPERTIES(${WebCoreTestSupport_LIBRARY_NAME} PROPERTIES FOLDER "WebCore")
 
 ADD_DEPENDENCIES(${WebCore_LIBRARY_NAME} ${JavaScriptCore_LIBRARY_NAME})
 ADD_DEPENDENCIES(${WebCoreTestSupport_LIBRARY_NAME} ${WebCore_LIBRARY_NAME})

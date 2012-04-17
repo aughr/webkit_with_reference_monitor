@@ -51,42 +51,43 @@ public:
     virtual ~CCThreadProxy();
 
     // CCProxy implementation
-    virtual bool compositeAndReadback(void *pixels, const IntRect&);
-    virtual void startPageScaleAnimation(const IntSize& targetPosition, bool useAnchor, float scale, double duration);
-    virtual GraphicsContext3D* context();
-    virtual void finishAllRendering();
-    virtual bool isStarted() const;
-    virtual bool initializeContext();
-    virtual bool initializeLayerRenderer();
-    virtual bool recreateContext();
-    virtual int compositorIdentifier() const;
-    virtual const LayerRendererCapabilities& layerRendererCapabilities() const;
-    virtual void loseContext();
-    virtual void setNeedsAnimate();
-    virtual void setNeedsCommit();
-    virtual void setNeedsRedraw();
-    virtual bool commitRequested() const;
-    virtual void setVisible(bool);
-    virtual void start();
-    virtual void stop();
-    virtual size_t maxPartialTextureUpdates() const;
+    virtual bool compositeAndReadback(void *pixels, const IntRect&) OVERRIDE;
+    virtual void startPageScaleAnimation(const IntSize& targetPosition, bool useAnchor, float scale, double duration) OVERRIDE;
+    virtual GraphicsContext3D* context() OVERRIDE;
+    virtual void finishAllRendering() OVERRIDE;
+    virtual bool isStarted() const OVERRIDE;
+    virtual bool initializeContext() OVERRIDE;
+    virtual bool initializeLayerRenderer() OVERRIDE;
+    virtual bool recreateContext() OVERRIDE;
+    virtual int compositorIdentifier() const OVERRIDE;
+    virtual const LayerRendererCapabilities& layerRendererCapabilities() const OVERRIDE;
+    virtual void loseContext() OVERRIDE;
+    virtual void setNeedsAnimate() OVERRIDE;
+    virtual void setNeedsCommit() OVERRIDE;
+    virtual void setNeedsRedraw() OVERRIDE;
+    virtual bool commitRequested() const OVERRIDE;
+    virtual void setVisible(bool) OVERRIDE;
+    virtual void start() OVERRIDE;
+    virtual void stop() OVERRIDE;
+    virtual size_t maxPartialTextureUpdates() const OVERRIDE;
+    virtual void setFontAtlas(PassOwnPtr<CCFontAtlas>) OVERRIDE;
 
     // CCLayerTreeHostImplClient implementation
-    virtual void didLoseContextOnImplThread();
-    virtual void onSwapBuffersCompleteOnImplThread();
-    virtual void setNeedsRedrawOnImplThread();
-    virtual void setNeedsCommitOnImplThread();
-    virtual void postAnimationEventsToMainThreadOnImplThread(PassOwnPtr<CCAnimationEventsVector>, double wallClockTime);
+    virtual void didLoseContextOnImplThread() OVERRIDE;
+    virtual void onSwapBuffersCompleteOnImplThread() OVERRIDE;
+    virtual void setNeedsRedrawOnImplThread() OVERRIDE;
+    virtual void setNeedsCommitOnImplThread() OVERRIDE;
+    virtual void postAnimationEventsToMainThreadOnImplThread(PassOwnPtr<CCAnimationEventsVector>, double wallClockTime) OVERRIDE;
 
     // CCSchedulerClient implementation
-    virtual bool canDraw();
-    virtual bool hasMoreResourceUpdates() const;
-    virtual void scheduledActionBeginFrame();
-    virtual CCScheduledActionDrawAndSwapResult scheduledActionDrawAndSwapIfPossible();
-    virtual CCScheduledActionDrawAndSwapResult scheduledActionDrawAndSwapForced();
-    virtual void scheduledActionUpdateMoreResources();
-    virtual void scheduledActionCommit();
-    virtual void scheduledActionBeginContextRecreation();
+    virtual bool canDraw() OVERRIDE;
+    virtual bool hasMoreResourceUpdates() const OVERRIDE;
+    virtual void scheduledActionBeginFrame() OVERRIDE;
+    virtual CCScheduledActionDrawAndSwapResult scheduledActionDrawAndSwapIfPossible() OVERRIDE;
+    virtual CCScheduledActionDrawAndSwapResult scheduledActionDrawAndSwapForced() OVERRIDE;
+    virtual void scheduledActionUpdateMoreResources() OVERRIDE;
+    virtual void scheduledActionCommit() OVERRIDE;
+    virtual void scheduledActionBeginContextRecreation() OVERRIDE;
 
 private:
     explicit CCThreadProxy(CCLayerTreeHost*);
@@ -94,9 +95,15 @@ private:
 
     // Set on impl thread, read on main thread.
     struct BeginFrameAndCommitState {
-        BeginFrameAndCommitState() : monotonicFrameBeginTime() { }
+        BeginFrameAndCommitState()
+            : monotonicFrameBeginTime(0)
+            , updater(0)
+        {
+        }
+
         double monotonicFrameBeginTime;
         OwnPtr<CCScrollAndScaleSet> scrollInfo;
+        CCTextureUpdater* updater;
     };
     OwnPtr<BeginFrameAndCommitState> m_pendingBeginFrameRequest;
 
@@ -128,6 +135,7 @@ private:
     void setFullRootLayerDamageOnImplThread();
     void recreateContextOnImplThread(CCCompletionEvent*, GraphicsContext3D*, bool* recreateSucceeded, LayerRendererCapabilities*);
     CCScheduledActionDrawAndSwapResult scheduledActionDrawAndSwapInternal(bool forcedDraw);
+    void setFontAtlasOnImplThread(PassOwnPtr<CCFontAtlas>);
 
     // Accessed on main thread only.
     bool m_animateRequested;

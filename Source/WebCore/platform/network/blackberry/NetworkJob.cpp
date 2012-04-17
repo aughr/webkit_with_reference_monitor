@@ -487,7 +487,7 @@ void NetworkJob::handleNotifyClose(int status)
             if (isClientAvailable()) {
 
                 RecursionGuard guard(m_callingClient);
-                if (isError(m_extendedStatusCode) && !m_dataReceived) {
+                if (isError(m_extendedStatusCode) && !m_dataReceived && m_handle->firstRequest().httpMethod() != "HEAD") {
                     String domain = m_extendedStatusCode < 0 ? ResourceError::platformErrorDomain : ResourceError::httpErrorDomain;
                     ResourceError error(domain, m_extendedStatusCode, m_response.url().string(), m_response.httpStatusText());
                     m_handle->client()->didFail(m_handle.get(), error);
@@ -584,11 +584,11 @@ bool NetworkJob::handleRedirect()
     newRequest.setMustHandleInternally(true);
 
     String method = newRequest.httpMethod().upper();
-    if ((method != "GET") && (method != "HEAD")) {
+    if (method != "GET" && method != "HEAD") {
         newRequest.setHTTPMethod("GET");
         newRequest.setHTTPBody(0);
-        newRequest.setHTTPHeaderField("Content-Length", String());
-        newRequest.setHTTPHeaderField("Content-Type", String());
+        newRequest.clearHTTPContentLength();
+        newRequest.clearHTTPContentType();
     }
 
     // Do not send existing credentials with the new request.

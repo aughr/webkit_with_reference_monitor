@@ -73,12 +73,12 @@ public:
 
     virtual ~MockLayerChromium() { }
 
-    virtual PassOwnPtr<CCLayerImpl> createCCLayerImpl()
+    virtual PassOwnPtr<CCLayerImpl> createCCLayerImpl() OVERRIDE
     {
         return MockCCLayerImpl::create(m_layerId);
     }
 
-    virtual void pushPropertiesTo(CCLayerImpl* ccLayer)
+    virtual void pushPropertiesTo(CCLayerImpl* ccLayer) OVERRIDE
     {
         LayerChromium::pushPropertiesTo(ccLayer);
 
@@ -228,10 +228,10 @@ TEST(TreeSynchronizerTest, syncSimpleTreeAndProperties)
     layerTreeRoot->addChild(LayerChromium::create());
 
     // Pick some random properties to set. The values are not important, we're just testing that at least some properties are making it through.
-    FloatPoint rootPosition = FloatPoint(2.3, 7.4);
+    FloatPoint rootPosition = FloatPoint(2.3f, 7.4f);
     layerTreeRoot->setPosition(rootPosition);
 
-    float firstChildOpacity = 0.25;
+    float firstChildOpacity = 0.25f;
     layerTreeRoot->children()[0]->setOpacity(firstChildOpacity);
 
     IntSize secondChildBounds = IntSize(25, 53);

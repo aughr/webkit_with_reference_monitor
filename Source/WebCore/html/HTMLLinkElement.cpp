@@ -155,7 +155,7 @@ void HTMLLinkElement::parseAttribute(Attribute* attr)
         setAttributeEventListener(eventNames().errorEvent, createAttributeEventListener(this, attr));
     else {
         if (attr->name() == titleAttr && m_sheet)
-            m_sheet->setTitle(attr->value());
+            m_sheet->internal()->setTitle(attr->value());
         HTMLElement::parseAttribute(attr);
     }
 }
@@ -230,9 +230,17 @@ void HTMLLinkElement::process()
         }
     } else if (m_sheet) {
         // we no longer contain a stylesheet, e.g. perhaps rel or type was changed
-        m_sheet = 0;
+        clearSheet();
         document()->styleSelectorChanged(DeferRecalcStyle);
     }
+}
+
+void HTMLLinkElement::clearSheet()
+{
+    ASSERT(m_sheet);
+    ASSERT(m_sheet->ownerNode() == this);
+    m_sheet->clearOwnerNode();
+    m_sheet = 0;
 }
 
 void HTMLLinkElement::insertedIntoDocument()
@@ -258,11 +266,8 @@ void HTMLLinkElement::removedFromDocument()
     }
     document()->removeStyleSheetCandidateNode(this);
 
-    if (m_sheet) {
-        ASSERT(m_sheet->ownerNode() == this);
-        m_sheet->clearOwnerNode();
-        m_sheet = 0;
-    }
+    if (m_sheet)
+        clearSheet();
 
     if (styleSheetIsLoading())
         removePendingSheet();
@@ -284,7 +289,7 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const KURL& baseURL, 
         return;
     }
 
-    m_sheet = CSSStyleSheet::create(this, href, baseURL, charset);
+    RefPtr<StyleSheetInternal> styleSheet = StyleSheetInternal::create(this, href, baseURL, charset);
 
     bool strictParsing = !document()->inQuirksMode();
     bool enforceMIMEType = strictParsing;
@@ -306,7 +311,7 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const KURL& baseURL, 
 #endif
 
     String sheetText = sheet->sheetText(enforceMIMEType, &validMIMEType);
-    m_sheet->parseString(sheetText, strictToCSSParserMode(strictParsing));
+    styleSheet->parseString(sheetText);
 
     // If we're loading a stylesheet cross-origin, and the MIME type is not
     // standard, require the CSS to at least start with a syntactically
@@ -316,8 +321,8 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const KURL& baseURL, 
     if (!document()->securityOrigin()->canRequest(baseURL))
         crossOriginCSS = true;
 
-    if (crossOriginCSS && !validMIMEType && !m_sheet->hasSyntacticallyValidCSSHeader())
-        m_sheet = CSSStyleSheet::create(this, href, baseURL, charset);
+    if (crossOriginCSS && !validMIMEType && !styleSheet->hasSyntacticallyValidCSSHeader())
+        styleSheet = StyleSheetInternal::create(this, href, baseURL, charset);
 
     if (strictParsing && needsSiteSpecificQuirks) {
         // Work around <https://bugs.webkit.org/show_bug.cgi?id=28350>.
@@ -327,20 +332,20 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const KURL& baseURL, 
         // while the other lacks the second trailing newline.
         if (baseURL.string().endsWith(slashKHTMLFixesDotCss) && !sheetText.isNull() && mediaWikiKHTMLFixesStyleSheet.startsWith(sheetText)
                 && sheetText.length() >= mediaWikiKHTMLFixesStyleSheet.length() - 1) {
-            ASSERT(m_sheet->length() == 1);
-            ExceptionCode ec;
-            m_sheet->deleteRule(0, ec);
+            ASSERT(styleSheet->ruleCount() == 1);
+            styleSheet->clearRules();
         }
     }
+    m_sheet = CSSStyleSheet::create(styleSheet);
 
-    m_sheet->setTitle(title());
+    styleSheet->setTitle(title());
 
     RefPtr<MediaQuerySet> media = MediaQuerySet::createAllowingDescriptionSyntax(m_media);
-    m_sheet->setMediaQueries(media.release());
+    styleSheet->setMediaQueries(media.release());
 
     m_loading = false;
-    m_sheet->notifyLoadedSheet(sheet);
-    m_sheet->checkLoaded();
+    styleSheet->notifyLoadedSheet(sheet);
+    styleSheet->checkLoaded();
 }
 
 bool HTMLLinkElement::styleSheetIsLoading() const
@@ -349,7 +354,7 @@ bool HTMLLinkElement::styleSheetIsLoading() const
         return true;
     if (!m_sheet)
         return false;
-    return m_sheet->isLoading();
+    return m_sheet->internal()->isLoading();
 }
 
 void HTMLLinkElement::linkLoaded()
@@ -442,7 +447,7 @@ void HTMLLinkElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
     
     // Walk the URLs linked by the linked-to stylesheet.
     if (CSSStyleSheet* styleSheet = const_cast<HTMLLinkElement*>(this)->sheet())
-        styleSheet->addSubresourceStyleURLs(urls);
+        styleSheet->internal()->addSubresourceStyleURLs(urls);
 }
 
 void HTMLLinkElement::addPendingSheet(PendingSheetType type)

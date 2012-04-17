@@ -456,11 +456,6 @@ input[type="search"]::-webkit-search-results-button {
 datalist {
     display: none;
 }
-
-input::-webkit-input-list-button {
-    -webkit-appearance: list-button;
-    display: inline-block;
-}
 #endif
 
 input::-webkit-inner-spin-button {
@@ -537,9 +532,9 @@ input[type="file"] {
 }
 
 input:-webkit-autofill {
-    background-color: #FAFFBD !important;
-    background-image:none !important;
-    color: #000000 !important;
+    background-color: #FAFFBD;
+    background-image: none;
+    color: #000000;
 }
 
 input[type="radio"], input[type="checkbox"] {

@@ -1,3 +1,221 @@
+2012-04-16  Antonio Gomes  <agomes@rim.com>
+
+        Screen shift down when VKB shows by clicking in a input box MKS_3601371
+        https://bugs.webkit.org/show_bug.cgi?id=84057
+
+        Reviewed by Rob Buis.
+
+        After switching from ScrollView::canOverscroll to ScrollView::constrainsScrollingToContentEdge
+        we had a less restricted code path allowing/disallowing overscrolling. That caused
+        some webpages like google.com to get on overscroll when adjusting the scroll
+        position to ensure the focused input field is visible.
+
+        Patch restricts the way we allow overscrolling to the bottom, where the virtual
+        keyboard pops up from, clamping it to 0, 0 if it tries to
+        overscroll upwards, and to maximum scroll position if it overscrolls
+        downwards.
+
+        PR #149846
+        Internally reviewed by Mike Fenton.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::ensureFocusTextElementVisible):
+
+2012-04-16  Yongxin Dai  <yodai@rim.com>
+
+        [BlackBerry] Increase padding for text element
+        https://bugs.webkit.org/show_bug.cgi?id=83903
+
+        Reviewed by Antonio Gomes.
+        
+        PR 125888
+        
+        Increase the padding value for focused text element to make selection handle
+        at least partially visible when the user is dragging at edge of viewport
+        in in-region scoll mode.
+ 
+        Reviewed internally by Mike Fenton.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::ensureFocusTextElementVisible):
+
+2012-04-16  Jonathan Dong  <jonathan.dong@torchmobile.com.cn>
+
+        [BlackBerry] Add ability for DRT to handle HTTP authentication challenges.
+        https://bugs.webkit.org/show_bug.cgi?id=84031
+
+        Reviewed by Rob Buis.
+
+        Added the interface function didReceivedAuthenticaitonChallenge()
+        in interface class DumpRenderTreeClient;
+        Called m_dumpRenderTree->didReceiveAuthenticationChallenge() in
+        WebPagePrivate::authenticationChallenge() when DRT is enabled.
+
+        Test: reuse existing test cases:
+        http/tests/loading/basic-credentials-sent-automatically.html
+        http/tests/loading/basic-auth-resend-wrong-credentials.html
+
+        * Api/DumpRenderTreeClient.h:
+        (WebCore):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::authenticationChallenge):
+
+2012-04-16  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] Accelerated compositing layers fail to render in direct rendering mode
+        https://bugs.webkit.org/show_bug.cgi?id=83933
+
+        Reviewed by Adam Treat.
+
+        RIM PR: 149609
+        This was because I accidentally dropped an exclamation mark when
+        upstreaming the patch for PR 136381 (bug #83131). Fixed by adding back
+        the exclamation mark.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::rootLayerCommitTimerFired):
+
+2012-04-12  Konrad Piascik  <kpiascik@rim.com>
+
+        [BlackBerry] Web Inspector messages incorrectly converted
+        https://bugs.webkit.org/show_bug.cgi?id=83796
+
+        Reviewed by Rob Buis.
+
+        The JSON sent over from the remote Web Inspector front-end was being
+        mis interpreted as ISO-8859-1.  This caused all non ascii characters to
+        become garbled when using the String constructor, so we use fromtUTF8 instead.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::dispatchInspectorMessage):
+
+2012-04-12  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Speed up processing of Selection region generation.
+        https://bugs.webkit.org/show_bug.cgi?id=82766
+
+        Reviewed by Rob Buis.
+
+        PR 136593.
+
+        Re-speed up text selection.  The previous patch had a merge
+        error causing text selection not to function.  The fix
+        implemented removed the optimization.  This fixes the error
+        in the original patch and removes the temporary fix.
+
+        Make style updated as suggested by Antonio Gomes.
+
+        Reviewed Internally by Gen Mak.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::regionForTextQuads):
+        (BlackBerry::WebKit::regionRectListContainsPoint):
+
+2012-04-12  Mike Fenton  <mifenton@rim.com>
+
+        Pattern matching for hexadecimal should include * as an allowable count.
+        https://bugs.webkit.org/show_bug.cgi?id=83779
+
+        Reviewed by Rob Buis.
+
+        Update pattern matching check to allow wildcard for number
+        of characters allowed.
+
+        PR 148907.
+
+        Reviewed Internally by Gen Mak.
+
+        * WebKitSupport/DOMSupport.cpp:
+        (BlackBerry::WebKit::DOMSupport::elementPatternIndicatesHexadecimal):
+
+2012-04-11  Joe Mason  <jmason@rim.com>
+
+        [BlackBerry] Update to the thread-safe GuardedPointer API
+        https://bugs.webkit.org/show_bug.cgi?id=83603
+
+        Reviewed by Rob Buis.
+
+        RIM PR: 134984
+        Make the destructors of all objects inheriting GuardedPointerBase protected or
+        private, and delete them using BlackBerry::Platform::deleteGuardedObject.
+        Access all GuardedPointers through GuardedPointerLocker.
+
+        No new tests, refactor.
+
+        Reviewed internally by Yong Li and George Staikos.
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStore::~BackingStore):
+        * Api/BackingStore_p.h:
+        (BackingStorePrivate):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::~WebPage):
+        (BlackBerry::WebKit::WebPage::destroy):
+        * Api/WebPage.h:
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+
+2012-04-10  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] Crash when tearing down web page rendered using WebPageCompositor
+        https://bugs.webkit.org/show_bug.cgi?id=83567
+
+        Reviewed by Antonio Gomes.
+
+        Fixed by checking if there's a layer renderer before calling into it.
+
+        * Api/WebPageCompositor.cpp:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::releaseLayerResources):
+
+2012-04-09  Eli Fidler  <efidler@rim.com>
+
+        [BlackBerry] Update about:config page
+        https://bugs.webkit.org/show_bug.cgi?id=83515
+
+        Reviewed by Rob Buis.
+
+        * WebCoreSupport/AboutData.cpp:
+        (WebCore::configPage):
+        * WebCoreSupport/AboutDataEnableFeatures.in:
+        * WebCoreSupport/AboutDataHaveFeatures.in:
+        * WebCoreSupport/AboutDataUseFeatures.in:
+
+2012-04-07  Rob Buis  <rbuis@rim.com>
+
+        [BlackBerry] Add Battery Status API support
+        https://bugs.webkit.org/show_bug.cgi?id=82615
+
+        Reviewed by George Staikos.
+
+        Add client implementation for Battery API.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::init):  initialize BatteryClient.
+        * WebCoreSupport/BatteryClientBlackBerry.cpp: Added.
+        (WebCore):
+        (WebCore::BatteryClientBlackBerry::BatteryClientBlackBerry):
+        (WebCore::BatteryClientBlackBerry::setController):
+        (WebCore::BatteryClientBlackBerry::startUpdating):
+        (WebCore::BatteryClientBlackBerry::stopUpdating):
+        (WebCore::BatteryClientBlackBerry::batteryControllerDestroyed):
+        (WebCore::BatteryClientBlackBerry::onLevelChange):
+        (WebCore::BatteryClientBlackBerry::onChargingChange):
+        (WebCore::BatteryClientBlackBerry::onChargingTimeChange):
+        (WebCore::BatteryClientBlackBerry::onDischargingTimeChange):
+        * WebCoreSupport/BatteryClientBlackBerry.h: Added.
+        (WebCore):
+        (BatteryClientBlackBerry):
+        (WebCore::BatteryClientBlackBerry::~BatteryClientBlackBerry):
+
+2012-04-06  Benjamin Poulain  <bpoulain@apple.com>
+
+        Get rid of the useless flag PREEMPT_GEOLOCATION_PERMISSION
+        https://bugs.webkit.org/show_bug.cgi?id=83325
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebCoreSupport/AboutDataUseFeatures.in:
+
 2012-04-06  Sean Wang  <Xuewen.Wang@torchmobile.com.cn>
 
         [BlackBerry] Text selection - Can't select texts

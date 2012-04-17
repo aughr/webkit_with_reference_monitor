@@ -611,6 +611,8 @@ public:
     void collectDashboardRegions(Vector<DashboardRegionValue>&);
 #endif
 
+    bool isComposited() const;
+
     bool hitTest(const HitTestRequest&, HitTestResult&, const LayoutPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestFilter = HitTestAll);
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const LayoutPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction);
     virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&);
@@ -855,6 +857,8 @@ public:
 
     // Return the renderer whose background style is used to paint the root background. Should only be called on the renderer for which isRoot() is true.
     RenderObject* rendererForRootBackground();
+
+    RespectImageOrientationEnum shouldRespectImageOrientation() const;
 
 protected:
     inline bool layerCreationAllowedForSubtree() const;

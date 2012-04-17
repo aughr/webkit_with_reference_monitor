@@ -116,18 +116,13 @@ void FakeTiledLayerChromium::setNeedsDisplayRect(const FloatRect& rect)
     TiledLayerChromium::setNeedsDisplayRect(rect);
 }
 
-void FakeTiledLayerChromium::paintContentsIfDirty(const CCOcclusionTracker* occlusion)
+void FakeTiledLayerChromium::update(CCTextureUpdater& updater, const CCOcclusionTracker* occlusion)
 {
-    prepareToUpdate(visibleLayerRect(), occlusion);
+    updateLayerRect(updater, visibleLayerRect(), occlusion);
 }
 
 FakeTiledLayerWithScaledBounds::FakeTiledLayerWithScaledBounds(TextureManager* textureManager)
     : FakeTiledLayerChromium(textureManager)
-{
-}
-
-FakeCCTextureUpdater::FakeCCTextureUpdater()
-    : CCTextureUpdater(&m_textureAllocator, &m_textureCopier)
 {
 }
 

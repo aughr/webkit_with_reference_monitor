@@ -67,11 +67,18 @@ public:
     // Gives an unoccluded sub-rect of |contentRect| in the content space of the layer. Used when considering occlusion for a layer that paints/draws something.
     IntRect unoccludedContentRect(const LayerType*, const IntRect& contentRect) const;
 
+    // Gives an unoccluded sub-rect of |contentRect| in the content space of the surface owned by |layer|. Used when considering occlusion for a surface
+    // that is rendering into another target surface.
+    IntRect unoccludedContributingSurfaceContentRect(const LayerType*, bool forReplica, const IntRect& contentRect) const;
+
     // Report operations for recording overdraw metrics.
     CCOverdrawMetrics& overdrawMetrics() const { return *m_overdrawMetrics.get(); }
 
     // FIXME: Remove this when paint tracking is on for paint culling.
     void setUsePaintTracking(bool use) { m_usePaintTracking = use; }
+
+    // Gives the region of the screen that is not occluded by something opaque.
+    Region computeVisibleRegionInScreen() const { return subtract(Region(m_scissorRectInScreenSpace), m_stack.last().occlusionInScreen); }
 
 protected:
     struct StackObject {

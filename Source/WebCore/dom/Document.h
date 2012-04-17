@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2011 Google Inc. All rights reserved.
@@ -63,7 +63,6 @@ class CDATASection;
 class CSSStyleDeclaration;
 class CSSStyleSelector;
 class CSSStyleSheet;
-class CSSValuePool;
 class CachedCSSStyleSheet;
 class CachedResourceLoader;
 class CachedScript;
@@ -128,6 +127,7 @@ class SerializedScriptValue;
 class SegmentedString;
 class Settings;
 class StyleSheet;
+class StyleSheetInternal;
 class StyleSheetList;
 class Text;
 class TextResourceDecoder;
@@ -352,7 +352,12 @@ public:
     PassRefPtr<Element> createElement(const QualifiedName&, bool createdByParser);
 
     bool cssRegionsEnabled() const;
+    enum FlowNameCheck {
+        CheckFlowNameForInvalidValues,
+        DoNotCheckFlowNameForInvalidValues
+    };
     PassRefPtr<WebKitNamedFlow> webkitGetFlowByName(const String&);
+    PassRefPtr<WebKitNamedFlow> webkitGetFlowByName(const String&, FlowNameCheck);
 
     bool regionBasedColumnsEnabled() const;
 
@@ -395,11 +400,15 @@ public:
 
     String xmlEncoding() const { return m_xmlEncoding; }
     String xmlVersion() const { return m_xmlVersion; }
-    bool xmlStandalone() const { return m_xmlStandalone; }
+    enum StandaloneStatus { StandaloneUnspecified, Standalone, NotStandalone };
+    bool xmlStandalone() const { return m_xmlStandalone == Standalone; }
+    StandaloneStatus xmlStandaloneStatus() const { return static_cast<StandaloneStatus>(m_xmlStandalone); }
+    bool hasXMLDeclaration() const { return m_hasXMLDeclaration; }
 
     void setXMLEncoding(const String& encoding) { m_xmlEncoding = encoding; } // read-only property, only to be set from XMLDocumentParser
     void setXMLVersion(const String&, ExceptionCode&);
     void setXMLStandalone(bool, ExceptionCode&);
+    void setHasXMLDeclaration(bool hasXMLDeclaration) { m_hasXMLDeclaration = hasXMLDeclaration ? 1 : 0; }
 
     String documentURI() const { return m_documentURI; }
     void setDocumentURI(const String&);
@@ -445,8 +454,6 @@ public:
 
     bool isSrcdocDocument() const { return m_isSrcdocDocument; }
 
-    PassRefPtr<CSSValuePool> cssValuePool() const;
-    
     CSSStyleSelector* styleSelectorIfExists() const { return m_styleSelector.get(); }
 
     bool isViewSource() const { return m_isViewSource; }
@@ -506,7 +513,6 @@ public:
     bool usesBeforeAfterRules() const { return m_usesBeforeAfterRules || m_usesBeforeAfterRulesOverride; }
     void setUsesBeforeAfterRules(bool b) { m_usesBeforeAfterRulesOverride = b; }
     bool usesRemUnits() const { return m_usesRemUnits; }
-    void setUsesRemUnits(bool b) { m_usesRemUnits = b; }
     bool usesLinkRules() const { return linkColor() != visitedLinkColor() || m_usesLinkRules; }
     void setUsesLinkRules(bool b) { m_usesLinkRules = b; }
 
@@ -624,17 +630,18 @@ public:
     virtual void disableEval();
 
     bool canNavigate(Frame* targetFrame);
+    bool canBeAccessedByEveryAncestorFrame();
 
-    CSSStyleSheet* pageUserSheet();
+    StyleSheetInternal* pageUserSheet();
     void clearPageUserSheet();
     void updatePageUserSheet();
 
-    const Vector<RefPtr<CSSStyleSheet> >* pageGroupUserSheets() const;
+    const Vector<RefPtr<StyleSheetInternal> >* pageGroupUserSheets() const;
     void clearPageGroupUserSheets();
     void updatePageGroupUserSheets();
 
-    const Vector<RefPtr<CSSStyleSheet> >* documentUserSheets() const { return m_userSheets.get(); }
-    void addUserSheet(PassRefPtr<CSSStyleSheet> userSheet);
+    const Vector<RefPtr<StyleSheetInternal> >* documentUserSheets() const { return m_userSheets.get(); }
+    void addUserSheet(PassRefPtr<StyleSheetInternal> userSheet);
 
     CSSStyleSheet* elementSheet();
     
@@ -1105,7 +1112,7 @@ public:
     const DocumentTiming* timing() const { return &m_documentTiming; }
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
-    int webkitRequestAnimationFrame(PassRefPtr<RequestAnimationFrameCallback>, Element*);
+    int webkitRequestAnimationFrame(PassRefPtr<RequestAnimationFrameCallback>);
     void webkitCancelAnimationFrame(int id);
     void serviceScriptedAnimations(DOMTimeStamp);
 #endif
@@ -1183,7 +1190,7 @@ private:
     
     bool updateActiveStylesheets(StyleSelectorUpdateFlag);
     void collectActiveStylesheets(Vector<RefPtr<StyleSheet> >&);
-    bool testAddedStylesheetRequiresStyleRecalc(CSSStyleSheet*);
+    bool testAddedStylesheetRequiresStyleRecalc(StyleSheetInternal*);
     void analyzeStylesheetChange(StyleSelectorUpdateFlag, const Vector<RefPtr<StyleSheet> >& newStylesheets, bool& requiresStyleSelectorReset, bool& requiresFullStyleRecalc);
 
     void deleteCustomFonts();
@@ -1215,8 +1222,6 @@ private:
     bool m_didCalculateStyleSelector;
     bool m_hasDirtyStyleSelector;
     Vector<OwnPtr<FontData> > m_customFonts;
-
-    mutable RefPtr<CSSValuePool> m_cssValuePool;
 
     Frame* m_frame;
     OwnPtr<CachedResourceLoader> m_cachedResourceLoader;
@@ -1261,9 +1266,9 @@ private:
     bool m_hasNodesWithPlaceholderStyle;
 
     RefPtr<CSSStyleSheet> m_elemSheet;
-    RefPtr<CSSStyleSheet> m_pageUserSheet;
-    mutable OwnPtr<Vector<RefPtr<CSSStyleSheet> > > m_pageGroupUserSheets;
-    OwnPtr<Vector<RefPtr<CSSStyleSheet> > > m_userSheets;
+    RefPtr<StyleSheetInternal> m_pageUserSheet;
+    mutable OwnPtr<Vector<RefPtr<StyleSheetInternal> > > m_pageGroupUserSheets;
+    OwnPtr<Vector<RefPtr<StyleSheetInternal> > > m_userSheets;
     mutable bool m_pageGroupUserSheetCacheValid;
 
     bool m_printing;
@@ -1377,7 +1382,8 @@ private:
 
     String m_xmlEncoding;
     String m_xmlVersion;
-    bool m_xmlStandalone;
+    unsigned m_xmlStandalone : 2;
+    unsigned m_hasXMLDeclaration : 1;
 
     String m_contentLanguage;
 
@@ -1499,6 +1505,8 @@ inline Node::Node(Document* document, ConstructionType type, SecurityLabel label
 #endif
     InspectorCounters::incrementCounter(InspectorCounters::NodeCounter);
 }
+
+Node* eventTargetNodeForDocument(Document*);
 
 } // namespace WebCore
 

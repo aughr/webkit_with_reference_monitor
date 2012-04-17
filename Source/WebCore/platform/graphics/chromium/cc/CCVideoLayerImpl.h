@@ -28,10 +28,13 @@
 
 #include "ManagedTexture.h"
 #include "ShaderChromium.h"
-#include "VideoFrameChromium.h"
 #include "VideoFrameProvider.h"
 #include "VideoLayerChromium.h"
 #include "cc/CCLayerImpl.h"
+
+namespace WebKit {
+class WebVideoFrame;
+}
 
 namespace WebCore {
 
@@ -49,16 +52,16 @@ public:
     }
     virtual ~CCVideoLayerImpl();
 
-    virtual void willDraw(LayerRendererChromium*);
-    virtual void appendQuads(CCQuadCuller&, const CCSharedQuadState*, bool& usedCheckerboard);
-    virtual void didDraw();
+    virtual void willDraw(LayerRendererChromium*) OVERRIDE;
+    virtual void appendQuads(CCQuadCuller&, const CCSharedQuadState*, bool& hadMissingTiles) OVERRIDE;
+    virtual void didDraw() OVERRIDE;
 
     typedef ProgramBinding<VertexShaderPosTexTransform, FragmentShaderRGBATexFlipAlpha> RGBAProgram;
     typedef ProgramBinding<VertexShaderPosTexYUVStretch, FragmentShaderYUVVideo> YUVProgram;
     typedef ProgramBinding<VertexShaderPosTexTransform, FragmentShaderRGBATexFlipAlpha> NativeTextureProgram;
     typedef ProgramBinding<VertexShaderVideoTransform, FragmentShaderOESImageExternal> StreamTextureProgram;
 
-    virtual void dumpLayerProperties(TextStream&, int indent) const;
+    virtual void dumpLayerProperties(TextStream&, int indent) const OVERRIDE;
 
     Mutex& providerMutex() { return m_providerMutex; }
     VideoFrameProvider* provider() const { return m_provider; }
@@ -83,10 +86,10 @@ public:
 private:
     explicit CCVideoLayerImpl(int, VideoFrameProvider*);
 
-    static IntSize computeVisibleSize(const VideoFrameChromium*, unsigned plane);
-    virtual const char* layerTypeAsString() const { return "VideoLayer"; }
+    static IntSize computeVisibleSize(const WebKit::WebVideoFrame&, unsigned plane);
+    virtual const char* layerTypeAsString() const OVERRIDE { return "VideoLayer"; }
 
-    bool reserveTextures(const VideoFrameChromium*, GC3Denum format, LayerRendererChromium*);
+    bool reserveTextures(const WebKit::WebVideoFrame&, GC3Denum format, LayerRendererChromium*);
 
     Mutex m_providerMutex; // Guards m_provider below.
     VideoFrameProvider* m_provider;
@@ -96,7 +99,7 @@ private:
     float m_streamTextureMatrix[16];
     CCLayerTreeHostImpl* m_layerTreeHostImpl;
 
-    VideoFrameChromium* m_frame;
+    WebKit::WebVideoFrame* m_frame;
     GC3Denum m_format;
 };
 

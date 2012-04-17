@@ -83,7 +83,7 @@
     ".thumb" "\n" \
     ".thumb_func " THUMB_FUNC_PARAM(function) "\n" \
     SYMBOL_STRING(function) ":" "\n" \
-        "cpy a2, lr" "\n" \
+        "mov a2, lr" "\n" \
         "b " SYMBOL_STRING_RELOCATION(function) "WithReturnAddress" "\n" \
     );
 
@@ -96,7 +96,7 @@
     ".thumb" "\n" \
     ".thumb_func " THUMB_FUNC_PARAM(function) "\n" \
     SYMBOL_STRING(function) ":" "\n" \
-        "cpy a4, lr" "\n" \
+        "mov a4, lr" "\n" \
         "b " SYMBOL_STRING_RELOCATION(function) "WithReturnAddress" "\n" \
     );
 
@@ -1049,7 +1049,17 @@ JSCell* DFG_OPERATION operationNewFunctionExpression(ExecState* exec, JSCell* fu
     return function;
 }
 
-double operationFModOnInts(int32_t a, int32_t b)
+size_t DFG_OPERATION operationIsObject(EncodedJSValue value)
+{
+    return jsIsObjectType(JSValue::decode(value));
+}
+
+size_t DFG_OPERATION operationIsFunction(EncodedJSValue value)
+{
+    return jsIsFunctionType(JSValue::decode(value));
+}
+
+double DFG_OPERATION operationFModOnInts(int32_t a, int32_t b)
 {
     return fmod(a, b);
 }
@@ -1123,7 +1133,17 @@ void DFG_OPERATION debugOperationPrintSpeculationFailure(ExecState* exec, void* 
     SpeculationFailureDebugInfo* debugInfo = static_cast<SpeculationFailureDebugInfo*>(debugInfoRaw);
     CodeBlock* codeBlock = debugInfo->codeBlock;
     CodeBlock* alternative = codeBlock->alternative();
-    dataLog("Speculation failure in %p at @%u with executeCounter = %d, reoptimizationRetryCounter = %u, optimizationDelayCounter = %u, success/fail %u/%u\n", codeBlock, debugInfo->nodeIndex, alternative ? alternative->jitExecuteCounter() : 0, alternative ? alternative->reoptimizationRetryCounter() : 0, alternative ? alternative->optimizationDelayCounter() : 0, codeBlock->speculativeSuccessCounter(), codeBlock->speculativeFailCounter());
+    dataLog("Speculation failure in %p at @%u with executeCounter = %d, "
+            "reoptimizationRetryCounter = %u, optimizationDelayCounter = %u, "
+            "success/fail %u/(%u+%u)\n",
+            codeBlock,
+            debugInfo->nodeIndex,
+            alternative ? alternative->jitExecuteCounter() : 0,
+            alternative ? alternative->reoptimizationRetryCounter() : 0,
+            alternative ? alternative->optimizationDelayCounter() : 0,
+            codeBlock->speculativeSuccessCounter(),
+            codeBlock->speculativeFailCounter(),
+            codeBlock->forcedOSRExitCounter());
 }
 #endif
 
@@ -1164,7 +1184,7 @@ HIDE_SYMBOL(getHostCallReturnValue) "\n"
 ".thumb_func " THUMB_FUNC_PARAM(getHostCallReturnValue) "\n"
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
     "ldr r5, [r5, #-40]" "\n"
-    "cpy r0, r5" "\n"
+    "mov r0, r5" "\n"
     "b " SYMBOL_STRING_RELOCATION(getHostCallReturnValueWithExecState) "\n"
 );
 #endif

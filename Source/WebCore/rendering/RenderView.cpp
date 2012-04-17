@@ -25,6 +25,7 @@
 #include "Document.h"
 #include "Element.h"
 #include "FloatQuad.h"
+#include "FlowThreadController.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
@@ -54,10 +55,8 @@ RenderView::RenderView(Node* node, FrameView* view)
     , m_maximalOutlineSize(0)
     , m_pageLogicalHeight(0)
     , m_pageLogicalHeightChanged(false)
-    , m_isRenderNamedFlowThreadOrderDirty(false)
     , m_layoutState(0)
     , m_layoutStateDisableCount(0)
-    , m_currentRenderFlowThread(0)
 {
     // Clear our anonymous bit, set because RenderObject assumes
     // any renderer with document as the node is anonymous.
@@ -76,6 +75,11 @@ RenderView::RenderView(Node* node, FrameView* view)
 
 RenderView::~RenderView()
 {
+}
+
+bool RenderView::hitTest(const HitTestRequest& request, HitTestResult& result)
+{
+    return layer()->hitTest(request, result);
 }
 
 void RenderView::computeLogicalHeight()
@@ -138,7 +142,7 @@ void RenderView::layout()
     if (needsLayout()) {
         RenderBlock::layout();
         if (hasRenderNamedFlowThreads())
-            layoutRenderNamedFlowThreads();
+            flowThreadController()->layoutRenderNamedFlowThreads();
     }
 
     ASSERT(layoutDelta() == LayoutSize());
@@ -217,6 +221,8 @@ void RenderView::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     // If we ever require layout but receive a paint anyway, something has gone horribly wrong.
     ASSERT(!needsLayout());
+    // RenderViews should never be called to paint with an offset not on device pixels.
+    ASSERT(LayoutPoint(IntPoint(paintOffset.x(), paintOffset.y())) == paintOffset);
     paintObject(paintInfo, paintOffset);
 }
 
@@ -249,8 +255,8 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         }
 
 #if USE(ACCELERATED_COMPOSITING)
-        if (RenderLayer* compositingLayer = layer->enclosingCompositingLayer()) {
-            if (!compositingLayer->backing()->paintingGoesToWindow()) {
+        if (RenderLayer* compositingLayer = layer->enclosingCompositingLayerForRepaint()) {
+            if (!compositingLayer->backing()->paintsIntoWindow()) {
                 frameView()->setCannotBlitToWindow();
                 break;
             }
@@ -294,7 +300,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
     }
 }
 
-bool RenderView::shouldRepaint(const IntRect& r) const
+bool RenderView::shouldRepaint(const LayoutRect& r) const
 {
     if (printing() || r.width() == 0 || r.height() == 0)
         return false;
@@ -308,7 +314,7 @@ bool RenderView::shouldRepaint(const IntRect& r) const
     return true;
 }
 
-void RenderView::repaintViewRectangle(const IntRect& ur, bool immediate)
+void RenderView::repaintViewRectangle(const LayoutRect& ur, bool immediate)
 {
     if (!shouldRepaint(ur))
         return;
@@ -317,23 +323,22 @@ void RenderView::repaintViewRectangle(const IntRect& ur, bool immediate)
     // or even invisible.
     Element* elt = document()->ownerElement();
     if (!elt)
-        m_frameView->repaintContentRectangle(ur, immediate);
+        m_frameView->repaintContentRectangle(pixelSnappedIntRect(ur), immediate);
     else if (RenderBox* obj = elt->renderBox()) {
-        IntRect vr = viewRect();
-        IntRect r = intersection(ur, vr);
+        LayoutRect vr = viewRect();
+        LayoutRect r = intersection(ur, vr);
         
         // Subtract out the contentsX and contentsY offsets to get our coords within the viewing
         // rectangle.
         r.moveBy(-vr.location());
-        
+
         // FIXME: Hardcoded offsets here are not good.
-        r.move(obj->borderLeft() + obj->paddingLeft(),
-               obj->borderTop() + obj->paddingTop());
+        r.moveBy(obj->contentBoxRect().location());
         obj->repaintRectangle(r, immediate);
     }
 }
 
-void RenderView::repaintRectangleInViewAndCompositedLayers(const IntRect& ur, bool immediate)
+void RenderView::repaintRectangleInViewAndCompositedLayers(const LayoutRect& ur, bool immediate)
 {
     if (!shouldRepaint(ur))
         return;
@@ -342,11 +347,11 @@ void RenderView::repaintRectangleInViewAndCompositedLayers(const IntRect& ur, bo
     
 #if USE(ACCELERATED_COMPOSITING)
     if (compositor()->inCompositingMode())
-        compositor()->repaintCompositedLayersAbsoluteRect(ur);
+        compositor()->repaintCompositedLayersAbsoluteRect(pixelSnappedIntRect(ur));
 #endif
 }
 
-void RenderView::computeRectForRepaint(RenderBoxModelObject* repaintContainer, IntRect& rect, bool fixed) const
+void RenderView::computeRectForRepaint(RenderBoxModelObject* repaintContainer, LayoutRect& rect, bool fixed) const
 {
     // If a container was specified, and was not 0 or the RenderView,
     // then we should have found it by now.
@@ -420,12 +425,12 @@ IntRect RenderView::selectionBounds(bool clipToVisibleContent) const
     }
 
     // Now create a single bounding box rect that encloses the whole selection.
-    IntRect selRect;
+    LayoutRect selRect;
     SelectionMap::iterator end = selectedObjects.end();
     for (SelectionMap::iterator i = selectedObjects.begin(); i != end; ++i) {
         RenderSelectionInfo* info = i->second;
         // RenderSelectionInfo::rect() is in the coordinates of the repaintContainer, so map to page coordinates.
-        IntRect currRect = info->rect();
+        LayoutRect currRect = info->rect();
         if (RenderBoxModelObject* repaintContainer = info->repaintContainer()) {
             FloatQuad absQuad = repaintContainer->localToAbsoluteQuad(FloatRect(currRect));
             currRect = absQuad.enclosingBoundingBox(); 
@@ -433,7 +438,7 @@ IntRect RenderView::selectionBounds(bool clipToVisibleContent) const
         selRect.unite(currRect);
         delete info;
     }
-    return selRect;
+    return pixelSnappedIntRect(selRect);
 }
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -706,21 +711,21 @@ void RenderView::notifyWidgets(WidgetNotification notification)
     releaseWidgets(renderWidgets);
 }
 
-IntRect RenderView::viewRect() const
+LayoutRect RenderView::viewRect() const
 {
     if (printing())
-        return IntRect(IntPoint(), size());
+        return LayoutRect(LayoutPoint(), size());
     if (m_frameView)
         return m_frameView->visibleContentRect();
-    return IntRect();
+    return LayoutRect();
 }
 
 
 IntRect RenderView::unscaledDocumentRect() const
 {
-    IntRect overflowRect(layoutOverflowRect());
+    LayoutRect overflowRect(layoutOverflowRect());
     flipForWritingMode(overflowRect);
-    return overflowRect;
+    return pixelSnappedIntRect(overflowRect);
 }
 
 LayoutRect RenderView::backgroundRect(RenderBox* backgroundRenderer) const
@@ -895,50 +900,17 @@ void RenderView::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
     }
 }
 
-RenderNamedFlowThread* RenderView::ensureRenderFlowThreadWithName(const AtomicString& name)
+bool RenderView::hasRenderNamedFlowThreads() const
 {
-    if (!m_renderNamedFlowThreadList)
-        m_renderNamedFlowThreadList = adoptPtr(new RenderNamedFlowThreadList());
-    else {
-        for (RenderNamedFlowThreadList::iterator iter = m_renderNamedFlowThreadList->begin(); iter != m_renderNamedFlowThreadList->end(); ++iter) {
-            RenderNamedFlowThread* flowRenderer = *iter;
-            if (flowRenderer->flowThreadName() == name)
-                return flowRenderer;
-        }
-    }
-
-    RenderNamedFlowThread* flowRenderer = new (renderArena()) RenderNamedFlowThread(document(), name);
-    flowRenderer->setStyle(RenderFlowThread::createFlowThreadStyle(style()));
-    addChild(flowRenderer);
-
-    m_renderNamedFlowThreadList->add(flowRenderer);
-    setIsRenderNamedFlowThreadOrderDirty(true);
-
-    return flowRenderer;
+    return m_flowThreadController && m_flowThreadController->hasRenderNamedFlowThreads();
 }
 
-void RenderView::layoutRenderNamedFlowThreads()
+FlowThreadController* RenderView::flowThreadController()
 {
-    ASSERT(m_renderNamedFlowThreadList);
+    if (!m_flowThreadController)
+        m_flowThreadController = FlowThreadController::create(this);
 
-    if (isRenderNamedFlowThreadOrderDirty()) {
-        // Arrange the thread list according to dependencies.
-        RenderNamedFlowThreadList sortedList;
-        for (RenderNamedFlowThreadList::iterator iter = m_renderNamedFlowThreadList->begin(); iter != m_renderNamedFlowThreadList->end(); ++iter) {
-            RenderNamedFlowThread* flowRenderer = *iter;
-            if (sortedList.contains(flowRenderer))
-                continue;
-            flowRenderer->pushDependencies(sortedList);
-            sortedList.add(flowRenderer);
-        }
-        m_renderNamedFlowThreadList->swap(sortedList);
-        setIsRenderNamedFlowThreadOrderDirty(false);
-    }
-
-    for (RenderNamedFlowThreadList::iterator iter = m_renderNamedFlowThreadList->begin(); iter != m_renderNamedFlowThreadList->end(); ++iter) {
-        RenderNamedFlowThread* flowRenderer = *iter;
-        flowRenderer->layoutIfNeeded();
-    }
+    return m_flowThreadController.get();
 }
 
 RenderBlock::IntervalArena* RenderView::intervalArena()
@@ -946,6 +918,37 @@ RenderBlock::IntervalArena* RenderView::intervalArena()
     if (!m_intervalArena)
         m_intervalArena = IntervalArena::create();
     return m_intervalArena.get();
+}
+
+void RenderView::setFixedPositionedObjectsNeedLayout()
+{
+    ASSERT(m_frameView);
+
+    PositionedObjectsListHashSet* positionedObjects = this->positionedObjects();
+    if (!positionedObjects)
+        return;
+
+    PositionedObjectsListHashSet::const_iterator end = positionedObjects->end();
+    for (PositionedObjectsListHashSet::const_iterator it = positionedObjects->begin(); it != end; ++it) {
+        RenderBox* currBox = *it;
+        currBox->setNeedsLayout(true);
+    }
+}
+
+void RenderView::insertFixedPositionedObject(RenderBox* object)
+{
+    if (!m_positionedObjects)
+        m_positionedObjects = adoptPtr(new PositionedObjectsListHashSet);
+
+    m_positionedObjects->add(object);
+}
+
+void RenderView::removeFixedPositionedObject(RenderBox* object)
+{
+    if (!m_positionedObjects)
+        return;
+
+    m_positionedObjects->remove(object);
 }
 
 } // namespace WebCore

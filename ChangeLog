@@ -1,3 +1,300 @@
+2012-04-16  Dave Tu  <dtu@chromium.org>
+
+        Re-add GPU DEPS builders to flakiness dashboard.
+        https://bugs.webkit.org/show_bug.cgi?id=84056
+
+        Reviewed by Ojan Vafai.
+
+        * Tools/TestResultServer/static-dashboards/builders.js:
+
+2012-04-16  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] Bump dependency on GTK+ 3.x to match reality
+        https://bugs.webkit.org/show_bug.cgi?id=84060
+
+        Rubber-stamped by Martin Robinson.
+
+        * configure.ac: Bump GTK+ 3 requirement to 3.4.0. In practice we
+        already depend on this version because of our dependency on a recent
+        glib, which causes linking issues with older GTK+; also bump glib to
+        its earliest version.
+
+2012-04-16  Philippe Normand  <pnormand@igalia.com>
+
+        [GTK] GStreamer 1.0 support in configure.ac
+        https://bugs.webkit.org/show_bug.cgi?id=84029
+
+        Reviewed by Martin Robinson.
+
+        The GStreamer version was recently changed to 1.0 in the git
+        repositories of the project so we need to reflect this change in
+        configure.ac.
+
+        * configure.ac:
+
+2012-04-16  Yael Aharon  <yael.aharon@nokia.com>
+
+        [Qt][WK2] Fixed elements position is wrong after zooming.
+        https://bugs.webkit.org/show_bug.cgi?id=83981
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * ManualTests/remove-add-fixed-position.html: Added.
+
+2012-04-13  Jason Liu  <jason.liu@torchmobile.com.cn>
+
+        [BlackBerry] Sign in cookie for ESPN.com does not retain login account (for fantasy sports).
+        https://bugs.webkit.org/show_bug.cgi?id=83760
+
+        Reviewed by George Staikos.
+
+        * ManualTests/blackberry/http-cookie-database-set.php: Added.
+        * ManualTests/blackberry/http-cookie-database-update.php: Added.
+
+2012-04-13  Thiago Marcos P. Santos  <thiago.santos@intel.com>
+
+        [EFL] Add API for color chooser
+        https://bugs.webkit.org/show_bug.cgi?id=83692
+
+        Enables INPUT_TYPE_COLOR by default on the EFL port.
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * Source/cmake/OptionsEfl.cmake:
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2012-04-12  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Enable WebKit2 by default in configure
+        https://bugs.webkit.org/show_bug.cgi?id=83753
+
+        Reviewed by Martin Robinson.
+
+        * configure.ac:
+
+2012-04-12  Bear Travis  <betravis@adobe.com>
+
+        [CSS Exclusions] Add flag to enable / disable exclusions at runtime
+        https://bugs.webkit.org/show_bug.cgi?id=83313
+
+        Reviewed by Ryosuke Niwa.
+
+        Adding the GTK symbols
+
+        * Source/autotools/symbols.filter:
+
+2012-04-12  George Staikos  <staikos@webkit.org>
+
+        Enable the fullscreen API for BlackBerry.
+        https://bugs.webkit.org/show_bug.cgi?id=83757
+
+        Reviewed by Antonio Gomes.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+
+2012-04-12  Yael Aharon  <yael.aharon@nokia.com>
+
+        [Qt][WK2] Nested fixed elements scroll too fast
+        https://bugs.webkit.org/show_bug.cgi?id=83720
+
+        Reviewed by Noam Rosenthal.
+
+        * ManualTests/nested-fixed-position.html: Added.
+
+2012-03-15  Martin Robinson  <mrobinson@igalia.com>
+
+        [CAIRO] Make GLContextGLX a subclass of GLContext
+        https://bugs.webkit.org/show_bug.cgi?id=81285
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * GNUmakefile.am: Add a configuration option for activating GLX.
+        This is selected automatically now, but in the future there will be
+        the choice to turn on EGL and turn off GLX at compilation time.
+        * configure.ac: Ditto.
+
+2012-04-10  Jocelyn Turcotte  <jocelyn.turcotte@nokia.com>
+
+        [Qt] InspectorServer: Add an API level auto test
+        https://bugs.webkit.org/show_bug.cgi?id=83594
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * Source/tests.pri:
+
+2012-04-11  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Add WEBKIT_CREATE_FORWARDING_HEADERS macro
+        https://bugs.webkit.org/show_bug.cgi?id=83574
+
+        Reviewed by Daniel Bates.
+
+        This new macro generates forwarding headers with absolute paths to the original files.
+        It accepts a list of files and/or a list of directories as input.
+
+        * Source/cmake/WebKitMacros.cmake:
+
+2012-04-10  Yael Aharon  <yael.aharon@nokia.com>
+
+        Initial support for fixed position elements in Qt WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=81786
+
+        Reviewed by Noam Rosenthal.
+
+        * ManualTests/fixed-position.html: Added.
+
+2012-04-10  Raphael Kubo da Costa  <rakuco@webkit.org>
+
+        [CMake] Do not pass -P to the preprocessor when running make_names.pl.
+        https://bugs.webkit.org/show_bug.cgi?id=83225
+
+        Reviewed by Rob Buis.
+
+        This is necessary to make CMake-based ports build with the
+        recently-released GCC 4.7.0, whose preprocessor seems to ignore
+        empty lines when -P is passed to it.  Such behavior breaks
+        make_names.pl (in fact, InFilesParser.pm), which expects an empty
+        line to separate common and specific sections in .in files.
+
+        A fix for this same problem has been supposedly done in r84123,
+        but as the CMake-based ports always pass --preprocessor to the
+        Perl tools the fix never reached us.
+
+        The idea is to define CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS
+        for (!MSVC && !QNX) and use it in the macros which call
+        make_names.pl.
+
+        * Source/cmake/OptionsCommon.cmake:
+        * Source/cmake/WebKitMacros.cmake:
+
+2012-04-10  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake][WIN] Add /MP flag when using a compiler with support for it
+        https://bugs.webkit.org/show_bug.cgi?id=83577
+
+        Reviewed by Daniel Bates.
+
+        * Source/cmake/OptionsWindows.cmake:
+
+2012-04-10  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Add missing DERIVED_SOURCES_WEBKIT_DIR variable
+        https://bugs.webkit.org/show_bug.cgi?id=83573
+
+        Reviewed by Daniel Bates.
+
+        We need this variable when ports want to generate files in the WebKit target.
+
+        * CMakeLists.txt:
+
+2012-04-10  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Enable USE_FOLDERS property
+        https://bugs.webkit.org/show_bug.cgi?id=83571
+
+        Reviewed by Daniel Bates.
+
+        Setting the FOLDER property on targets gives more structure
+        to the generated Visual Studio solutions.
+        This does not affect other CMake generators.
+
+        * Source/cmake/OptionsCommon.cmake:
+
+2012-04-06  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Update perf-o-matic config.js per upstream change.
+
+        * Websites/webkit-perf.appspot.com/js/config.js:
+        (var):
+
+2012-04-09  Dale Curtis  <dalecurtis@chromium.org>
+
+        Remove unworkable video-buffering-repaints-controls test.
+        https://bugs.webkit.org/show_bug.cgi?id=83097
+
+        Replaces the automated test for progress bar repaints during buffering
+        with a manual test entry.
+
+        Reviewed by Eric Carlson.
+
+        * ManualTests/media-controls.html:
+
+2012-04-09  Ming Xie  <mxie@rim.com>
+
+        [BlackBerry] Allow simulator to use GLES2 acceleration
+        https://bugs.webkit.org/show_bug.cgi?id=81672
+
+        Reviewed by Rob Buis.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+
+2012-04-09  Zalan Bujtas  <zbujtas@gmail.com>
+
+        [Qt][WK2] Fail to activate links after double tap gesture.
+        https://bugs.webkit.org/show_bug.cgi?id=83468
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * ManualTests/link-activation-fails-after-double-tap-gesture.html: Added.
+
+2012-04-09  Martin Robinson  <mrobinson@igalia.com>
+
+        [soup] Crash while loading http://www.jusco.cn
+        https://bugs.webkit.org/show_bug.cgi?id=68238
+
+        Reviewed by Philippe Normand.
+
+        * configure.ac: Bumped the libsoup dependency to 2.37.90.
+
+2012-04-09  Abhishek Arya  <inferno@chromium.org>
+
+        Crash due to floats not cleared before starting SVG <text> layout.
+        https://bugs.webkit.org/show_bug.cgi?id=83021
+
+        Reviewed by Dirk Schulze.
+
+        * ManualTests/svg-text-float-not-removed-crash.html: Added.
+
+2012-04-09  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Build fix for USE_SYSTEM_MALLOC after r113570.
+
+        * Source/cmakeconfig.h.cmake:
+
+2012-04-09  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Share build system options across ports
+        https://bugs.webkit.org/show_bug.cgi?id=72815
+
+        Reviewed by Daniel Bates.
+
+        Don't define the generic features for every port again.
+        Add a few macros for reusing the central defined options.
+
+        * CMakeLists.txt:
+        * Source/cmake/OptionsBlackBerry.cmake:
+        * Source/cmake/OptionsEfl.cmake:
+        * Source/cmake/OptionsWinCE.cmake:
+        * Source/cmake/WebKitFeatures.cmake:
+
+2012-04-07  Rob Buis  <rbuis@rim.com>
+
+        [BlackBerry] Add Battery Status API support
+        https://bugs.webkit.org/show_bug.cgi?id=82615
+
+        Reviewed by George Staikos.
+
+        Enable BATTERY_STATUS.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+
+2012-04-06  Martin Robinson  <mrobinson@igalia.com>
+
+        Fix the GTK+ debug build.
+
+        * Source/autotools/symbols.filter: Add a missing symbol to the symbols.list file.
+
 2012-04-05  George Staikos  <staikos@webkit.org>
 
         Compile the vibration module for BlackBerry.

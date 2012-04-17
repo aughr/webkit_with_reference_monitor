@@ -379,7 +379,13 @@ private:
         case CompareGreaterEq:
         case CompareEq:
         case CompareStrictEq:
-        case InstanceOf: {
+        case InstanceOf:
+        case IsUndefined:
+        case IsBoolean:
+        case IsNumber:
+        case IsString:
+        case IsObject:
+        case IsFunction: {
             changed |= setPrediction(PredictBoolean);
             changed |= mergeDefaultFlags(node);
             break;
@@ -447,14 +453,11 @@ private:
         }
             
         case GetGlobalVar: {
-            PredictedType prediction = m_graph.getGlobalVarPrediction(node.varNumber());
-            changed |= mergePrediction(prediction);
+            changed |= mergePrediction(node.getHeapPrediction());
             break;
         }
             
         case PutGlobalVar: {
-            changed |= m_graph.predictGlobalVar(
-                node.varNumber(), m_graph[node.child1()].prediction());
             changed |= m_graph[node.child1()].mergeFlags(NodeUsedAsValue);
             break;
         }
@@ -799,11 +802,24 @@ private:
             }
         }
         for (unsigned i = 0; i < m_graph.m_variableAccessData.size(); ++i) {
-            VariableAccessData* variableAccessData = m_graph.m_variableAccessData[i].find();
+            VariableAccessData* variableAccessData = &m_graph.m_variableAccessData[i];
+            if (!variableAccessData->isRoot())
+                continue;
             if (operandIsArgument(variableAccessData->local())
                 || m_graph.isCaptured(variableAccessData->local()))
                 continue;
             m_changed |= variableAccessData->tallyVotesForShouldUseDoubleFormat();
+        }
+        for (unsigned i = 0; i < m_graph.m_argumentPositions.size(); ++i)
+            m_changed |= m_graph.m_argumentPositions[i].mergeArgumentAwareness();
+        for (unsigned i = 0; i < m_graph.m_variableAccessData.size(); ++i) {
+            VariableAccessData* variableAccessData = &m_graph.m_variableAccessData[i];
+            if (!variableAccessData->isRoot())
+                continue;
+            if (operandIsArgument(variableAccessData->local())
+                || m_graph.isCaptured(variableAccessData->local()))
+                continue;
+            m_changed |= variableAccessData->makePredictionForDoubleFormat();
         }
     }
     

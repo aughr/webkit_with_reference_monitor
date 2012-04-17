@@ -623,12 +623,27 @@ void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
             }
 
             // Pad the rect to improve the visual appearance.
-            selectionFocusRect.inflate(4 /* padding in pixels */);
+            // Padding must be large enough to expose the selection / FCC should they exist. Dragging the handle offscreen and releasing
+            // will not trigger an automatic scroll. Using a padding of 40 will fully exposing the width of the current handle and half of
+            // the height making it usable.
+            // FIXME: This will need to be updated when the graphics change.
+            // FIXME: The value of 40 should be calculated as a unit of measure using Graphics::Screen::primaryScreen()->heightInMMToPixels
+            // using a relative value to the size of the handle. We should also consider expanding different amounts horizontally vs vertically.
+            selectionFocusRect.inflate(40 /* padding in pixels */);
             WebCore::IntRect revealRect = layer->getRectToExpose(actualScreenRect, selectionFocusRect,
                                                                  horizontalScrollAlignment,
                                                                  verticalScrollAlignment);
 
-            mainFrameView->setScrollPosition(revealRect.location());
+            mainFrameView->setConstrainsScrollingToContentEdge(false);
+            // In order to adjust the scroll position to ensure the focused input field is visible,
+            // we allow overscrolling. However this overscroll has to be strictly allowed towards the
+            // bottom of the page on the y axis only, where the virtual keyboard pops up from.
+            WebCore::IntPoint scrollLocation = revealRect.location();
+            scrollLocation.clampNegativeToZero();
+            WebCore::IntPoint maximumScrollPosition = WebCore::IntPoint(mainFrameView->contentsWidth() - actualScreenRect.width(), mainFrameView->contentsHeight() - actualScreenRect.height());
+            scrollLocation = scrollLocation.shrunkTo(maximumScrollPosition);
+            mainFrameView->setScrollPosition(scrollLocation);
+            mainFrameView->setConstrainsScrollingToContentEdge(true);
         }
     }
 

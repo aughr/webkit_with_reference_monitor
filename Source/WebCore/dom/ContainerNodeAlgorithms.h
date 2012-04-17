@@ -22,6 +22,7 @@
 #ifndef ContainerNodeAlgorithms_h
 #define ContainerNodeAlgorithms_h
 
+#include <Document.h>
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -83,18 +84,21 @@ void appendChildToContainer(GenericNode* child, GenericNodeContainer* container)
 // Helper methods for removeAllChildrenInContainer, hidden from WebCore namespace
 namespace Private {
 
-    template<class GenericNode, bool dispatchRemovalNotification>
+    template<class GenericNode, class GenericNodeContainer, bool dispatchRemovalNotification>
     struct NodeRemovalDispatcher {
-        static void dispatch(GenericNode*)
+        static void dispatch(GenericNode*, GenericNodeContainer*)
         {
             // no-op, by default
         }
     };
 
-    template<class GenericNode>
-    struct NodeRemovalDispatcher<GenericNode, true> {
-        static void dispatch(GenericNode* node)
+    template<class GenericNode, class GenericNodeContainer>
+    struct NodeRemovalDispatcher<GenericNode, GenericNodeContainer, true> {
+        static void dispatch(GenericNode* node, GenericNodeContainer* container)
         {
+            // Clean up any TreeScope to a removed tree.
+            if (Document* containerDocument = container->ownerDocument())
+                containerDocument->adoptIfNeeded(node);
             if (node->inDocument())
                 node->removedFromDocument();
         }
@@ -137,7 +141,7 @@ namespace Private {
                 tail = n;
             } else {
                 RefPtr<GenericNode> protect(n); // removedFromDocument may remove remove all references to this node.
-                NodeRemovalDispatcher<GenericNode, ShouldDispatchRemovalNotification<GenericNode>::value>::dispatch(n);
+                NodeRemovalDispatcher<GenericNode, GenericNodeContainer, ShouldDispatchRemovalNotification<GenericNode>::value>::dispatch(n, container);
             }
         }
 

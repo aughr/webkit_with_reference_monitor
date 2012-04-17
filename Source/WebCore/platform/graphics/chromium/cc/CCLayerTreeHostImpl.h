@@ -25,6 +25,7 @@
 #ifndef CCLayerTreeHostImpl_h
 #define CCLayerTreeHostImpl_h
 
+#include "Color.h"
 #include "LayerRendererChromium.h"
 #include "cc/CCAnimationEvents.h"
 #include "cc/CCInputHandler.h"
@@ -39,6 +40,7 @@ namespace WebCore {
 
 class CCActiveGestureAnimation;
 class CCCompletionEvent;
+class CCFontAtlas;
 class CCPageScaleAnimation;
 class CCLayerImpl;
 class CCLayerTreeHostImplTimeSourceAdapter;
@@ -93,17 +95,18 @@ public:
     virtual void drawLayers(const FrameData&);
 
     // LayerRendererChromiumClient implementation
-    virtual const IntSize& viewportSize() const { return m_viewportSize; }
-    virtual const CCSettings& settings() const { return m_settings; }
-    virtual CCLayerImpl* rootLayer() { return m_rootLayerImpl.get(); }
-    virtual const CCLayerImpl* rootLayer() const { return m_rootLayerImpl.get(); }
-    virtual void didLoseContext();
-    virtual void onSwapBuffersComplete();
-    virtual void setFullRootLayerDamage();
+    virtual const IntSize& viewportSize() const OVERRIDE { return m_viewportSize; }
+    virtual const CCSettings& settings() const OVERRIDE { return m_settings; }
+    virtual void didLoseContext() OVERRIDE;
+    virtual void onSwapBuffersComplete() OVERRIDE;
+    virtual void setFullRootLayerDamage() OVERRIDE;
 
     // Implementation
     bool canDraw();
     GraphicsContext3D* context();
+
+    String layerTreeAsText() const;
+    void setFontAtlas(PassOwnPtr<CCFontAtlas>);
 
     void finishAllRendering();
     int frameNumber() const { return m_frameNumber; }
@@ -120,6 +123,7 @@ public:
 
     void setRootLayer(PassOwnPtr<CCLayerImpl>);
     PassOwnPtr<CCLayerImpl> releaseRootLayer() { return m_rootLayerImpl.release(); }
+    CCLayerImpl* rootLayer() { return m_rootLayerImpl.get(); }
 
     CCLayerImpl* scrollLayer() const { return m_scrollLayerImpl; }
 
@@ -137,6 +141,9 @@ public:
     PassOwnPtr<CCScrollAndScaleSet> processScrollDeltas();
 
     void startPageScaleAnimation(const IntSize& tragetPosition, bool useAnchor, float scale, double durationSec);
+
+    const Color& backgroundColor() const { return m_backgroundColor; }
+    void setBackgroundColor(const Color& color) { m_backgroundColor = color; }
 
     bool needsAnimateLayers() const { return m_needsAnimateLayers; }
     void setNeedsAnimateLayers() { m_needsAnimateLayers = true; }
@@ -173,6 +180,8 @@ private:
     void sendDidLoseContextRecursive(CCLayerImpl*);
     void clearRenderSurfacesOnCCLayerImplRecursive(CCLayerImpl*);
 
+    void dumpRenderSurfaces(TextStream&, int indent, const CCLayerImpl*) const;
+
     OwnPtr<LayerRendererChromium> m_layerRenderer;
     OwnPtr<CCLayerImpl> m_rootLayerImpl;
     CCLayerImpl* m_scrollLayerImpl;
@@ -180,10 +189,14 @@ private:
     IntSize m_viewportSize;
     bool m_visible;
 
+    OwnPtr<CCHeadsUpDisplay> m_headsUpDisplay;
+
     float m_pageScale;
     float m_pageScaleDelta;
     float m_sentPageScaleDelta;
     float m_minPageScale, m_maxPageScale;
+
+    Color m_backgroundColor;
 
     // If this is true, it is necessary to traverse the layer tree ticking the animators.
     bool m_needsAnimateLayers;

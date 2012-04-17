@@ -1432,6 +1432,7 @@ CodeBlock::CodeBlock(CopyParsedBlockTag, CodeBlock& other, SymbolTable* symTab)
     , m_symbolTable(symTab)
     , m_speculativeSuccessCounter(0)
     , m_speculativeFailCounter(0)
+    , m_forcedOSRExitCounter(0)
     , m_optimizationDelayCounter(0)
     , m_reoptimizationRetryCounter(0)
 #if ENABLE(JIT)
@@ -1925,7 +1926,7 @@ void CodeBlock::stronglyVisitStrongReferences(SlotVisitor& visitor)
     for (size_t i = 0; i < m_functionDecls.size(); ++i)
         visitor.append(&m_functionDecls[i]);
 #if ENABLE(CLASSIC_INTERPRETER)
-    if (m_globalData->interpreter->classicEnabled()) {
+    if (m_globalData->interpreter->classicEnabled() && !!numberOfInstructions()) {
         for (size_t size = m_propertyAccessInstructions.size(), i = 0; i < size; ++i)
             visitStructures(visitor, &instructions()[m_propertyAccessInstructions[i]]);
         for (size_t size = m_globalResolveInstructions.size(), i = 0; i < size; ++i)

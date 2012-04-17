@@ -40,7 +40,6 @@
 #include "LayerChromium.h"
 #include "TextureCopier.h"
 #include "TrackingTextureAllocator.h"
-#include "VideoLayerChromium.h"
 #include "cc/CCDrawQuad.h"
 #include "cc/CCHeadsUpDisplay.h"
 #include "cc/CCLayerTreeHost.h"
@@ -54,8 +53,6 @@
 
 namespace WebCore {
 
-class CCHeadsUpDisplay;
-class CCLayerImpl;
 class CCRenderPass;
 class CCTextureDrawQuad;
 class GeometryBinding;
@@ -68,8 +65,6 @@ class LayerRendererChromiumClient {
 public:
     virtual const IntSize& viewportSize() const = 0;
     virtual const CCSettings& settings() const = 0;
-    virtual CCLayerImpl* rootLayer() = 0;
-    virtual const CCLayerImpl* rootLayer() const = 0;
     virtual void didLoseContext() = 0;
     virtual void onSwapBuffersComplete() = 0;
     virtual void setFullRootLayerDamage() = 0;
@@ -86,9 +81,6 @@ public:
     const CCSettings& settings() const { return m_client->settings(); }
     const LayerRendererCapabilities& capabilities() const { return m_capabilities; }
 
-    CCLayerImpl* rootLayer() { return m_client->rootLayer(); }
-    const CCLayerImpl* rootLayer() const { return m_client->rootLayer(); }
-
     GraphicsContext3D* context();
     bool contextSupportsMapSub() const { return m_capabilities.usingMapSub; }
 
@@ -98,9 +90,11 @@ public:
 
     void viewportChanged();
 
-    void beginDrawingFrame();
+    void beginDrawingFrame(CCRenderSurface* defaultRenderSurface);
     void drawRenderPass(const CCRenderPass*);
     void finishDrawingFrame();
+
+    void drawHeadsUpDisplay(ManagedTexture*, const IntSize& hudSize);
 
     // waits for rendering to finish
     void finish();
@@ -115,6 +109,10 @@ public:
 
     const GeometryBinding* sharedGeometry() const { return m_sharedGeometry.get(); }
     const FloatQuad& sharedGeometryQuad() const { return m_sharedGeometryQuad; }
+
+    typedef ProgramBinding<VertexShaderPosTex, FragmentShaderCheckerboard> CheckerboardProgram;
+
+    const CheckerboardProgram* checkerboardProgram();
     const LayerChromium::BorderProgram* borderProgram();
     const CCHeadsUpDisplay::Program* headsUpDisplayProgram();
     const CCRenderSurface::Program* renderSurfaceProgram();
@@ -138,17 +136,14 @@ public:
     const CCVideoLayerImpl::StreamTextureProgram* streamTextureLayerProgram();
 
     void getFramebufferPixels(void *pixels, const IntRect&);
+    bool getFramebufferTexture(ManagedTexture*, const IntRect& deviceRect);
 
     TextureManager* renderSurfaceTextureManager() const { return m_renderSurfaceTextureManager.get(); }
     TextureCopier* textureCopier() const { return m_textureCopier.get(); }
     TextureAllocator* renderSurfaceTextureAllocator() const { return m_renderSurfaceTextureAllocator.get(); }
     TextureAllocator* contentsTextureAllocator() const { return m_contentsTextureAllocator.get(); }
 
-    CCHeadsUpDisplay* headsUpDisplay() { return m_headsUpDisplay.get(); }
-
     void setScissorToRect(const IntRect&);
-
-    String layerTreeAsText() const;
 
     bool isContextLost();
 
@@ -172,14 +167,15 @@ protected:
 
 private:
     void drawQuad(const CCDrawQuad*, const FloatRect& surfaceDamageRect);
+    void drawCheckerboardQuad(const CCCheckerboardDrawQuad*);
     void drawDebugBorderQuad(const CCDebugBorderDrawQuad*);
+    void drawBackgroundFilters(const CCRenderSurfaceDrawQuad*);
     void drawRenderSurfaceQuad(const CCRenderSurfaceDrawQuad*);
     void drawSolidColorQuad(const CCSolidColorDrawQuad*);
     void drawTextureQuad(const CCTextureDrawQuad*);
     void drawTileQuad(const CCTileDrawQuad*);
     void drawVideoQuad(const CCVideoDrawQuad*);
 
-    ManagedTexture* getOffscreenLayerTexture();
     void copyPlaneToTexture(const CCVideoDrawQuad*, const void* plane, int index);
     bool copyFrameToTextures(const CCVideoDrawQuad*);
     template<class Program> void drawSingleTextureVideoQuad(const CCVideoDrawQuad*, Program*, float widthScaleFactor, Platform3DObject textureId, GC3Denum target);
@@ -188,20 +184,20 @@ private:
     void drawRGBA(const CCVideoDrawQuad*);
     void drawYUV(const CCVideoDrawQuad*);
 
-    void copyOffscreenTextureToDisplay();
-
     void setDrawViewportRect(const IntRect&, bool flipY);
 
+    // The current drawing target is either a RenderSurface or ManagedTexture. Use these functions to switch to a new drawing target.
     bool useRenderSurface(CCRenderSurface*);
+    bool useManagedTexture(ManagedTexture*, const IntRect& viewportRect);
+    bool isCurrentRenderSurface(CCRenderSurface*);
+
+    bool bindFramebufferToTexture(ManagedTexture*, const IntRect& viewportRect);
+
     void clearRenderSurface(CCRenderSurface*, CCRenderSurface* rootRenderSurface, const FloatRect& surfaceDamageRect);
 
     void releaseRenderSurfaceTextures();
 
     bool makeContextCurrent();
-
-    static bool compareLayerZ(const RefPtr<CCLayerImpl>&, const RefPtr<CCLayerImpl>&);
-
-    void dumpRenderSurfaces(TextStream&, int indent, const CCLayerImpl*) const;
 
     bool initializeSharedObjects();
     void cleanupSharedObjects();
@@ -217,6 +213,7 @@ private:
     TransformationMatrix m_windowMatrix;
 
     CCRenderSurface* m_currentRenderSurface;
+    ManagedTexture* m_currentManagedTexture;
     unsigned m_offscreenFramebufferId;
 
     // Store values that are shared between instances of each layer type
@@ -224,6 +221,7 @@ private:
     // multiple instances of the compositor running in the same renderer process
     // we cannot store these values in static variables.
     OwnPtr<GeometryBinding> m_sharedGeometry;
+    OwnPtr<CheckerboardProgram> m_checkerboardProgram;
     OwnPtr<LayerChromium::BorderProgram> m_borderProgram;
     OwnPtr<CCHeadsUpDisplay::Program> m_headsUpDisplayProgram;
     OwnPtr<CCTextureLayerImpl::ProgramFlip> m_textureLayerProgramFlip;
@@ -250,8 +248,6 @@ private:
     OwnPtr<AcceleratedTextureCopier> m_textureCopier;
     OwnPtr<TrackingTextureAllocator> m_contentsTextureAllocator;
     OwnPtr<TrackingTextureAllocator> m_renderSurfaceTextureAllocator;
-
-    OwnPtr<CCHeadsUpDisplay> m_headsUpDisplay;
 
     RefPtr<GraphicsContext3D> m_context;
 

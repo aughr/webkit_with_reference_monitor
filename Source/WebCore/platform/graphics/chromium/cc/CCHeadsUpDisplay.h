@@ -27,66 +27,65 @@
 
 #if USE(ACCELERATED_COMPOSITING)
 
-#include "Font.h"
 #include "ProgramBinding.h"
 #include "ShaderChromium.h"
+#include "cc/CCFontAtlas.h"
 
 namespace WebCore {
 
-struct CCSettings;
-class GeometryBinding;
-class GraphicsContext3D;
-class LayerRendererChromium;
+class CCLayerTreeHostImpl;
+class GraphicsContext;
 class ManagedTexture;
+struct CCSettings;
 
 // Class that handles drawing of composited render layers using GL.
 class CCHeadsUpDisplay {
     WTF_MAKE_NONCOPYABLE(CCHeadsUpDisplay);
 public:
-    static PassOwnPtr<CCHeadsUpDisplay> create(LayerRendererChromium* owner)
+    static PassOwnPtr<CCHeadsUpDisplay> create()
     {
-        return adoptPtr(new CCHeadsUpDisplay(owner));
+        return adoptPtr(new CCHeadsUpDisplay());
     }
 
     ~CCHeadsUpDisplay();
+
+    void setFontAtlas(PassOwnPtr<CCFontAtlas>);
 
     int currentFrameNumber() const { return m_currentFrameNumber; }
 
     void onFrameBegin(double timestamp);
     void onSwapBuffers();
 
-    bool enabled() const;
-    void draw();
+    bool enabled(const CCSettings&) const;
+    void draw(CCLayerTreeHostImpl*);
 
     typedef ProgramBinding<VertexShaderPosTex, FragmentShaderRGBATexSwizzleAlpha> Program;
 
 private:
-    explicit CCHeadsUpDisplay(LayerRendererChromium* owner);
-    void drawHudContents(GraphicsContext*, const IntSize& hudSize);
+    CCHeadsUpDisplay();
+
+    void drawHudContents(GraphicsContext*, CCLayerTreeHostImpl*, const CCSettings&, const IntSize& hudSize);
     void drawFPSCounter(GraphicsContext*, int top, int height);
-    float drawFPSCounterText(GraphicsContext*, int top, int height);
-    void drawPlatformLayerTree(GraphicsContext*, int top);
-    const CCSettings& settings() const;
+    void drawFPSCounterText(GraphicsContext*, int top, int width, int height);
+    bool isBadFrame(int frameNumber) const;
+    int frameIndex(int frameNumber) const;
+    void getAverageFPSAndStandardDeviation(double *average, double *standardDeviation) const;
 
-    bool showPlatformLayerTree() const;
-
-    void initializeFonts();
+    bool showPlatformLayerTree(const CCSettings&) const;
 
     int m_currentFrameNumber;
 
-    double m_filteredFrameTime;
-
     OwnPtr<ManagedTexture> m_hudTexture;
 
-    LayerRendererChromium* m_layerRenderer;
-
-    static const int kBeginFrameHistorySize = 64;
+    static const int kBeginFrameHistorySize = 120;
+    // The number of seconds of no frames makes us decide that the previous
+    // animation is over.
+    static const double kIdleSecondsTriggersReset;
     double m_beginTimeHistoryInSec[kBeginFrameHistorySize];
+    static const double kFrameTooFast;
+    static const int kNumMissedFramesForReset = 5;
 
-    OwnPtr<Font> m_smallFont;
-    OwnPtr<Font> m_mediumFont;
-
-    bool m_useMapSubForUploads;
+    OwnPtr<CCFontAtlas> m_fontAtlas;
 };
 
 }

@@ -39,14 +39,18 @@ import time
 from webkitpy.common import find_files
 from webkitpy.common.host import Host
 from webkitpy.common.net.file_uploader import FileUploader
-from webkitpy.layout_tests.port.driver import DriverInput
 from webkitpy.layout_tests.views import printing
+from webkitpy.performance_tests.perftest import ChromiumStylePerfTest
+from webkitpy.performance_tests.perftest import PageLoadingPerfTest
+from webkitpy.performance_tests.perftest import PerfTest
+
 
 _log = logging.getLogger(__name__)
 
 
 class PerfTestsRunner(object):
-    _test_directories_for_chromium_style_tests = ['inspector']
+    _pattern_for_chromium_style_tests = re.compile('^inspector/')
+    _pattern_for_page_loading_tests = re.compile('^PageLoad/')
     _default_branch = 'webkit-trunk'
     _EXIT_CODE_BAD_BUILD = -1
     _EXIT_CODE_BAD_JSON = -2
@@ -110,18 +114,34 @@ class PerfTestsRunner(object):
         """Return the list of tests found."""
 
         def _is_test_file(filesystem, dirname, filename):
-            return filename.endswith('.html')
+            return filesystem.splitext(filename)[1] in ['.html', '.svg']
+
+        filesystem = self._host.filesystem
 
         paths = []
         for arg in self._args:
             paths.append(arg)
-            relpath = self._host.filesystem.relpath(arg, self._base_path)
+            relpath = filesystem.relpath(arg, self._base_path)
             if relpath:
                 paths.append(relpath)
 
         skipped_directories = set(['.svn', 'resources'])
-        tests = find_files.find(self._host.filesystem, self._base_path, paths, skipped_directories, _is_test_file)
-        return [test for test in tests if not self._port.skips_perf_test(self._port.relative_perf_test_filename(test))]
+        test_files = find_files.find(filesystem, self._base_path, paths, skipped_directories, _is_test_file)
+        tests = []
+        for path in test_files:
+            relative_path = self._port.relative_perf_test_filename(path)
+            if self._port.skips_perf_test(relative_path):
+                continue
+            test_name = relative_path.replace('\\', '/')
+            dirname = filesystem.dirname(path)
+            if self._pattern_for_chromium_style_tests.match(relative_path):
+                tests.append(ChromiumStylePerfTest(test_name, dirname, path))
+            elif self._pattern_for_page_loading_tests.match(relative_path):
+                tests.append(PageLoadingPerfTest(test_name, dirname, path))
+            else:
+                tests.append(PerfTest(test_name, dirname, path))
+
+        return tests
 
     def run(self):
         if self._options.help_printing:
@@ -138,7 +158,7 @@ class PerfTestsRunner(object):
         unexpected = -1
         try:
             tests = self._collect_tests()
-            unexpected = self._run_tests_set(sorted(list(tests)), self._port)
+            unexpected = self._run_tests_set(sorted(list(tests), key=lambda test: test.test_name()), self._port)
         finally:
             self._printer.cleanup()
 
@@ -227,11 +247,8 @@ class PerfTestsRunner(object):
                     driver.stop()
                     return unexpected
 
-            relative_test_path = self._host.filesystem.relpath(test, self._base_path)
-            self._printer.write('Running %s (%d of %d)' % (relative_test_path, expected + unexpected + 1, len(tests)))
-
-            is_chromium_style = self._host.filesystem.split(relative_test_path)[0] in self._test_directories_for_chromium_style_tests
-            if self._run_single_test(test, driver, is_chromium_style):
+            self._printer.write('Running %s (%d of %d)' % (test.test_name(), expected + unexpected + 1, len(tests)))
+            if self._run_single_test(test, driver):
                 expected = expected + 1
             else:
                 unexpected = unexpected + 1
@@ -242,101 +259,15 @@ class PerfTestsRunner(object):
 
         return unexpected
 
-    _inspector_result_regex = re.compile(r'^RESULT\s+(?P<name>[^=]+)\s*=\s+(?P<value>\d+(\.\d+)?)\s*(?P<unit>\w+)$')
-
-    def _process_chromium_style_test_result(self, test, output):
-        test_failed = False
-        got_a_result = False
-        for line in re.split('\n', output.text):
-            resultLine = self._inspector_result_regex.match(line)
-            if resultLine:
-                # FIXME: Store the unit
-                self._results[resultLine.group('name').replace(' ', '')] = float(resultLine.group('value'))
-                self._buildbot_output.write("%s\n" % line)
-                got_a_result = True
-            elif not len(line) == 0:
-                test_failed = True
-                self._printer.write("%s" % line)
-        return test_failed or not got_a_result
-
-    _lines_to_ignore_in_parser_result = [
-        re.compile(r'^Running \d+ times$'),
-        re.compile(r'^Ignoring warm-up '),
-        re.compile(r'^Info:'),
-        re.compile(r'^\d+(.\d+)?$'),
-        # Following are for handle existing test like Dromaeo
-        re.compile(re.escape("""main frame - has 1 onunload handler(s)""")),
-        re.compile(re.escape("""frame "<!--framePath //<!--frame0-->-->" - has 1 onunload handler(s)""")),
-        re.compile(re.escape("""frame "<!--framePath //<!--frame0-->/<!--frame0-->-->" - has 1 onunload handler(s)"""))]
-
-    def _should_ignore_line_in_parser_test_result(self, line):
-        if not line:
-            return True
-        for regex in self._lines_to_ignore_in_parser_result:
-            if regex.search(line):
-                return True
-        return False
-
-    def _process_parser_test_result(self, test, output):
-        got_a_result = False
-        test_failed = False
-        filesystem = self._host.filesystem
-        category, test_name = filesystem.split(filesystem.relpath(test, self._base_path))
-        test_name = filesystem.splitext(test_name)[0]
-        results = {}
-        keys = ['avg', 'median', 'stdev', 'min', 'max']
-        score_regex = re.compile(r'^(?P<key>' + r'|'.join(keys) + r')\s+(?P<value>[0-9\.]+)\s*(?P<unit>.*)')
-        unit = "ms"
-
-        for line in re.split('\n', output.text):
-            score = score_regex.match(line)
-            if score:
-                results[score.group('key')] = float(score.group('value'))
-                if score.group('unit'):
-                    unit = score.group('unit')
-                continue
-
-            if not self._should_ignore_line_in_parser_test_result(line):
-                test_failed = True
-                self._printer.write("%s" % line)
-
-        if test_failed or set(keys) != set(results.keys()):
-            return True
-
-        results['unit'] = unit
-
-        self._results[filesystem.join(category, test_name).replace('\\', '/')] = results
-        self._buildbot_output.write('RESULT %s: %s= %s %s\n' % (category, test_name, results['avg'], unit))
-        self._buildbot_output.write(', '.join(['%s= %s %s' % (key, results[key], unit) for key in keys[1:]]) + '\n')
-        return False
-
-    def _run_single_test(self, test, driver, is_chromium_style):
-        test_failed = False
+    def _run_single_test(self, test, driver):
         start_time = time.time()
 
-        output = driver.run_test(DriverInput(test, self._options.time_out_ms, None, False))
-
-        if output.text == None:
-            test_failed = True
-        elif output.timeout:
-            self._printer.write('timeout: %s' % test[self._webkit_base_dir_len + 1:])
-            test_failed = True
-        elif output.crash:
-            self._printer.write('crash: %s' % test[self._webkit_base_dir_len + 1:])
-            test_failed = True
+        new_results = test.run(driver, self._options.time_out_ms, self._printer, self._buildbot_output)
+        if new_results:
+            self._results.update(new_results)
         else:
-            if is_chromium_style:
-                test_failed = self._process_chromium_style_test_result(test, output)
-            else:
-                test_failed = self._process_parser_test_result(test, output)
-
-        if len(output.error):
-            self._printer.write('error:\n%s' % output.error)
-            test_failed = True
-
-        if test_failed:
             self._printer.write('FAILED')
 
         self._printer.write("Finished: %f s" % (time.time() - start_time))
 
-        return not test_failed
+        return new_results != None

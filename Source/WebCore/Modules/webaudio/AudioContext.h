@@ -93,10 +93,10 @@ public:
     bool hasDocument();
 
     AudioDestinationNode* destination() { return m_destinationNode.get(); }
-    size_t currentSampleFrame() { return m_destinationNode->currentSampleFrame(); }
-    double currentTime() { return m_destinationNode->currentTime(); }
-    float sampleRate() { return m_destinationNode->sampleRate(); }
-    unsigned long activeSourceCount() { return static_cast<unsigned long>(m_activeSourceCount); }
+    size_t currentSampleFrame() const { return m_destinationNode->currentSampleFrame(); }
+    double currentTime() const { return m_destinationNode->currentTime(); }
+    float sampleRate() const { return m_destinationNode->sampleRate(); }
+    unsigned long activeSourceCount() const { return static_cast<unsigned long>(m_activeSourceCount); }
 
     void incrementActiveSourceCount();
     void decrementActiveSourceCount();
@@ -123,9 +123,13 @@ public:
     PassRefPtr<ConvolverNode> createConvolver();
     PassRefPtr<DynamicsCompressorNode> createDynamicsCompressor();    
     PassRefPtr<RealtimeAnalyserNode> createAnalyser();
-    PassRefPtr<JavaScriptAudioNode> createJavaScriptNode(size_t bufferSize);
-    PassRefPtr<AudioChannelSplitter> createChannelSplitter();
-    PassRefPtr<AudioChannelMerger> createChannelMerger();
+    PassRefPtr<JavaScriptAudioNode> createJavaScriptNode(size_t bufferSize, ExceptionCode&);
+    PassRefPtr<JavaScriptAudioNode> createJavaScriptNode(size_t bufferSize, size_t numberOfInputChannels, ExceptionCode&);
+    PassRefPtr<JavaScriptAudioNode> createJavaScriptNode(size_t bufferSize, size_t numberOfInputChannels, size_t numberOfOutputChannels, ExceptionCode&);
+    PassRefPtr<AudioChannelSplitter> createChannelSplitter(ExceptionCode&);
+    PassRefPtr<AudioChannelSplitter> createChannelSplitter(size_t numberOfOutputs, ExceptionCode&);
+    PassRefPtr<AudioChannelMerger> createChannelMerger(ExceptionCode&);
+    PassRefPtr<AudioChannelMerger> createChannelMerger(size_t numberOfInputs, ExceptionCode&);
     PassRefPtr<Oscillator> createOscillator();
     PassRefPtr<WaveTable> createWaveTable(Float32Array* real, Float32Array* imag, ExceptionCode&);
 

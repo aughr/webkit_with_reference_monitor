@@ -68,6 +68,10 @@
 #include <stdio.h>
 #endif
 
+#if USE(GSTREAMER)
+#include "GStreamerUtilities.h"
+#endif
+
 #include <wtf/ArrayBuffer.h>
 #include <wtf/Atomics.h>
 #include <wtf/MainThread.h>
@@ -178,6 +182,10 @@ AudioContext::AudioContext(Document* document, unsigned numberOfChannels, size_t
 
 void AudioContext::constructCommon()
 {
+#if USE(GSTREAMER)
+    initializeGStreamer();
+#endif
+
     FFTFrame::initialize();
     
     m_listener = AudioListener::create();
@@ -369,11 +377,28 @@ PassRefPtr<MediaElementAudioSourceNode> AudioContext::createMediaElementSource(H
 }
 #endif
 
-PassRefPtr<JavaScriptAudioNode> AudioContext::createJavaScriptNode(size_t bufferSize)
+PassRefPtr<JavaScriptAudioNode> AudioContext::createJavaScriptNode(size_t bufferSize, ExceptionCode& ec)
+{
+    // Set number of input/output channels to stereo by default.
+    return createJavaScriptNode(bufferSize, 2, 2, ec);
+}
+
+PassRefPtr<JavaScriptAudioNode> AudioContext::createJavaScriptNode(size_t bufferSize, size_t numberOfInputChannels, ExceptionCode& ec)
+{
+    // Set number of output channels to stereo by default.
+    return createJavaScriptNode(bufferSize, numberOfInputChannels, 2, ec);
+}
+
+PassRefPtr<JavaScriptAudioNode> AudioContext::createJavaScriptNode(size_t bufferSize, size_t numberOfInputChannels, size_t numberOfOutputChannels, ExceptionCode& ec)
 {
     ASSERT(isMainThread());
     lazyInitialize();
-    RefPtr<JavaScriptAudioNode> node = JavaScriptAudioNode::create(this, m_destinationNode->sampleRate(), bufferSize);
+    RefPtr<JavaScriptAudioNode> node = JavaScriptAudioNode::create(this, m_destinationNode->sampleRate(), bufferSize, numberOfInputChannels, numberOfOutputChannels);
+
+    if (!node.get()) {
+        ec = SYNTAX_ERR;
+        return 0;
+    }
 
     refNode(node.get()); // context keeps reference until we stop making javascript rendering callbacks
     return node;
@@ -441,18 +466,46 @@ PassRefPtr<DelayNode> AudioContext::createDelayNode(double maxDelayTime)
     return DelayNode::create(this, m_destinationNode->sampleRate(), maxDelayTime);
 }
 
-PassRefPtr<AudioChannelSplitter> AudioContext::createChannelSplitter()
+PassRefPtr<AudioChannelSplitter> AudioContext::createChannelSplitter(ExceptionCode& ec)
 {
-    ASSERT(isMainThread());
-    lazyInitialize();
-    return AudioChannelSplitter::create(this, m_destinationNode->sampleRate());
+    const unsigned ChannelSplitterDefaultNumberOfOutputs = 6;
+    return createChannelSplitter(ChannelSplitterDefaultNumberOfOutputs, ec);
 }
 
-PassRefPtr<AudioChannelMerger> AudioContext::createChannelMerger()
+PassRefPtr<AudioChannelSplitter> AudioContext::createChannelSplitter(size_t numberOfOutputs, ExceptionCode& ec)
 {
     ASSERT(isMainThread());
     lazyInitialize();
-    return AudioChannelMerger::create(this, m_destinationNode->sampleRate());
+
+    RefPtr<AudioChannelSplitter> node = AudioChannelSplitter::create(this, m_destinationNode->sampleRate(), numberOfOutputs);
+
+    if (!node.get()) {
+        ec = SYNTAX_ERR;
+        return 0;
+    }
+
+    return node;
+}
+
+PassRefPtr<AudioChannelMerger> AudioContext::createChannelMerger(ExceptionCode& ec)
+{
+    const unsigned ChannelMergerDefaultNumberOfInputs = 6;
+    return createChannelMerger(ChannelMergerDefaultNumberOfInputs, ec);
+}
+
+PassRefPtr<AudioChannelMerger> AudioContext::createChannelMerger(size_t numberOfInputs, ExceptionCode& ec)
+{
+    ASSERT(isMainThread());
+    lazyInitialize();
+
+    RefPtr<AudioChannelMerger> node = AudioChannelMerger::create(this, m_destinationNode->sampleRate(), numberOfInputs);
+
+    if (!node.get()) {
+        ec = SYNTAX_ERR;
+        return 0;
+    }
+
+    return node;
 }
 
 PassRefPtr<Oscillator> AudioContext::createOscillator()

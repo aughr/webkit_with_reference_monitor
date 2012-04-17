@@ -835,6 +835,9 @@ void WebPage::setResizesToContentsUsingLayoutSize(const IntSize& targetLayoutSiz
     // Always reset even when empty.
     view->setFixedLayoutSize(targetLayoutSize);
 
+    m_page->settings()->setAcceleratedCompositingForFixedPositionEnabled(true);
+    m_page->settings()->setFixedElementsLayoutRelativeToFrame(true);
+
     // Schedule a layout to use the new target size.
     if (!view->layoutPending()) {
         view->setNeedsLayout();
@@ -861,6 +864,25 @@ void WebPage::resizeToContentsIfNeeded()
     view->setNeedsLayout();
 }
 
+void WebPage::sendViewportAttributesChanged()
+{
+    ASSERT(m_useFixedLayout);
+
+    // Viewport properties have no impact on zero sized fixed viewports.
+    if (m_viewportSize.isEmpty())
+        return;
+
+    // Recalculate the recommended layout size, when the available size (device pixel) changes.
+    Settings* settings = m_page->settings();
+
+    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), m_viewportSize.width());
+
+    ViewportAttributes attr = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, settings->deviceWidth(), settings->deviceHeight(), settings->deviceDPI(), m_viewportSize);
+
+    setResizesToContentsUsingLayoutSize(attr.layoutSize);
+    send(Messages::WebPageProxy::DidChangeViewportProperties(attr));
+}
+
 void WebPage::setViewportSize(const IntSize& size)
 {
     ASSERT(m_useFixedLayout);
@@ -870,13 +892,7 @@ void WebPage::setViewportSize(const IntSize& size)
 
      m_viewportSize = size;
 
-    // Recalculate the recommended layout size, when the available size (device pixel) changes.
-    Settings* settings = m_page->settings();
-
-    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), size.width());
-
-    IntSize targetLayoutSize = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, settings->deviceWidth(), settings->deviceHeight(), settings->deviceDPI(), size).layoutSize;
-    setResizesToContentsUsingLayoutSize(targetLayoutSize);
+    sendViewportAttributesChanged();
 }
 
 #endif
@@ -1454,14 +1470,19 @@ void WebPage::restoreSessionAndNavigateToCurrentItem(const SessionState& session
 #if PLATFORM(QT)
 void WebPage::highlightPotentialActivation(const IntPoint& point, const IntSize& area)
 {
-    Node* activationNode = 0;
-    Frame* mainframe = m_page->mainFrame();
-    IntPoint adjustedPoint;
-
-    if (point != IntPoint::zero()) {
+    if (point == IntPoint::zero()) {
+        // An empty point deactivates the highlighting.
+        tapHighlightController().hideHighlight();
+    } else {
+        Frame* mainframe = m_page->mainFrame();
+        Node* activationNode = 0;
         Node* adjustedNode = 0;
+        IntPoint adjustedPoint;
+
 #if ENABLE(TOUCH_ADJUSTMENT)
-        mainframe->eventHandler()->bestClickableNodeForTouchPoint(point, IntSize(area.width() / 2, area.height() / 2), adjustedPoint, adjustedNode);
+        if (!mainframe->eventHandler()->bestClickableNodeForTouchPoint(point, IntSize(area.width() / 2, area.height() / 2), adjustedPoint, adjustedNode))
+            return;
+
 #else
         HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), /*allowShadowContent*/ false, /*ignoreClipping*/ true);
         adjustedNode = result.innerNode();
@@ -1479,12 +1500,10 @@ void WebPage::highlightPotentialActivation(const IntPoint& point, const IntSize&
             else if (activationNode)
                 break;
         }
-    }
 
-    if (activationNode)
-        tapHighlightController().highlight(activationNode);
-    else
-        tapHighlightController().hideHighlight();
+        if (activationNode)
+            tapHighlightController().highlight(activationNode);
+    }
 }
 #endif
 
@@ -1979,6 +1998,8 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     settings->setNotificationsEnabled(store.getBoolValueForKey(WebPreferencesKey::notificationsEnabledKey()));
 #endif
+
+    settings->setShouldRespectImageOrientation(store.getBoolValueForKey(WebPreferencesKey::shouldRespectImageOrientationKey()));
 
     platformPreferencesDidChange(store);
 
@@ -2531,16 +2552,16 @@ InjectedBundleBackForwardList* WebPage::backForwardList()
 #if ENABLE(TOUCH_ADJUSTMENT)
 void WebPage::findZoomableAreaForPoint(const WebCore::IntPoint& point, const WebCore::IntSize& area)
 {
-    Frame* mainframe = m_mainFrame->coreFrame();
     Node* node = 0;
     IntRect zoomableArea;
-    mainframe->eventHandler()->bestZoomableAreaForTouchPoint(point, IntSize(area.width() / 2, area.height() / 2), zoomableArea, node);
-
+    bool foundAreaForTouchPoint = m_mainFrame->coreFrame()->eventHandler()->bestZoomableAreaForTouchPoint(point, IntSize(area.width() / 2, area.height() / 2), zoomableArea, node);
     ASSERT(node);
-    if (node->document() && node->document()->frame() && node->document()->frame()->view()) {
-        const ScrollView* view = node->document()->frame()->view();
-        zoomableArea = view->contentsToWindow(zoomableArea);
-    }
+
+    if (!foundAreaForTouchPoint)
+        return;
+
+    if (node->document() && node->document()->view())
+        zoomableArea = node->document()->view()->contentsToWindow(zoomableArea);
 
     send(Messages::WebPageProxy::DidFindZoomableArea(point, zoomableArea));
 }

@@ -47,10 +47,8 @@ namespace WebCore {
 
 class CSSBorderImageSliceValue;
 class CSSPrimitiveValue;
-class CSSValuePool;
 class CSSProperty;
 class CSSSelectorList;
-class CSSStyleSheet;
 class CSSValue;
 class CSSValueList;
 class CSSWrapShape;
@@ -63,28 +61,25 @@ class StylePropertyShorthand;
 class StyleRuleBase;
 class StyleRuleKeyframes;
 class StyleKeyframe;
+class StyleSheetInternal;
 class StyledElement;
 
 class CSSParser {
 public:
-    CSSParser(CSSParserMode = CSSStrictMode);
+    CSSParser(const CSSParserContext&);
 
     ~CSSParser();
 
-    void parseSheet(CSSStyleSheet*, const String&, int startLineNumber = 0, StyleRuleRangeMap* ruleRangeMap = 0);
-    PassRefPtr<StyleRuleBase> parseRule(CSSStyleSheet*, const String&);
-    PassRefPtr<StyleKeyframe> parseKeyframeRule(CSSStyleSheet*, const String&);
-    static bool parseValue(StylePropertySet*, CSSPropertyID, const String&, bool important, CSSParserMode, CSSStyleSheet*);
+    void parseSheet(StyleSheetInternal*, const String&, int startLineNumber = 0, StyleRuleRangeMap* = 0);
+    PassRefPtr<StyleRuleBase> parseRule(StyleSheetInternal*, const String&);
+    PassRefPtr<StyleKeyframe> parseKeyframeRule(StyleSheetInternal*, const String&);
+    static bool parseValue(StylePropertySet*, CSSPropertyID, const String&, bool important, CSSParserMode, StyleSheetInternal*);
     static bool parseColor(RGBA32& color, const String&, bool strict = false);
     static bool parseSystemColor(RGBA32& color, const String&, Document*);
-    static PassRefPtr<CSSValueList> parseFontFaceValue(const AtomicString&, CSSStyleSheet* contextStyleSheet);
+    static PassRefPtr<CSSValueList> parseFontFaceValue(const AtomicString&);
     PassRefPtr<CSSPrimitiveValue> parseValidPrimitive(int ident, CSSParserValue*);
-    bool parseDeclaration(StylePropertySet*, const String&, RefPtr<CSSStyleSourceData>*, CSSStyleSheet* contextStyleSheet);
+    bool parseDeclaration(StylePropertySet*, const String&, RefPtr<CSSStyleSourceData>*, StyleSheetInternal* contextStyleSheet);
     PassOwnPtr<MediaQuery> parseMediaQuery(const String&);
-
-    Document* findDocument() const;
-
-    CSSValuePool* cssValuePool() const { return m_cssValuePool.get(); }
 
     void addProperty(CSSPropertyID, PassRefPtr<CSSValue>, bool important, bool implicit = false);
     void rollbackLastProperties(int num);
@@ -158,7 +153,7 @@ public:
     bool parseHSLParameters(CSSParserValue*, double* colorValues, bool parseAlpha);
     PassRefPtr<CSSPrimitiveValue> parseColor(CSSParserValue* = 0);
     bool parseColorFromValue(CSSParserValue*, RGBA32&);
-    void parseSelector(const String&, Document* doc, CSSSelectorList&);
+    void parseSelector(const String&, CSSSelectorList&);
 
     static bool fastParseColor(RGBA32&, const String&, bool strict);
 
@@ -224,7 +219,7 @@ public:
     bool parseFontFeatureSettings(bool important);
 
     bool cssRegionsEnabled() const;
-    bool parseFlowThread(const String& flowName, Document*);
+    bool parseFlowThread(const String& flowName);
     bool parseFlowThread(CSSPropertyID, bool important);
     bool parseRegionThread(CSSPropertyID, bool important);
 
@@ -286,10 +281,11 @@ public:
 
     void clearProperties();
 
-    CSSParserMode m_cssParserMode;
+    CSSParserContext m_context;
+
     bool m_important;
     CSSPropertyID m_id;
-    CSSStyleSheet* m_styleSheet;
+    StyleSheetInternal* m_styleSheet;
     RefPtr<StyleRuleBase> m_rule;
     RefPtr<StyleKeyframe> m_keyframe;
     OwnPtr<MediaQuery> m_mediaQuery;
@@ -297,7 +293,6 @@ public:
     Vector<CSSProperty, 256> m_parsedProperties;
     CSSSelectorList* m_selectorListForParseSelector;
 
-    RefPtr<CSSValuePool> m_cssValuePool;
     unsigned m_numParsedPropertiesBeforeMarginBox;
 
     int m_inParseShorthand;
@@ -330,7 +325,9 @@ public:
 
     PassRefPtr<CSSPrimitiveValue> createPrimitiveNumericValue(CSSParserValue*);
     PassRefPtr<CSSPrimitiveValue> createPrimitiveStringValue(CSSParserValue*);
-        
+
+    static KURL completeURL(const CSSParserContext&, const String& url);
+
 private:
     inline bool isIdentifierStart();
 
@@ -349,11 +346,12 @@ private:
     inline void detectDashToken(int);
     inline void detectAtToken(int, bool);
 
-    void setStyleSheet(CSSStyleSheet*);
-    void ensureCSSValuePool();
+    void setStyleSheet(StyleSheetInternal*);
 
-    inline bool inStrictMode() const { return m_cssParserMode == CSSStrictMode || m_cssParserMode == SVGAttributeMode; }
-    inline bool inQuirksMode() const { return m_cssParserMode == CSSQuirksMode; }
+    inline bool inStrictMode() const { return m_context.mode == CSSStrictMode || m_context.mode == SVGAttributeMode; }
+    inline bool inQuirksMode() const { return m_context.mode == CSSQuirksMode; }
+    
+    KURL completeURL(const String& url) const;
 
     void recheckAtKeyword(const UChar* str, int len);
 
@@ -368,7 +366,7 @@ private:
     bool isGeneratedImageValue(CSSParserValue*) const;
     bool parseGeneratedImage(CSSParserValueList*, RefPtr<CSSValue>&);
 
-    bool parseValue(StylePropertySet*, CSSPropertyID, const String&, bool important, CSSStyleSheet* contextStyleSheet);
+    bool parseValue(StylePropertySet*, CSSPropertyID, const String&, bool important, StyleSheetInternal* contextStyleSheet);
 
     enum SizeParameterType {
         None,
@@ -445,7 +443,7 @@ private:
 
     bool shouldAcceptUnitLessValues(CSSParserValue*, Units, CSSParserMode);
 
-    inline bool validUnit(CSSParserValue* value, Units unitflags) { return validUnit(value, unitflags, m_cssParserMode); }
+    inline bool validUnit(CSSParserValue* value, Units unitflags) { return validUnit(value, unitflags, m_context.mode); }
     bool validUnit(CSSParserValue*, Units, CSSParserMode);
 
     bool parseBorderImageQuad(Units, RefPtr<CSSPrimitiveValue>&);

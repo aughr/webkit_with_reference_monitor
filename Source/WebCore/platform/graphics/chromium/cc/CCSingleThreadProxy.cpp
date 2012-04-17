@@ -72,10 +72,7 @@ bool CCSingleThreadProxy::compositeAndReadback(void *pixels, const IntRect& rect
     TRACE_EVENT("CCSingleThreadProxy::compositeAndReadback", this, 0);
     ASSERT(CCProxy::isMainThread());
 
-    if (!commitIfNeeded())
-        return false;
-
-    if (!doComposite())
+    if (!commitAndComposite())
         return false;
 
     m_layerTreeHostImpl->readback(pixels, rect);
@@ -191,7 +188,7 @@ void CCSingleThreadProxy::setNeedsAnimate()
     ASSERT_NOT_REACHED();
 }
 
-void CCSingleThreadProxy::doCommit()
+void CCSingleThreadProxy::doCommit(CCTextureUpdater& updater)
 {
     ASSERT(CCProxy::isMainThread());
     // Commit immediately
@@ -200,9 +197,7 @@ void CCSingleThreadProxy::doCommit()
         m_layerTreeHostImpl->beginCommit();
 
         m_layerTreeHost->beginCommitOnImplThread(m_layerTreeHostImpl.get());
-        CCTextureUpdater updater(m_layerTreeHostImpl->contentsTextureAllocator(), m_layerTreeHostImpl->layerRenderer()->textureCopier());
-        m_layerTreeHost->updateCompositorResources(m_layerTreeHostImpl->context(), updater);
-        updater.update(m_layerTreeHostImpl->context(), numeric_limits<size_t>::max());
+        updater.update(m_layerTreeHostImpl->context(), m_layerTreeHostImpl->contentsTextureAllocator(), m_layerTreeHostImpl->layerRenderer()->textureCopier(), numeric_limits<size_t>::max());
         ASSERT(!updater.hasMoreUpdates());
         m_layerTreeHostImpl->setVisible(m_layerTreeHost->visible());
         m_layerTreeHost->finishCommitOnImplThread(m_layerTreeHostImpl.get());
@@ -264,6 +259,13 @@ void CCSingleThreadProxy::stop()
     m_layerTreeHost = 0;
 }
 
+void CCSingleThreadProxy::setFontAtlas(PassOwnPtr<CCFontAtlas> fontAtlas)
+{
+    ASSERT(isMainThread());
+    DebugScopedSetImplThread impl;
+    m_layerTreeHostImpl->setFontAtlas(fontAtlas);
+}
+
 void CCSingleThreadProxy::postAnimationEventsToMainThreadOnImplThread(PassOwnPtr<CCAnimationEventsVector> events, double wallClockTime)
 {
     ASSERT(CCProxy::isImplThread());
@@ -274,24 +276,23 @@ void CCSingleThreadProxy::postAnimationEventsToMainThreadOnImplThread(PassOwnPtr
 // Called by the legacy scheduling path (e.g. where render_widget does the scheduling)
 void CCSingleThreadProxy::compositeImmediately()
 {
-    if (!commitIfNeeded())
-        return;
-
-    if (doComposite()) {
+    if (commitAndComposite()) {
         m_layerTreeHostImpl->swapBuffers();
         didSwapFrame();
     }
 }
 
-bool CCSingleThreadProxy::commitIfNeeded()
+bool CCSingleThreadProxy::commitAndComposite()
 {
     ASSERT(CCProxy::isMainThread());
 
-    if (!m_layerTreeHost->updateLayers())
+    CCTextureUpdater updater;
+
+    if (!m_layerTreeHost->updateLayers(updater))
         return false;
 
-    doCommit();
-    return true;
+    doCommit(updater);
+    return doComposite();
 }
 
 bool CCSingleThreadProxy::doComposite()

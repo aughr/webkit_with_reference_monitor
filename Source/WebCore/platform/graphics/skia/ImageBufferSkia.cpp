@@ -195,7 +195,7 @@ void ImageBuffer::draw(GraphicsContext* context, ColorSpace styleColorSpace, con
                        CompositeOperator op, bool useLowQualityScale)
 {
     RefPtr<Image> image = BitmapImageSingleFrameSkia::create(*m_data.m_platformContext.bitmap(), drawNeedsCopy(m_context.get(), context));
-    context->drawImage(image.get(), styleColorSpace, destRect, srcRect, op, useLowQualityScale);
+    context->drawImage(image.get(), styleColorSpace, destRect, srcRect, op, DoNotRespectImageOrientation, useLowQualityScale);
 }
 
 void ImageBuffer::drawPattern(GraphicsContext* context, const FloatRect& srcRect, const AffineTransform& patternTransform,
@@ -262,17 +262,17 @@ PassRefPtr<ByteArray> getImageData(const IntRect& rect, SkCanvas* canvas,
     return result.release();
 }
 
-PassRefPtr<ByteArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect) const
+PassRefPtr<ByteArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect, CoordinateSystem) const
 {
     return getImageData<Unmultiplied>(rect, context()->platformContext()->canvas(), m_size);
 }
 
-PassRefPtr<ByteArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect) const
+PassRefPtr<ByteArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, CoordinateSystem) const
 {
     return getImageData<Premultiplied>(rect, context()->platformContext()->canvas(), m_size);
 }
 
-void ImageBuffer::putByteArray(Multiply multiplied, ByteArray* source, const IntSize& sourceSize, const IntRect& sourceRect, const IntPoint& destPoint)
+void ImageBuffer::putByteArray(Multiply multiplied, ByteArray* source, const IntSize& sourceSize, const IntRect& sourceRect, const IntPoint& destPoint, CoordinateSystem)
 {
     SkCanvas* canvas = context()->platformContext()->canvas();
     ASSERT(sourceRect.width() > 0);
@@ -343,16 +343,18 @@ static bool encodeImage(T& source, const String& mimeType, const double* quality
     return true;
 }
 
-String ImageBuffer::toDataURL(const String& mimeType, const double* quality) const
+String ImageBuffer::toDataURL(const String& mimeType, const double* quality, CoordinateSystem) const
 {
     ASSERT(MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType));
 
-    Vector<char> encodedImage, base64Data;
+    Vector<char> encodedImage;
     SkDevice* device = context()->platformContext()->canvas()->getDevice();
     if (!encodeImage(device->accessBitmap(false), mimeType, quality, &encodedImage))
         return "data:,";
 
+    Vector<char> base64Data;
     base64Encode(encodedImage, base64Data);
+
     return "data:" + mimeType + ";base64," + base64Data;
 }
 
@@ -360,11 +362,13 @@ String ImageDataToDataURL(const ImageData& imageData, const String& mimeType, co
 {
     ASSERT(MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType));
 
-    Vector<char> encodedImage, base64Data;
+    Vector<char> encodedImage;
     if (!encodeImage(imageData, mimeType, quality, &encodedImage))
         return "data:,";
 
+    Vector<char> base64Data;
     base64Encode(encodedImage, base64Data);
+
     return "data:" + mimeType + ";base64," + base64Data;
 }
 

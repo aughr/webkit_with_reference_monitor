@@ -72,9 +72,9 @@ PassRefPtr<HTMLTrackElement> HTMLTrackElement::create(const QualifiedName& tagNa
     return adoptRef(new HTMLTrackElement(tagName, document));
 }
 
-void HTMLTrackElement::insertedIntoTree(bool deep)
+void HTMLTrackElement::insertedIntoDocument()
 {
-    HTMLElement::insertedIntoTree(deep);
+    HTMLElement::insertedIntoDocument();
 
     if (HTMLMediaElement* parent = mediaElement())
         parent->didAddTrack(this);
@@ -315,7 +315,7 @@ void HTMLTrackElement::textTrackAddCues(TextTrack* track, const TextTrackCueList
 void HTMLTrackElement::textTrackRemoveCues(TextTrack* track, const TextTrackCueList* cues)
 {
     if (HTMLMediaElement* parent = mediaElement())
-        return parent->textTrackAddCues(track, cues);
+        return parent->textTrackRemoveCues(track, cues);
 }
     
 void HTMLTrackElement::textTrackAddCue(TextTrack* track, PassRefPtr<TextTrackCue> cue)

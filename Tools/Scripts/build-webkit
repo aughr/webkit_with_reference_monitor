@@ -90,6 +90,7 @@ my (
     $fullscreenAPISupport,
     $gamepadSupport,
     $geolocationSupport,
+    $highDPICanvasSupport,
     $iconDatabaseSupport,
     $imageResizerSupport,
     $indexedDatabaseSupport,
@@ -163,7 +164,7 @@ my @features = (
       define => "ENABLE_ANIMATION_API", default => isBlackBerry(), value => \$animationAPISupport },
 
     { option => "battery-status-api", desc => "Toggle battery status API support",
-      define => "ENABLE_BATTERY_STATUS", default => isEfl(), value => \$batterystatusAPISupport },
+      define => "ENABLE_BATTERY_STATUS", default => (isEfl() || isBlackBerry()), value => \$batterystatusAPISupport },
 
     { option => "blob", desc => "Toggle Blob support",
       define => "ENABLE_BLOB", default => (isAppleMacWebKit() || isGtk() || isChromium() || isBlackBerry()), value => \$blobSupport },
@@ -211,13 +212,16 @@ my @features = (
       define => "ENABLE_FTPDIR", default => !isWinCE(), value => \$ftpDirSupport },
 
     { option => "fullscreen-api", desc => "Toggle Fullscreen API support",
-      define => "ENABLE_FULLSCREEN_API", default => (isAppleMacWebKit() || isGtk()), value => \$fullscreenAPISupport },
+      define => "ENABLE_FULLSCREEN_API", default => (isAppleMacWebKit() || isGtk() || isBlackBerry()), value => \$fullscreenAPISupport },
 
     { option => "gamepad", desc => "Toggle Gamepad support",
       define => "ENABLE_GAMEPAD", default => 0, value => \$gamepadSupport },
 
     { option => "geolocation", desc => "Toggle Geolocation support",
       define => "ENABLE_GEOLOCATION", default => (isAppleWebKit() || isGtk() || isBlackBerry()), value => \$geolocationSupport },
+
+    { option => "high-dpi-canvas", desc => "Toggle high-DPI canvas backing store support",
+      define => "ENABLE_HIGH_DPI_CANVAS", default => (isAppleWebKit()), value => \$highDPICanvasSupport },
 
     { option => "icon-database", desc => "Toggle Icon database support",
       define => "ENABLE_ICONDATABASE", default => 1, value => \$iconDatabaseSupport },
@@ -232,7 +236,7 @@ my @features = (
       define => "ENABLE_SCRIPTED_SPEECH", default => 0, value => \$scriptedSpeechSupport },
 
     { option => "input-type-color", desc => "Toggle color type <input> support",
-      define => "ENABLE_INPUT_TYPE_COLOR", default => isBlackBerry(), value => \$inputTypeColorSupport },
+      define => "ENABLE_INPUT_TYPE_COLOR", default => (isBlackBerry() || isEfl()), value => \$inputTypeColorSupport },
 
     { option => "input-type-date", desc => "Toggle date type <input> support",
       define => "ENABLE_INPUT_TYPE_DATE", default => 0, value => \$inputTypeDateSupport },
@@ -313,7 +317,7 @@ my @features = (
       define => "ENABLE_REGISTER_PROTOCOL_HANDLER", default => 0, value => \$registerProtocolHandlerSupport },
 
     { option => "system-malloc", desc => "Toggle system allocator instead of TCmalloc",
-      define => "USE_SYSTEM_MALLOC", default => 0, value => \$systemMallocSupport },
+      define => "USE_SYSTEM_MALLOC", default => isWinCE(), value => \$systemMallocSupport },
 
     { option => "shadow-dom", desc => "Toggle Shadow DOM support",
       define => "ENABLE_SHADOW_DOM", default => isGtk(), value => \$shadowDomSupport },
@@ -343,7 +347,7 @@ my @features = (
       define => "ENABLE_TOUCH_ICON_LOADING", default => 0, value => \$touchIconLoadingSupport },
 
     { option => "vibration", desc => "Toggle Vibration API support",
-      define => "ENABLE_VIBRATION", default => isEfl(), value => \$vibrationSupport },
+      define => "ENABLE_VIBRATION", default => (isEfl() || isBlackBerry()), value => \$vibrationSupport },
 
     { option => "video", desc => "Toggle Video support",
       define => "ENABLE_VIDEO", default => (isAppleWebKit() || isGtk() || isBlackBerry() || isEfl()), value => \$videoSupport },
@@ -707,8 +711,8 @@ for my $dir (@projects) {
 
     my $project = basename($dir);
     if (isGtk()) {
-        if (!$noWebKit2) {
-            unshift(@options, "--enable-webkit2");
+        if ($noWebKit2) {
+            unshift(@options, "--disable-webkit2");
         }
         $result = buildGtkProject($project, $clean, @options);
     } elsif (isAppleMacWebKit()) {

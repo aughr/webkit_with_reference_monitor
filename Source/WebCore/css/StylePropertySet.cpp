@@ -171,6 +171,8 @@ String StylePropertySet::getPropertyValue(CSSPropertyID propertyID) const
             return value->cssText();
     }
 #endif
+    case CSSPropertyBorderRadius:
+        return get4Values(borderRadiusShorthand());
     default:
           return String();
     }
@@ -484,7 +486,7 @@ bool StylePropertySet::isPropertyImplicit(CSSPropertyID propertyID) const
     return property ? property->isImplicit() : false;
 }
 
-bool StylePropertySet::setProperty(CSSPropertyID propertyID, const String& value, bool important, CSSStyleSheet* contextStyleSheet)
+bool StylePropertySet::setProperty(CSSPropertyID propertyID, const String& value, bool important, StyleSheetInternal* contextStyleSheet)
 {
     // Setting the value to an empty string just removes the property in both IE and Gecko.
     // Setting it to null seems to produce less consistent results, but we treat it just the same.
@@ -525,22 +527,22 @@ void StylePropertySet::setProperty(const CSSProperty& property, CSSProperty* slo
     m_properties.append(property);
 }
 
-bool StylePropertySet::setProperty(CSSPropertyID propertyID, int identifier, bool important, CSSStyleSheet* contextStyleSheet)
+bool StylePropertySet::setProperty(CSSPropertyID propertyID, int identifier, bool important)
 {
-    RefPtr<CSSPrimitiveValue> value;    
-    if (Document* document = contextStyleSheet ? contextStyleSheet->findDocument() : 0)
-        value = document->cssValuePool()->createIdentifierValue(identifier);
-    else
-        value = CSSPrimitiveValue::createIdentifier(identifier);
-
-    setProperty(CSSProperty(propertyID, value.release(), important));
+    setProperty(CSSProperty(propertyID, cssValuePool().createIdentifierValue(identifier), important));
     return true;
 }
 
-void StylePropertySet::parseDeclaration(const String& styleDeclaration, CSSStyleSheet* contextStyleSheet)
+void StylePropertySet::parseDeclaration(const String& styleDeclaration, StyleSheetInternal* contextStyleSheet)
 {
     m_properties.clear();
-    CSSParser parser(cssParserMode());
+
+    CSSParserContext context(cssParserMode());
+    if (contextStyleSheet) {
+        context = contextStyleSheet->parserContext();
+        context.mode = cssParserMode();
+    }
+    CSSParser parser(context);
     parser.parseDeclaration(this, styleDeclaration, 0, contextStyleSheet);
 }
 
@@ -799,7 +801,7 @@ void StylePropertySet::merge(const StylePropertySet* other, bool argOverridesOnC
     }
 }
 
-void StylePropertySet::addSubresourceStyleURLs(ListHashSet<KURL>& urls, CSSStyleSheet* contextStyleSheet)
+void StylePropertySet::addSubresourceStyleURLs(ListHashSet<KURL>& urls, StyleSheetInternal* contextStyleSheet)
 {
     size_t size = m_properties.size();
     for (size_t i = 0; i < size; ++i)
@@ -850,7 +852,7 @@ bool StylePropertySet::removePropertiesInSet(const CSSPropertyID* set, unsigned 
         return false;
 
     // FIXME: This is always used with static sets and in that case constructing the hash repeatedly is pretty pointless.
-    HashSet<int> toRemove;
+    HashSet<CSSPropertyID> toRemove;
     for (unsigned i = 0; i < length; ++i)
         toRemove.add(set[i]);
 

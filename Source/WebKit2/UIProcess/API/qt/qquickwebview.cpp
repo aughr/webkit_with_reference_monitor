@@ -82,7 +82,8 @@ QQuickWebViewPrivate::QQuickWebViewPrivate(QQuickWebView* viewport)
     , m_loadStartedSignalSent(false)
     , m_dialogActive(false)
 {
-    viewport->setFlags(QQuickItem::ItemClipsChildrenToShape);
+    viewport->setClip(true);
+    viewport->setPixelAligned(true);
     QObject::connect(viewport, SIGNAL(visibleChanged()), viewport, SLOT(_q_onVisibleChanged()));
     QObject::connect(viewport, SIGNAL(urlChanged()), viewport, SLOT(_q_onUrlChanged()));
     pageView.reset(new QQuickWebPage(viewport));
@@ -206,12 +207,10 @@ void QQuickWebViewPrivate::processDidCrash()
 
 void QQuickWebViewPrivate::didRelaunchProcess()
 {
-    Q_Q(QQuickWebView);
-
     qWarning("WARNING: The web process has been successfully restarted.");
 
-    webPageProxy->setViewportSize(q->boundingRect().size().toSize());
     webPageProxy->drawingArea()->setSize(viewSize(), IntSize());
+    updateViewportSize();
 }
 
 PassOwnPtr<DrawingAreaProxy> QQuickWebViewPrivate::createDrawingAreaProxy()
@@ -482,6 +481,12 @@ void QQuickWebViewPrivate::didReceiveMessageFromNavigatorQtObject(const String& 
 QQuickWebViewLegacyPrivate::QQuickWebViewLegacyPrivate(QQuickWebView* viewport)
     : QQuickWebViewPrivate(viewport)
 {
+    // Default values for the Legacy view.
+    attributes.devicePixelRatio = 1;
+    attributes.initialScale = 1;
+    attributes.minimumScale = 1;
+    attributes.maximumScale = 1;
+    attributes.userScalable = 0;
 }
 
 void QQuickWebViewLegacyPrivate::initialize(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
@@ -615,12 +620,35 @@ void QQuickWebViewFlickablePrivate::didFinishFirstNonEmptyLayout()
 {
 }
 
-void QQuickWebViewFlickablePrivate::didChangeViewportProperties(const WebCore::ViewportArguments& args)
+void QQuickWebViewFlickablePrivate::didChangeViewportProperties(const WebCore::ViewportAttributes& newAttributes)
 {
-    viewportArguments = args;
+    Q_Q(QQuickWebView);
 
-    // FIXME: If suspended we should do this on resume.
-    interactionEngine->applyConstraints(computeViewportConstraints());
+    QSize viewportSize = q->boundingRect().size().toSize();
+
+    // FIXME: Revise these when implementing fit-to-width.
+    WebCore::ViewportAttributes attr = newAttributes;
+    WebCore::restrictMinimumScaleFactorToViewportSize(attr, viewportSize);
+    WebCore::restrictScaleFactorToInitialScaleIfNotUserScalable(attr);
+
+    // FIXME: Resetting here can reset more than needed. For instance it will end deferrers.
+    // This needs to be revised at some point.
+    interactionEngine->reset();
+
+    interactionEngine->setContentToDevicePixelRatio(attr.devicePixelRatio);
+
+    interactionEngine->setAllowsUserScaling(!!attr.userScalable);
+    interactionEngine->setCSSScaleBounds(attr.minimumScale, attr.maximumScale);
+
+    if (!interactionEngine->hadUserInteraction() && !pageIsSuspended)
+        interactionEngine->setCSSScale(attr.initialScale);
+
+    this->attributes = attr;
+    q->experimental()->viewportInfo()->didUpdateViewportConstraints();
+
+    // If the web app successively changes the viewport on purpose
+    // it wants to be in control and we should disable animations.
+    interactionEngine->ensureContentWithinViewportBoundary(/*immediate*/ true);
 }
 
 void QQuickWebViewFlickablePrivate::updateViewportSize()
@@ -631,11 +659,18 @@ void QQuickWebViewFlickablePrivate::updateViewportSize()
     if (viewportSize.isEmpty() || !interactionEngine)
         return;
 
+    WebPreferences* wkPrefs = webPageProxy->pageGroup()->preferences();
+
+    // FIXME: Remove later; Hardcode a value for now to make sure the DPI adjustment is being tested.
+    wkPrefs->setDeviceDPI(160);
+
+    wkPrefs->setDeviceWidth(viewportSize.width());
+    wkPrefs->setDeviceHeight(viewportSize.height());
+
     // Let the WebProcess know about the new viewport size, so that
     // it can resize the content accordingly.
     webPageProxy->setViewportSize(viewportSize);
 
-    interactionEngine->applyConstraints(computeViewportConstraints());
     _q_contentViewportChanged(QPointF());
 }
 
@@ -682,43 +717,6 @@ void QQuickWebViewFlickablePrivate::didChangeContentsSize(const QSize& newSize)
     Q_Q(QQuickWebView);
     pageView->setContentsSize(newSize);
     q->experimental()->viewportInfo()->didUpdateContentsSize();
-}
-
-QtViewportInteractionEngine::Constraints QQuickWebViewFlickablePrivate::computeViewportConstraints()
-{
-    Q_Q(QQuickWebView);
-
-    QtViewportInteractionEngine::Constraints newConstraints;
-    QSize availableSize = q->boundingRect().size().toSize();
-
-    // Return default values for zero sized viewport.
-    if (availableSize.isEmpty())
-        return newConstraints;
-
-    WebPreferences* wkPrefs = webPageProxy->pageGroup()->preferences();
-
-    // FIXME: Remove later; Hardcode a value for now to make sure the DPI adjustment is being tested.
-    wkPrefs->setDeviceDPI(160);
-
-    wkPrefs->setDeviceWidth(availableSize.width());
-    wkPrefs->setDeviceHeight(availableSize.height());
-
-    int minimumLayoutFallbackWidth = qMax<int>(wkPrefs->layoutFallbackWidth(), availableSize.width());
-
-    WebCore::ViewportAttributes attr = WebCore::computeViewportAttributes(viewportArguments, minimumLayoutFallbackWidth, wkPrefs->deviceWidth(), wkPrefs->deviceHeight(), wkPrefs->deviceDPI(), availableSize);
-    WebCore::restrictMinimumScaleFactorToViewportSize(attr, availableSize);
-    WebCore::restrictScaleFactorToInitialScaleIfNotUserScalable(attr);
-
-    newConstraints.initialScale = attr.initialScale;
-    newConstraints.minimumScale = attr.minimumScale;
-    newConstraints.maximumScale = attr.maximumScale;
-    newConstraints.devicePixelRatio = attr.devicePixelRatio;
-    newConstraints.isUserScalable = !!attr.userScalable;
-    newConstraints.layoutSize = attr.layoutSize;
-
-    q->experimental()->viewportInfo()->didUpdateViewportConstraints();
-
-    return newConstraints;
 }
 
 /*!
@@ -1077,7 +1075,6 @@ QQuickWebView::QQuickWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRe
 {
     Q_D(QQuickWebView);
     d->initialize(contextRef, pageGroupRef);
-    setClip(true);
 }
 
 QQuickWebView::~QQuickWebView()

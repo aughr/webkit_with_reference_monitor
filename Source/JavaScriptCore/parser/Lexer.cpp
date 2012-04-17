@@ -403,7 +403,6 @@ void Lexer<T>::setCode(const SourceCode& source, ParserArena* arena)
     m_arena = &arena->identifierArena();
     
     m_lineNumber = source.firstLine();
-    m_delimited = false;
     m_lastToken = -1;
     
     const StringImpl* sourceString = source.provider()->data();
@@ -629,7 +628,7 @@ template <typename T>
 inline void Lexer<T>::record16(int c)
 {
     ASSERT(c >= 0);
-    ASSERT(c <= USHRT_MAX);
+    ASSERT(c <= static_cast<int>(USHRT_MAX));
     m_buffer16.append(static_cast<UChar>(c));
 }
 
@@ -664,8 +663,6 @@ template <>
         tokenData->ident = ident;
     } else
         tokenData->ident = 0;
-
-    m_delimited = false;
 
     if (UNLIKELY((remaining < maxTokenLength) && !(lexerFlags & LexerFlagsIgnoreReservedWords))) {
         ASSERT(shouldCreateIdentifier);
@@ -725,8 +722,6 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
         tokenData->ident = ident;
     } else
         tokenData->ident = 0;
-    
-    m_delimited = false;
     
     if (UNLIKELY((remaining < maxTokenLength) && !(lexerFlags & LexerFlagsIgnoreReservedWords))) {
         ASSERT(shouldCreateIdentifier);
@@ -793,8 +788,6 @@ template <bool shouldCreateIdentifier> JSTokenType Lexer<T>::parseIdentifierSlow
         tokenData->ident = ident;
     } else
         tokenData->ident = 0;
-
-    m_delimited = false;
 
     if (LIKELY(!bufferRequired && !(lexerFlags & LexerFlagsIgnoreReservedWords))) {
         ASSERT(shouldCreateIdentifier);
@@ -1192,8 +1185,6 @@ start:
     if (UNLIKELY(m_current == -1))
         return EOFTOK;
 
-    m_delimited = false;
-
     CharacterType type;
     if (LIKELY(isLatin1(static_cast<T>(m_current))))
         type = static_cast<CharacterType>(typesOfLatin1Characters[m_current]);
@@ -1425,7 +1416,6 @@ start:
         shift();
         break;
     case CharacterSemicolon:
-        m_delimited = true;
         shift();
         token = SEMICOLON;
         break;
@@ -1436,7 +1426,6 @@ start:
         break;
     case CharacterCloseBrace:
         tokenData->intValue = currentOffset();
-        m_delimited = true;
         shift();
         token = CLOSEBRACE;
         break;
@@ -1491,7 +1480,6 @@ inNumberAfterDecimalPoint:
             goto returnError;
         }
         m_buffer8.resize(0);
-        m_delimited = false;
         break;
     case CharacterQuote:
         if (lexerFlags & LexerFlagsDontBuildStrings) {
@@ -1502,7 +1490,6 @@ inNumberAfterDecimalPoint:
                 goto returnError;
         }
         shift();
-        m_delimited = false;
         token = STRING;
         break;
     case CharacterIdentifierStart:
@@ -1545,7 +1532,6 @@ inSingleLineComment:
         goto start;
 
     token = SEMICOLON;
-    m_delimited = true;
     // Fall through into returnToken.
 
 returnToken:

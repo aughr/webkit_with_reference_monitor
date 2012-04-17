@@ -39,6 +39,8 @@ from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.layout_tests.port.driver import DriverInput, DriverOutput
 from webkitpy.layout_tests.port.test import TestPort
 from webkitpy.layout_tests.views import printing
+from webkitpy.performance_tests.perftest import ChromiumStylePerfTest
+from webkitpy.performance_tests.perftest import PerfTest
 from webkitpy.performance_tests.perftestsrunner import PerfTestsRunner
 
 
@@ -126,7 +128,8 @@ max 1120
     def run_test(self, test_name):
         runner = self.create_runner()
         driver = MainTest.TestDriver()
-        return runner._run_single_test(test_name, driver, is_chromium_style=True)
+        return runner._run_single_test(ChromiumStylePerfTest(test_name, 'some-dir',
+            runner._host.filesystem.join('some-dir', test_name)), driver)
 
     def test_run_passing_test(self):
         self.assertTrue(self.run_test('pass.html'))
@@ -146,12 +149,23 @@ max 1120
     def test_run_crash_test(self):
         self.assertFalse(self.run_test('crash.html'))
 
+    def _tests_for_runner(self, runner, test_names):
+        filesystem = runner._host.filesystem
+        tests = []
+        for test in test_names:
+            path = filesystem.join(runner._base_path, test)
+            dirname = filesystem.dirname(path)
+            if test.startswith('inspector/'):
+                tests.append(ChromiumStylePerfTest(test, dirname, path))
+            else:
+                tests.append(PerfTest(test, dirname, path))
+        return tests
+
     def test_run_test_set(self):
         buildbot_output = StringIO.StringIO()
         runner = self.create_runner(buildbot_output)
-        dirname = runner._base_path + '/inspector/'
-        tests = [dirname + 'pass.html', dirname + 'silent.html', dirname + 'failed.html',
-            dirname + 'tonguey.html', dirname + 'timeout.html', dirname + 'crash.html']
+        tests = self._tests_for_runner(runner, ['inspector/pass.html', 'inspector/silent.html', 'inspector/failed.html',
+            'inspector/tonguey.html', 'inspector/timeout.html', 'inspector/crash.html'])
         unexpected_result_count = runner._run_tests_set(tests, runner._port)
         self.assertEqual(unexpected_result_count, len(tests) - 1)
         self.assertWritten(buildbot_output, ['RESULT group_name: test_name= 42 ms\n'])
@@ -166,10 +180,8 @@ max 1120
 
         buildbot_output = StringIO.StringIO()
         runner = self.create_runner(buildbot_output, driver_class=TestDriverWithStopCount)
-
-        dirname = runner._base_path + '/inspector/'
-        tests = [dirname + 'pass.html', dirname + 'silent.html', dirname + 'failed.html',
-            dirname + 'tonguey.html', dirname + 'timeout.html', dirname + 'crash.html']
+        tests = self._tests_for_runner(runner, ['inspector/pass.html', 'inspector/silent.html', 'inspector/failed.html',
+            'inspector/tonguey.html', 'inspector/timeout.html', 'inspector/crash.html'])
 
         unexpected_result_count = runner._run_tests_set(tests, runner._port)
         self.assertEqual(TestDriverWithStopCount.stop_count, 6)
@@ -184,9 +196,7 @@ max 1120
         buildbot_output = StringIO.StringIO()
         regular_output = StringIO.StringIO()
         runner = self.create_runner(buildbot_output, args=["--pause-before-testing"], regular_output=regular_output, driver_class=TestDriverWithStartCount)
-
-        dirname = runner._base_path + '/inspector/'
-        tests = [dirname + 'pass.html']
+        tests = self._tests_for_runner(runner, ['inspector/pass.html'])
 
         try:
             output = OutputCapture()
@@ -201,7 +211,7 @@ max 1120
     def test_run_test_set_for_parser_tests(self):
         buildbot_output = StringIO.StringIO()
         runner = self.create_runner(buildbot_output)
-        tests = [runner._base_path + '/Bindings/event-target-wrapper.html', runner._base_path + '/Parser/some-parser.html']
+        tests = self._tests_for_runner(runner, ['Bindings/event-target-wrapper.html', 'Parser/some-parser.html'])
         unexpected_result_count = runner._run_tests_set(tests, runner._port)
         self.assertEqual(unexpected_result_count, 0)
         self.assertWritten(buildbot_output, ['RESULT Bindings: event-target-wrapper= 1489.05 ms\n',
@@ -223,7 +233,7 @@ max 1120
         self.assertEqual(json.loads(runner._host.filesystem.files['/mock-checkout/output.json']), {
             "timestamp": 123456789, "results":
             {"Bindings/event-target-wrapper": {"max": 1510, "avg": 1489.05, "median": 1487, "min": 1471, "stdev": 14.46, "unit": "ms"},
-            "group_name:test_name": 42},
+            "inspector/pass.html:group_name:test_name": 42},
             "webkit-revision": 5678})
 
     def test_run_test_set_with_json_source(self):
@@ -242,7 +252,7 @@ max 1120
         self.assertEqual(json.loads(runner._host.filesystem.files['/mock-checkout/output.json']), {
             "timestamp": 123456789, "results":
             {"Bindings/event-target-wrapper": {"max": 1510, "avg": 1489.05, "median": 1487, "min": 1471, "stdev": 14.46, "unit": "ms"},
-            "group_name:test_name": 42},
+            "inspector/pass.html:group_name:test_name": 42},
             "webkit-revision": 5678,
             "key": "value"})
 
@@ -255,7 +265,7 @@ max 1120
         self.assertEqual(runner.run(), 0)
 
         self.assertEqual(json.loads(runner._host.filesystem.files['/mock-checkout/output.json']), {
-            "timestamp": 123456789, "results": {"group_name:test_name": 42.0}, "webkit-revision": 5678, "some-revision": 5678})
+            "timestamp": 123456789, "results": {"inspector/pass.html:group_name:test_name": 42.0}, "webkit-revision": 5678, "some-revision": 5678})
 
     def test_run_with_upload_json(self):
         runner = self.create_runner(args=['--output-json-path=/mock-checkout/output.json',
@@ -334,6 +344,9 @@ max 1120
         tests = runner._collect_tests()
         self.assertEqual(len(tests), 1)
 
+    def _collect_tests_and_sort_test_name(self, runner):
+        return sorted([test.test_name() for test in runner._collect_tests()])
+
     def test_collect_tests(self):
         runner = self.create_runner(args=['PerformanceTests/test1.html', 'test2.html'])
 
@@ -344,8 +357,7 @@ max 1120
         add_file('test2.html')
         add_file('test3.html')
         runner._host.filesystem.chdir(runner._port.perf_tests_dir()[:runner._port.perf_tests_dir().rfind(runner._host.filesystem.sep)])
-        tests = [runner._port.relative_perf_test_filename(test) for test in runner._collect_tests()]
-        self.assertEqual(sorted(tests), ['test1.html', 'test2.html'])
+        self.assertEqual(self._collect_tests_and_sort_test_name(runner), ['test1.html', 'test2.html'])
 
     def test_collect_tests_with_skipped_list(self):
         runner = self.create_runner()
@@ -361,8 +373,20 @@ max 1120
         add_file('inspector/resources', 'resource_file.html')
         add_file('unsupported', 'unsupported_test2.html')
         runner._port.skipped_perf_tests = lambda: ['inspector/unsupported_test1.html', 'unsupported']
-        tests = [runner._port.relative_perf_test_filename(test) for test in runner._collect_tests()]
-        self.assertEqual(sorted(tests), ['inspector/test1.html', 'inspector/test2.html'])
+        self.assertEqual(self._collect_tests_and_sort_test_name(runner), ['inspector/test1.html', 'inspector/test2.html'])
+
+    def test_collect_tests_with_page_load_svg(self):
+        runner = self.create_runner()
+
+        def add_file(dirname, filename, content=True):
+            dirname = runner._host.filesystem.join(runner._base_path, dirname) if dirname else runner._base_path
+            runner._host.filesystem.maybe_make_directory(dirname)
+            runner._host.filesystem.files[runner._host.filesystem.join(dirname, filename)] = content
+
+        add_file('PageLoad', 'some-svg-test.svg')
+        tests = runner._collect_tests()
+        self.assertEqual(len(tests), 1)
+        self.assertEqual(tests[0].__class__.__name__, 'PageLoadingPerfTest')
 
     def test_parse_args(self):
         runner = self.create_runner()

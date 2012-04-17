@@ -76,7 +76,7 @@ using namespace HTMLNames;
 
 static inline LayoutUnit NoXPosForVerticalArrowNavigation()
 {
-    return std::numeric_limits<LayoutUnit>::min();
+    return MIN_LAYOUT_UNIT;
 }
 
 CaretBase::CaretBase(CaretVisibility visibility)
@@ -1477,7 +1477,7 @@ bool FrameSelection::contains(const LayoutPoint& point)
     HitTestRequest request(HitTestRequest::ReadOnly |
                            HitTestRequest::Active);
     HitTestResult result(point);
-    document->renderView()->layer()->hitTest(request, result);
+    document->renderView()->hitTest(request, result);
     Node* innerNode = result.innerNode();
     if (!innerNode || !innerNode->renderer())
         return false;

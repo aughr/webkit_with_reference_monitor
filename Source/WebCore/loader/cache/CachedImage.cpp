@@ -241,7 +241,12 @@ IntSize CachedImage::imageSizeForRenderer(const RenderObject* renderer, float mu
     if (!m_image)
         return IntSize();
 
-    IntSize imageSize = m_image->size();
+    IntSize imageSize;
+
+    if (m_image->isBitmapImage() && (renderer && renderer->shouldRespectImageOrientation() == RespectImageOrientation))
+        imageSize = static_cast<BitmapImage*>(m_image.get())->sizeRespectingOrientation();
+    else
+        imageSize = m_image->size();
 
 #if ENABLE(SVG)
     if (m_image->isSVGImage()) {
@@ -251,23 +256,18 @@ IntSize CachedImage::imageSizeForRenderer(const RenderObject* renderer, float mu
             imageSize.setHeight(sizeAndZoom.size.height() / sizeAndZoom.zoom);
         }
     }
-#else
-    UNUSED_PARAM(renderer);
 #endif
 
     if (multiplier == 1.0f)
         return imageSize;
         
     // Don't let images that have a width/height >= 1 shrink below 1 when zoomed.
-    bool hasWidth = imageSize.width() > 0;
-    bool hasHeight = imageSize.height() > 0;
-    int width = imageSize.width() * (m_image->hasRelativeWidth() ? 1.0f : multiplier);
-    int height = imageSize.height() * (m_image->hasRelativeHeight() ? 1.0f : multiplier);
-    if (hasWidth)
-        width = max(1, width);
-    if (hasHeight)
-        height = max(1, height);
-    return IntSize(width, height);
+    float widthScale = m_image->hasRelativeWidth() ? 1.0f : multiplier;
+    float heightScale = m_image->hasRelativeHeight() ? 1.0f : multiplier;
+    IntSize minimumSize(imageSize.width() > 0 ? 1 : 0, imageSize.height() > 0 ? 1 : 0);
+    imageSize.scale(widthScale, heightScale);
+    imageSize.clampToMinimumSize(minimumSize);
+    return imageSize;
 }
 
 void CachedImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio, float scaleFactor)

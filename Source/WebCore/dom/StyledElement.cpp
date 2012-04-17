@@ -192,21 +192,21 @@ void StyledElement::inlineStyleChanged()
     
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, int identifier, bool important)
 {
-    ensureAttributeData()->ensureMutableInlineStyle(this)->setProperty(propertyID, document()->cssValuePool()->createIdentifierValue(identifier), important);
+    ensureAttributeData()->ensureMutableInlineStyle(this)->setProperty(propertyID, cssValuePool().createIdentifierValue(identifier), important);
     inlineStyleChanged();
     return true;
 }
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, double value, CSSPrimitiveValue::UnitTypes unit, bool important)
 {
-    ensureAttributeData()->ensureMutableInlineStyle(this)->setProperty(propertyID, document()->cssValuePool()->createValue(value, unit), important);
+    ensureAttributeData()->ensureMutableInlineStyle(this)->setProperty(propertyID, cssValuePool().createValue(value, unit), important);
     inlineStyleChanged();
     return true;
 }
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, const String& value, bool important)
 {
-    bool changes = ensureAttributeData()->ensureMutableInlineStyle(this)->setProperty(propertyID, value, important, document()->elementSheet());
+    bool changes = ensureAttributeData()->ensureMutableInlineStyle(this)->setProperty(propertyID, value, important, document()->elementSheet()->internal());
     if (changes)
         inlineStyleChanged();
     return changes;
@@ -226,7 +226,7 @@ bool StyledElement::removeInlineStyleProperty(CSSPropertyID propertyID)
 void StyledElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
 {
     if (StylePropertySet* inlineStyle = attributeData() ? attributeData()->inlineStyle() : 0)
-        inlineStyle->addSubresourceStyleURLs(urls, document()->elementSheet());
+        inlineStyle->addSubresourceStyleURLs(urls, document()->elementSheet()->internal());
 }
 
 static inline bool attributeNameSort(const pair<AtomicStringImpl*, AtomicString>& p1, const pair<AtomicStringImpl*, AtomicString>& p2)
@@ -326,12 +326,17 @@ void StyledElement::updateAttributeStyle()
 
 void StyledElement::addPropertyToAttributeStyle(StylePropertySet* style, CSSPropertyID propertyID, int identifier)
 {
-    style->setProperty(propertyID, document()->cssValuePool()->createIdentifierValue(identifier));
+    style->setProperty(propertyID, cssValuePool().createIdentifierValue(identifier));
 }
 
 void StyledElement::addPropertyToAttributeStyle(StylePropertySet* style, CSSPropertyID propertyID, double value, CSSPrimitiveValue::UnitTypes unit)
 {
-    style->setProperty(propertyID, document()->cssValuePool()->createValue(value, unit));
+    style->setProperty(propertyID, cssValuePool().createValue(value, unit));
+}
+    
+void StyledElement::addPropertyToAttributeStyle(StylePropertySet* style, CSSPropertyID propertyID, const String& value)
+{
+    style->setProperty(propertyID, value, false, document()->elementSheet()->internal());
 }
 
 }

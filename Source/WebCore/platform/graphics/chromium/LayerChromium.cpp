@@ -59,6 +59,7 @@ LayerChromium::LayerChromium()
     : m_needsDisplay(false)
     , m_layerId(s_nextLayerId++)
     , m_parent(0)
+    , m_layerTreeHost(0)
     , m_layerAnimationController(CCLayerAnimationController::create(this))
     , m_scrollable(false)
     , m_shouldScrollOnMainThread(false)
@@ -66,7 +67,6 @@ LayerChromium::LayerChromium()
     , m_nonFastScrollableRegionChanged(false)
     , m_anchorPoint(0.5, 0.5)
     , m_backgroundColor(0, 0, 0, 0)
-    , m_backgroundCoversViewport(false)
     , m_debugBorderWidth(0)
     , m_opacity(1.0)
     , m_anchorPointZ(0)
@@ -78,6 +78,7 @@ LayerChromium::LayerChromium()
     , m_isNonCompositedContent(false)
     , m_preserves3D(false)
     , m_alwaysReserveTextures(false)
+    , m_drawCheckerboardForMissingTiles(false)
     , m_replicaLayer(0)
     , m_drawOpacity(0)
     , m_drawOpacityIsAnimating(false)
@@ -270,14 +271,6 @@ void LayerChromium::setBackgroundColor(const Color& backgroundColor)
     setNeedsCommit();
 }
 
-void LayerChromium::setBackgroundCoversViewport(bool backgroundCoversViewport)
-{
-    if (m_backgroundCoversViewport == backgroundCoversViewport)
-        return;
-    m_backgroundCoversViewport = backgroundCoversViewport;
-    setNeedsCommit();
-}
-
 void LayerChromium::setMasksToBounds(bool masksToBounds)
 {
     if (m_masksToBounds == masksToBounds)
@@ -294,7 +287,7 @@ void LayerChromium::setMaskLayer(LayerChromium* maskLayer)
         m_maskLayer->setLayerTreeHost(0);
     m_maskLayer = maskLayer;
     if (m_maskLayer) {
-        m_maskLayer->setLayerTreeHost(m_layerTreeHost.get());
+        m_maskLayer->setLayerTreeHost(m_layerTreeHost);
         m_maskLayer->setIsMask(true);
     }
     setNeedsCommit();
@@ -308,7 +301,7 @@ void LayerChromium::setReplicaLayer(LayerChromium* layer)
         m_replicaLayer->setLayerTreeHost(0);
     m_replicaLayer = layer;
     if (m_replicaLayer)
-        m_replicaLayer->setLayerTreeHost(m_layerTreeHost.get());
+        m_replicaLayer->setLayerTreeHost(m_layerTreeHost);
     setNeedsCommit();
 }
 
@@ -320,6 +313,14 @@ void LayerChromium::setFilters(const FilterOperations& filters)
     setNeedsCommit();
     if (!filters.isEmpty())
         CCLayerTreeHost::setNeedsFilterContext(true);
+}
+
+void LayerChromium::setBackgroundFilters(const FilterOperations& backgroundFilters)
+{
+    if (m_backgroundFilters == backgroundFilters)
+        return;
+    m_backgroundFilters = backgroundFilters;
+    setNeedsCommit();
 }
 
 void LayerChromium::setOpacity(float opacity)
@@ -413,6 +414,14 @@ void LayerChromium::setNonFastScrollableRegion(const Region& region)
     setNeedsCommit();
 }
 
+void LayerChromium::setDrawCheckerboardForMissingTiles(bool checkerboard)
+{
+    if (m_drawCheckerboardForMissingTiles == checkerboard)
+        return;
+    m_drawCheckerboardForMissingTiles = checkerboard;
+    setNeedsCommit();
+}
+
 void LayerChromium::setDoubleSided(bool doubleSided)
 {
     if (m_doubleSided == doubleSided)
@@ -453,13 +462,13 @@ void LayerChromium::pushPropertiesTo(CCLayerImpl* layer)
     layer->setAnchorPoint(m_anchorPoint);
     layer->setAnchorPointZ(m_anchorPointZ);
     layer->setBackgroundColor(m_backgroundColor);
-    layer->setBackgroundCoversViewport(m_backgroundCoversViewport);
     layer->setBounds(m_bounds);
     layer->setContentBounds(contentBounds());
     layer->setDebugBorderColor(m_debugBorderColor);
     layer->setDebugBorderWidth(m_debugBorderWidth);
     layer->setDebugName(m_debugName.isolatedCopy()); // We have to use isolatedCopy() here to safely pass ownership to another thread.
     layer->setDoubleSided(m_doubleSided);
+    layer->setDrawCheckerboardForMissingTiles(m_drawCheckerboardForMissingTiles);
     layer->setDrawsContent(drawsContent());
     if (CCProxy::hasImplThread()) {
         // Since FilterOperations contains a vector of RefPtrs, we must deep copy the filters.
@@ -474,6 +483,7 @@ void LayerChromium::pushPropertiesTo(CCLayerImpl* layer)
         layer->setFilters(filters());
 
     layer->setFilters(filters());
+    layer->setBackgroundFilters(backgroundFilters());
     layer->setIsNonCompositedContent(m_isNonCompositedContent);
     layer->setMasksToBounds(m_masksToBounds);
     layer->setScrollable(m_scrollable);
@@ -629,6 +639,13 @@ void LayerChromium::notifyAnimationStarted(const CCAnimationStartedEvent& event,
 {
     m_layerAnimationController->notifyAnimationStarted(event);
     m_layerAnimationDelegate->notifyAnimationStarted(wallClockTime);
+}
+
+Region LayerChromium::visibleContentOpaqueRegion() const
+{
+    if (opaque())
+        return visibleLayerRect();
+    return Region();
 }
 
 void sortLayers(Vector<RefPtr<LayerChromium> >::iterator, Vector<RefPtr<LayerChromium> >::iterator, void*)

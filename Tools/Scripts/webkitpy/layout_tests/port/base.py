@@ -306,6 +306,27 @@ class Port(object):
         # FIXME: Seems we should get this from the Port's Driver class.
         return "DumpRenderTree"
 
+    def expected_baselines_by_extension(self, test_name):
+        """Returns a dict mapping baseline suffix to relative path for each baseline in
+        a test. For reftests, it returns ".==" or ".!=" instead of the suffix."""
+        # FIXME: The name similarity between this and expected_baselines() below, is unfortunate.
+        # We should probably rename them both.
+        baseline_dict = {}
+        reference_files = self.reference_files(test_name)
+        if reference_files:
+            # FIXME: How should this handle more than one type of reftest?
+            baseline_dict['.' + reference_files[0][0]] = self.relative_test_filename(reference_files[0][1])
+
+        for extension in self.baseline_extensions():
+            path = self.expected_filename(test_name, extension, return_default=False)
+            baseline_dict[extension] = self.relative_test_filename(path) if path else path
+
+        return baseline_dict
+
+    def baseline_extensions(self):
+        """Returns a tuple of all of the non-reftest baseline extensions we use. The extensions include the leading '.'."""
+        return ('.wav', '.webarchive', '.txt', '.png')
+
     def expected_baselines(self, test_name, suffix, all_baselines=False):
         """Given a test name, finds where the baseline results are located.
 
@@ -355,7 +376,7 @@ class Port(object):
 
         return [(None, baseline_filename)]
 
-    def expected_filename(self, test_name, suffix):
+    def expected_filename(self, test_name, suffix, return_default=True):
         """Given a test name, returns an absolute path to its expected results.
 
         If no expected results are found in any of the searched directories,
@@ -370,6 +391,8 @@ class Port(object):
         platform: the most-specific directory name to use to build the
             search list of directories, e.g., 'chromium-win', or
             'chromium-cg-mac-leopard' (we follow the WebKit format)
+        return_default: if True, returns the path to the generic expectation if nothing
+            else is found; if False, returns None.
 
         This routine is generic but is implemented here to live alongside
         the other baseline and filename manipulation routines.
@@ -383,7 +406,9 @@ class Port(object):
         if actual_test_name:
             return self.expected_filename(actual_test_name, suffix)
 
-        return self._filesystem.join(self.layout_tests_dir(), baseline_filename)
+        if return_default:
+            return self._filesystem.join(self.layout_tests_dir(), baseline_filename)
+        return None
 
     def expected_checksum(self, test_name):
         """Returns the checksum of the image we expect the test to produce, or None if it is a text-only test."""
@@ -569,8 +594,9 @@ class Port(object):
     def webkit_base(self):
         return self._filesystem.abspath(self.path_from_webkit_base('.'))
 
-    def skipped_layout_tests(self):
-        return []
+    def skipped_layout_tests(self, test_list):
+        """Returns the set of tests found in Skipped files. Does *not* include tests marked as SKIP in expectations files."""
+        return set([])
 
     def _tests_from_skipped_file_contents(self, skipped_file_contents):
         tests_to_skip = []
@@ -597,21 +623,6 @@ class Port(object):
     @memoized
     def skipped_perf_tests(self):
         return self._expectations_from_skipped_files([self.perf_tests_dir()])
-
-    def skipped_tests(self, test_list):
-        return set([])
-
-    def skips_layout_test(self, test_name):
-        """Figures out if the givent test is being skipped or not.
-
-        Test categories are handled as well."""
-        for test_or_category in self.skipped_layout_tests():
-            if test_or_category == test_name:
-                return True
-            category = self._filesystem.join(self.layout_tests_dir(), test_or_category)
-            if self._filesystem.isdir(category) and test_name.startswith(test_or_category):
-                return True
-        return False
 
     def skips_perf_test(self, test_name):
         for test_or_category in self.skipped_perf_tests():
@@ -701,6 +712,10 @@ class Port(object):
 
     def setup_test_run(self):
         """Perform port-specific work at the beginning of a test run."""
+        pass
+
+    def clean_up_test_run(self):
+        """Perform port-specific work at the end of a test run."""
         pass
 
     # FIXME: os.environ access should be moved to onto a common/system class to be more easily mockable.

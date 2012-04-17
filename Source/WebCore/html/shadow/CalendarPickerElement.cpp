@@ -55,6 +55,7 @@ using namespace HTMLNames;
 
 inline CalendarPickerElement::CalendarPickerElement(Document* document)
     : HTMLDivElement(divTag, document)
+    , m_popup(0)
 {
     setShadowPseudoId("-webkit-calendar-picker-indicator");
 }
@@ -102,7 +103,7 @@ void CalendarPickerElement::openPopup()
         return;
     if (!document()->view())
         return;
-    IntRect elementRectInRootView = document()->view()->contentsToRootView(hostInput()->getRect());
+    IntRect elementRectInRootView = document()->view()->contentsToRootView(hostInput()->getPixelSnappedRect());
     m_popup = chrome->client()->openPagePopup(this, elementRectInRootView);
 }
 
@@ -159,6 +160,14 @@ static void addProperty(const char* name, const String& value, DocumentWriter& w
     addLiteral(",\n", writer);
 }
 
+static void addProperty(const char* name, unsigned value, DocumentWriter& writer)
+{
+    writer.addData(name, strlen(name));
+    addLiteral(": ", writer);
+    addString(String::number(value), writer);
+    addLiteral(",\n", writer);
+}
+
 static void addProperty(const char* name, const Vector<String>& values, DocumentWriter& writer)
 {
     writer.addData(name, strlen(name));
@@ -196,7 +205,7 @@ void CalendarPickerElement::writeDocument(DocumentWriter& writer)
     addProperty("locale", defaultLanguage(), writer);
     addProperty("todayLabel", calendarTodayText(), writer);
     addProperty("clearLabel", calendarClearText(), writer);
-    addProperty("weekStartDay", String::number(firstDayOfWeek()), writer);
+    addProperty("weekStartDay", firstDayOfWeek(), writer);
     addProperty("monthLabels", monthLabels(), writer);
     addProperty("dayLabels", weekDayShortLabels(), writer);
     addLiteral("}\n", writer);

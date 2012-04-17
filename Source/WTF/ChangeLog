@@ -1,3 +1,193 @@
+2012-04-16  Nico Weber  <thakis@chromium.org>
+
+        Make NullPtr.h compile with clang -std=c++11 and libstdc++4.2
+        https://bugs.webkit.org/show_bug.cgi?id=83999
+
+        Reviewed by Sam Weinig.
+
+        Before this patch, NullPtr.h assumed that a working |nullptr| implied
+        a working |std::nullptr_t| as well. With clang and libstdc++4.2, this
+        is not true.
+
+        I tested (-stdlib=libc++, -stdlib=libstdc++) x (-std=c++11, -std=c++03)
+        with clang.
+
+        * wtf/NullPtr.h:
+        (std):
+
+2012-04-14  Sam Weinig  <sam@webkit.org>
+
+        Harden WTF::ByteArray::create()
+        https://bugs.webkit.org/show_bug.cgi?id=83318
+
+        Reviewed by Maciej Stachowiak.
+
+        * wtf/ByteArray.cpp:
+        (WTF::ByteArray::create):
+        Add overflow check. I don't believe there is anyway to trigger this currently,
+        hence no tests, so this should be considered hardening.
+
+2012-04-12  Benjamin Poulain  <bpoulain@apple.com>
+
+        Inline StringImpl::find(UChar, ...)
+        https://bugs.webkit.org/show_bug.cgi?id=83737
+
+        Reviewed by Geoffrey Garen.
+
+        The implementation of StringImpl::find() is a simple branch before invoking one of
+        two inline functions. The overhead of having a function for StringImpl::find() is significant.
+
+        It is better to let the compiler decide if that should be inlined or not.
+
+        * wtf/text/StringImpl.cpp:
+        * wtf/text/StringImpl.h:
+        (StringImpl):
+        (WTF::find):
+        (WTF):
+        (WTF::reverseFind):
+        (WTF::StringImpl::find):
+        * wtf/text/WTFString.h:
+
+2012-04-12  Balazs Kelemen  <kbalazs@webkit.org>
+
+        [Qt] Fix WebKit1 build with V8
+        https://bugs.webkit.org/show_bug.cgi?id=83322
+
+        Reviewed by Adam Barth.
+
+        * wtf/StdLibExtras.h:
+        (WTF):
+
+2012-04-12  Jer Noble  <jer.noble@apple.com>
+
+        ThreadingWin: Mutex::unlock() can be "over-unlocked".
+        https://bugs.webkit.org/show_bug.cgi?id=83725
+
+        Reviewed by David Levin.
+
+        In order to support the behavior of pthread_mutex_trylock(), the Windows Mutex class includes
+        a recursion counter which is incremented in Mutex::lock(), decremented in Mutex::unlock(),
+        and checked in Mutex::tryLock().  If the mutex is "over-unlocked", the counter wraps around to
+        MAX_INT, and subsequent calls to Mutex::trylock() will fail. Raise an ASSERT in this situation
+        so the "over-unlock" will be caught.
+
+        * wtf/ThreadingWin.cpp:
+        (WTF::Mutex::unlock): ASSERT if unlocking a non-locked mutex.
+
+2012-04-10  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/10583749> WebKit2 should log to both ASL and stderr
+
+        Reviewed by Sam Weinig.
+
+        * wtf/Assertions.cpp: Add a WTFLogAlways function that unconditionally logs the given message.
+        * wtf/Assertions.h:
+
+2012-04-10  Patrick Gansterer  <paroga@webkit.org>
+
+        Cleanup wtf/Platform.h and config.h files
+        https://bugs.webkit.org/show_bug.cgi?id=83431
+
+        Reviewed by Eric Seidel.
+
+        The ENABLE() and USE() macros take care about the case when the flag
+        isn't defined. So there is no need to define anything with 0.
+
+        Also move duplicated code from the config.h files to Platform.h and
+        merge a few preprocessor commands to make the file more readable.
+
+        * config.h:
+        * wtf/Platform.h:
+
+2012-04-10  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG should flush SetLocals to arguments
+        https://bugs.webkit.org/show_bug.cgi?id=83554
+
+        Reviewed by Gavin Barraclough.
+        
+        Added an isRoot() method that is a faster shorthand for saying
+        find() == this.
+
+        * wtf/UnionFind.h:
+        (WTF::UnionFind::isRoot):
+        (UnionFind):
+
+2012-04-10  Adam Klein  <adamk@chromium.org>
+
+        Remove unused NonNullPassRefPtr from WTF
+        https://bugs.webkit.org/show_bug.cgi?id=82389
+
+        Reviewed by Kentaro Hara.
+
+        NonNullPassRefPtr seems to be unused since JSC allocation was
+        restructured in r84052.
+
+        If someone decides they need this later, they can always revert this patch.
+
+        * wtf/PassRefPtr.h:
+        * wtf/RefPtr.h:
+        (RefPtr):
+
+2012-04-10  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Enable USE_FOLDERS property
+        https://bugs.webkit.org/show_bug.cgi?id=83571
+
+        Reviewed by Daniel Bates.
+
+        Setting the FOLDER property on targets gives more structure 
+        to the generated Visual Studio solutions.
+        This does not affect other CMake generators.
+
+        * wtf/CMakeLists.txt:
+
+2012-04-09  Patrick Gansterer  <paroga@webkit.org>
+
+        Port BinarySemaphoreWin.cpp to WinCE
+        https://bugs.webkit.org/show_bug.cgi?id=83502
+
+        Reviewed by Daniel Bates.
+
+        Replace WaitForSingleObjectEx with WaitForSingleObject since
+        the additonal parameter supported by the extended function
+        is not used anyway and the function does not exist on WinCE.
+
+        * wtf/CMakeLists.txt:
+        * wtf/PlatformWinCE.cmake:
+        * wtf/threads/win/BinarySemaphoreWin.cpp:
+        (WTF::BinarySemaphore::wait):
+
+2012-04-09  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Build fix for USE_SYSTEM_MALLOC after r113570.
+
+        * wtf/CMakeLists.txt:
+
+2012-04-09  Patrick Gansterer  <paroga@webkit.org>
+
+        Remove HAVE_STDINT_H
+        https://bugs.webkit.org/show_bug.cgi?id=83434
+
+        Reviewed by Kentaro Hara.
+
+        HAVE_STDINT_H is defined with 1 all the time and we us stdint.h without HAVE(STDINT_H) already.
+
+        * config.h:
+        * wtf/FastMalloc.cpp:
+        * wtf/TCPageMap.h:
+        * wtf/TCSpinLock.h:
+        * wtf/TCSystemAlloc.cpp:
+
+2012-04-06  Benjamin Poulain  <bpoulain@apple.com>
+
+        Get rid of the useless flag PREEMPT_GEOLOCATION_PERMISSION
+        https://bugs.webkit.org/show_bug.cgi?id=83325
+
+        Reviewed by Ryosuke Niwa.
+
+        * wtf/Platform.h: Remove the flag.
+
 2012-04-06  Darin Adler  <darin@apple.com>
 
         Streamline strtod and fix some related problems

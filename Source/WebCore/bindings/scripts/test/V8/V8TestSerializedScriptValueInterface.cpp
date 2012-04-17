@@ -23,24 +23,25 @@
 
 #if ENABLE(Condition1) || ENABLE(Condition2)
 
-#include "ArrayBuffer.h"
 #include "ExceptionCode.h"
 #include "MessagePort.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SerializedScriptValue.h"
+#include "V8Array.h"
 #include "V8Binding.h"
 #include "V8BindingMacros.h"
 #include "V8BindingState.h"
 #include "V8DOMWrapper.h"
 #include "V8IsolatedContext.h"
 #include "V8Proxy.h"
+#include <wtf/ArrayBuffer.h>
 #include <wtf/UnusedParam.h>
 
 namespace WebCore {
 
 WrapperTypeInfo V8TestSerializedScriptValueInterface::info = { V8TestSerializedScriptValueInterface::GetTemplate, V8TestSerializedScriptValueInterface::derefObject, 0, 0 };
 
-namespace TestSerializedScriptValueInterfaceInternal {
+namespace TestSerializedScriptValueInterfaceV8Internal {
 
 template <typename T> void V8_USE(T) { }
 
@@ -89,6 +90,20 @@ static void cachedValueAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Valu
     imp->setCachedValue(WTF::getPtr(v));
     info.Holder()->DeleteHiddenValue(v8::String::NewSymbol("cachedValue")); // Invalidate the cached value.
     return;
+}
+
+static v8::Handle<v8::Value> portsAttrGetter(v8::Local<v8::String> name, const v8::AccessorInfo& info)
+{
+    INC_STATS("DOM.TestSerializedScriptValueInterface.ports._get");
+    TestSerializedScriptValueInterface* imp = V8TestSerializedScriptValueInterface::toNative(info.Holder());
+    MessagePortArray* ports = imp->ports();
+    if (!ports)
+        return v8::Array::New(0);
+    MessagePortArray portsCopy(*ports);
+    v8::Local<v8::Array> portArray = v8::Array::New(portsCopy.size());
+    for (size_t i = 0; i < portsCopy.size(); ++i)
+        portArray->Set(v8::Integer::New(i), toV8(portsCopy[i].get()));
+    return portArray;
 }
 
 static v8::Handle<v8::Value> cachedReadonlyValueAttrGetter(v8::Local<v8::String> name, const v8::AccessorInfo& info)
@@ -173,22 +188,24 @@ static v8::Handle<v8::Value> multiTransferListCallback(const v8::Arguments& args
     return v8::Handle<v8::Value>();
 }
 
-} // namespace TestSerializedScriptValueInterfaceInternal
+} // namespace TestSerializedScriptValueInterfaceV8Internal
 
 static const BatchedAttribute TestSerializedScriptValueInterfaceAttrs[] = {
     // Attribute 'value' (Type: 'attribute' ExtAttr: '')
-    {"value", TestSerializedScriptValueInterfaceInternal::valueAttrGetter, TestSerializedScriptValueInterfaceInternal::valueAttrSetter, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
+    {"value", TestSerializedScriptValueInterfaceV8Internal::valueAttrGetter, TestSerializedScriptValueInterfaceV8Internal::valueAttrSetter, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
     // Attribute 'readonlyValue' (Type: 'readonly attribute' ExtAttr: '')
-    {"readonlyValue", TestSerializedScriptValueInterfaceInternal::readonlyValueAttrGetter, 0, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
+    {"readonlyValue", TestSerializedScriptValueInterfaceV8Internal::readonlyValueAttrGetter, 0, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
     // Attribute 'cachedValue' (Type: 'attribute' ExtAttr: 'CachedAttribute')
-    {"cachedValue", TestSerializedScriptValueInterfaceInternal::cachedValueAttrGetter, TestSerializedScriptValueInterfaceInternal::cachedValueAttrSetter, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
+    {"cachedValue", TestSerializedScriptValueInterfaceV8Internal::cachedValueAttrGetter, TestSerializedScriptValueInterfaceV8Internal::cachedValueAttrSetter, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
+    // Attribute 'ports' (Type: 'readonly attribute' ExtAttr: '')
+    {"ports", TestSerializedScriptValueInterfaceV8Internal::portsAttrGetter, 0, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
     // Attribute 'cachedReadonlyValue' (Type: 'readonly attribute' ExtAttr: 'CachedAttribute')
-    {"cachedReadonlyValue", TestSerializedScriptValueInterfaceInternal::cachedReadonlyValueAttrGetter, 0, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
+    {"cachedReadonlyValue", TestSerializedScriptValueInterfaceV8Internal::cachedReadonlyValueAttrGetter, 0, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
 };
 
 static const BatchedCallback TestSerializedScriptValueInterfaceCallbacks[] = {
-    {"acceptTransferList", TestSerializedScriptValueInterfaceInternal::acceptTransferListCallback},
-    {"multiTransferList", TestSerializedScriptValueInterfaceInternal::multiTransferListCallback},
+    {"acceptTransferList", TestSerializedScriptValueInterfaceV8Internal::acceptTransferListCallback},
+    {"multiTransferList", TestSerializedScriptValueInterfaceV8Internal::multiTransferListCallback},
 };
 
 v8::Handle<v8::Value> V8TestSerializedScriptValueInterface::constructorCallback(const v8::Arguments& args)
@@ -288,7 +305,7 @@ v8::Handle<v8::Object> V8TestSerializedScriptValueInterface::wrapSlow(PassRefPtr
 
     if (!hasDependentLifetime)
         wrapperHandle.MarkIndependent();
-    getDOMObjectMap().set(impl.leakRef(), wrapperHandle);
+    V8DOMWrapper::setJSWrapperForDOMObject(impl, wrapperHandle);
     return wrapper;
 }
 

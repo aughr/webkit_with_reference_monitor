@@ -270,9 +270,13 @@ void DumpRenderTreeChrome::onStatusbarTextSet(void*, Evas_Object*, void* eventIn
     printf("UI DELEGATE STATUS CALLBACK: setStatusText:%s\n", statusbarText);
 }
 
-void DumpRenderTreeChrome::onTitleChanged(void*, Evas_Object*, void*)
+void DumpRenderTreeChrome::onTitleChanged(void*, Evas_Object*, void* eventInfo)
 {
-    notImplemented();
+    if (!gLayoutTestController->dumpTitleChanges())
+        return;
+
+    const char* titleText = static_cast<const char*>(eventInfo);
+    printf("TITLE CHANGED: %s\n", titleText);
 }
 
 void DumpRenderTreeChrome::onDocumentLoadFinished(void*, Evas_Object*, void* eventInfo)
@@ -292,6 +296,12 @@ void DumpRenderTreeChrome::onDocumentLoadFinished(void*, Evas_Object*, void* eve
 void DumpRenderTreeChrome::onWillSendRequest(void*, Evas_Object*, void* eventInfo)
 {
     Ewk_Frame_Resource_Request* request = static_cast<Ewk_Frame_Resource_Request*>(eventInfo);
+
+    if (!done && gLayoutTestController->willSendRequestReturnsNull()) {
+        // As requested by the LayoutTestController, don't perform the request.
+        request->url = 0;
+        return;
+    }
 
     KURL url = KURL(ParsedURLString, request->url);
 

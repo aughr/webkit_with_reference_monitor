@@ -60,12 +60,16 @@ GPRReg SpeculativeJIT::fillStorage(NodeIndex nodeIndex)
     
     switch (info.registerFormat()) {
     case DataFormatNone: {
-        GPRReg gpr = allocate();
-        ASSERT(info.spillFormat() == DataFormatStorage);
-        m_gprs.retain(gpr, virtualRegister, SpillOrderSpilled);
-        m_jit.loadPtr(JITCompiler::addressFor(virtualRegister), gpr);
-        info.fillStorage(gpr);
-        return gpr;
+        if (info.spillFormat() == DataFormatStorage) {
+            GPRReg gpr = allocate();
+            m_gprs.retain(gpr, virtualRegister, SpillOrderSpilled);
+            m_jit.loadPtr(JITCompiler::addressFor(virtualRegister), gpr);
+            info.fillStorage(gpr);
+            return gpr;
+        }
+        
+        // Must be a cell; fill it as a cell and then return the pointer.
+        return fillSpeculateCell(nodeIndex);
     }
         
     case DataFormatStorage: {
@@ -75,10 +79,8 @@ GPRReg SpeculativeJIT::fillStorage(NodeIndex nodeIndex)
     }
         
     default:
-        ASSERT_NOT_REACHED();
+        return fillSpeculateCell(nodeIndex);
     }
-    
-    return InvalidGPRReg;
 }
 
 void SpeculativeJIT::useChildren(Node& node)
@@ -986,6 +988,10 @@ void SpeculativeJIT::compile(BasicBlock& block)
                     // since the Arguments code isn't smart enough to handle anything else.
                     // The exception is the this argument, which we don't really need to be
                     // able to recover.
+#if DFG_ENABLE(DEBUG_VERBOSE)
+                    dataLog("\nRecovery for argument %d: ", i);
+                    recovery.dump(WTF::dataFile());
+#endif
                     ASSERT(!i || (recovery.isAlreadyInRegisterFile() || recovery.isConstant()));
                     inlineCallFrame->arguments[i] = recovery;
                 }
@@ -2973,7 +2979,7 @@ bool SpeculativeJIT::compileStrictEq(Node& node)
 void SpeculativeJIT::compileGetIndexedPropertyStorage(Node& node)
 {
     if (!node.prediction() || !at(node.child1()).prediction() || !at(node.child2()).prediction()) {
-        terminateSpeculativeExecution(Uncountable, JSValueRegs(), NoNode);
+        terminateSpeculativeExecution(InadequateCoverage, JSValueRegs(), NoNode);
         return;
     }
         

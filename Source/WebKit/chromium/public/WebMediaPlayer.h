@@ -31,9 +31,9 @@
 #ifndef WebMediaPlayer_h
 #define WebMediaPlayer_h
 
+#include "WebTimeRange.h"
 #include "WebVideoFrame.h"
 #include "platform/WebCanvas.h"
-#include "platform/WebVector.h"
 
 namespace WebKit {
 
@@ -41,57 +41,81 @@ class WebAudioSourceProvider;
 class WebAudioSourceProviderClient;
 class WebMediaPlayerClient;
 class WebStreamTextureClient;
+class WebString;
 class WebURL;
 struct WebRect;
 struct WebSize;
 
-struct WebTimeRange {
-    WebTimeRange() : start(0), end(0) {}
-    WebTimeRange(float s, float e) : start(s), end(e) {}
-
-    float start;
-    float end;
-};
-
-typedef WebVector<WebTimeRange> WebTimeRanges;
-
 class WebMediaPlayer {
 public:
     enum NetworkState {
-        Empty,
-        Idle,
-        Loading,
-        Loaded,
-        FormatError,
-        NetworkError,
-        DecodeError,
+        NetworkStateEmpty,
+        NetworkStateIdle,
+        NetworkStateLoading,
+        NetworkStateLoaded,
+        NetworkStateFormatError,
+        NetworkStateNetworkError,
+        NetworkStateDecodeError,
+        Empty = NetworkStateEmpty,
+        Idle = NetworkStateIdle,
+        Loading = NetworkStateLoading,
+        Loaded = NetworkStateLoaded,
+        FormatError = NetworkStateFormatError,
+        NetworkError = NetworkStateNetworkError,
+        DecodeError = NetworkStateDecodeError,
     };
 
     enum ReadyState {
-        HaveNothing,
-        HaveMetadata,
-        HaveCurrentData,
-        HaveFutureData,
-        HaveEnoughData,
+        ReadyStateHaveNothing,
+        ReadyStateHaveMetadata,
+        ReadyStateHaveCurrentData,
+        ReadyStateHaveFutureData,
+        ReadyStateHaveEnoughData,
+        HaveNothing = ReadyStateHaveNothing,
+        HaveMetadata = ReadyStateHaveMetadata,
+        HaveCurrentData = ReadyStateHaveCurrentData,
+        HaveFutureData = ReadyStateHaveFutureData,
+        HaveEnoughData = ReadyStateHaveEnoughData,
     };
 
     enum MovieLoadType {
-        Unknown,
-        Download,
-        StoredStream,
-        LiveStream,
+        MovieLoadTypeUnknown,
+        MovieLoadTypeDownload,
+        MovieLoadTypeStoredStream,
+        MovieLoadTypeLiveStream,
+        Unknown = MovieLoadTypeUnknown,
+        Download = MovieLoadTypeDownload,
+        StoredStream = MovieLoadTypeStoredStream,
+        LiveStream = MovieLoadTypeLiveStream,
     };
 
     enum Preload {
-        None,
-        MetaData,
-        Auto,
+        PreloadNone,
+        PreloadMetaData,
+        PreloadAuto,
+        None = PreloadNone,
+        MetaData = PreloadMetaData,
+        Auto = PreloadAuto,
     };
 
     enum EndOfStreamStatus {
-        EosNoError,
-        EosNetworkError,
-        EosDecodeError,
+        EndOfStreamStatusNoError,
+        EndOfStreamStatusNetworkError,
+        EndOfStreamStatusDecodeError,
+        EosNoError = EndOfStreamStatusNoError,
+        EosNetworkError = EndOfStreamStatusNetworkError,
+        EosDecodeError = EndOfStreamStatusDecodeError,
+    };
+
+    // Represents synchronous exceptions that can be thrown from the Encrypted
+    // Media methods. This is different from the asynchronous MediaKeyError.
+    enum MediaKeyException {
+        MediaKeyExceptionNoError,
+        MediaKeyExceptionInvalidPlayerState,
+        MediaKeyExceptionKeySystemNotSupported,
+        NoError = MediaKeyExceptionNoError,
+        InvalidPlayerState = MediaKeyExceptionInvalidPlayerState,
+        KeySystemNotSupported = MediaKeyExceptionKeySystemNotSupported,
     };
 
     virtual ~WebMediaPlayer() {}
@@ -169,6 +193,12 @@ public:
 
     virtual bool sourceAppend(const unsigned char* data, unsigned length) { return false; }
     virtual void sourceEndOfStream(EndOfStreamStatus)  { }
+
+    // Returns whether keySystem is supported. If true, the result will be
+    // reported by an event.
+    virtual MediaKeyException generateKeyRequest(const WebString& keySystem, const unsigned char* initData, unsigned initDataLength) { return KeySystemNotSupported; }
+    virtual MediaKeyException addKey(const WebString& keySystem, const unsigned char* key, unsigned keyLength, const unsigned char* initData, unsigned initDataLength, const WebString& sessionId) { return KeySystemNotSupported; }
+    virtual MediaKeyException cancelKeyRequest(const WebString& keySystem, const WebString& sessionId) { return KeySystemNotSupported; }
 };
 
 } // namespace WebKit

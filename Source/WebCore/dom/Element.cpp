@@ -40,6 +40,7 @@
 #include "DocumentFragment.h"
 #include "ElementRareData.h"
 #include "ExceptionCode.h"
+#include "FlowThreadController.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -282,7 +283,8 @@ void Element::scrollByUnits(int units, ScrollGranularity granularity)
         direction = ScrollUp;
         units = -units;
     }
-    toRenderBox(renderer())->layer()->scroll(direction, granularity, units);
+    Node* stopNode = this;
+    toRenderBox(renderer())->scroll(direction, granularity, units, &stopNode);
 }
 
 void Element::scrollByLines(int lines)
@@ -980,6 +982,11 @@ void Element::attach()
 void Element::detach()
 {
     RenderWidget::suspendWidgetHierarchyUpdates();
+
+    if (document()->cssRegionsEnabled() && inNamedFlow()) {
+        if (document()->renderer() && document()->renderer()->view())
+            document()->renderer()->view()->flowThreadController()->unregisterNamedFlowContentNode(this);
+    }
 
     cancelFocusAppearanceUpdate();
     if (hasRareData())
@@ -1749,12 +1756,10 @@ bool Element::webkitMatchesSelector(const String& selector, ExceptionCode& ec)
         ec = SYNTAX_ERR;
         return false;
     }
-
-    bool strictParsing = !document()->inQuirksMode();
-    CSSParser p(strictToCSSParserMode(strictParsing));
-
+    CSSParserContext parserContext(document());
+    CSSParser parser(parserContext);
     CSSSelectorList selectorList;
-    p.parseSelector(selector, document(), selectorList);
+    parser.parseSelector(selector, selectorList);
 
     if (!selectorList.first()) {
         ec = SYNTAX_ERR;
@@ -1767,7 +1772,7 @@ bool Element::webkitMatchesSelector(const String& selector, ExceptionCode& ec)
         return false;
     }
 
-    SelectorChecker selectorChecker(document(), strictParsing);
+    SelectorChecker selectorChecker(document(), parserContext.mode == CSSStrictMode);
     for (CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector)) {
         if (selectorChecker.checkSelector(selector, this))
             return true;

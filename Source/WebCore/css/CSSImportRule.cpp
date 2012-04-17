@@ -33,21 +33,20 @@
 
 namespace WebCore {
 
-PassRefPtr<StyleRuleImport> StyleRuleImport::create(CSSStyleSheet* parent, const String& href, PassRefPtr<MediaQuerySet> media)
+PassRefPtr<StyleRuleImport> StyleRuleImport::create(const String& href, PassRefPtr<MediaQuerySet> media)
 {
-    return adoptRef(new StyleRuleImport(parent, href, media));
+    return adoptRef(new StyleRuleImport(href, media));
 }
 
-StyleRuleImport::StyleRuleImport(CSSStyleSheet* parent, const String& href, PassRefPtr<MediaQuerySet> media)
+StyleRuleImport::StyleRuleImport(const String& href, PassRefPtr<MediaQuerySet> media)
     : StyleRuleBase(Import, 0)
-    , m_parentStyleSheet(parent)
+    , m_parentStyleSheet(0)
     , m_styleSheetClient(this)
     , m_strHref(href)
     , m_mediaQueries(media)
     , m_cachedSheet(0)
     , m_loading(false)
 {
-    ASSERT(parent);
     if (!m_mediaQueries)
         m_mediaQueries = MediaQuerySet::create(String());
 }
@@ -64,11 +63,11 @@ void StyleRuleImport::setCSSStyleSheet(const String& href, const KURL& baseURL, 
 {
     if (m_styleSheet)
         m_styleSheet->clearOwnerRule();
-    m_styleSheet = CSSStyleSheet::create(this, href, baseURL, charset);
+    m_styleSheet = StyleSheetInternal::create(this, href, baseURL, charset);
 
     bool crossOriginCSS = false;
     bool validMIMEType = false;
-    CSSParserMode cssParserMode = m_parentStyleSheet ? m_parentStyleSheet->cssParserMode() : CSSStrictMode;
+    CSSParserMode cssParserMode = m_parentStyleSheet ? m_parentStyleSheet->parserContext().mode : CSSStrictMode;
     bool enforceMIMEType = isStrictParserMode(cssParserMode);
     Document* document = m_parentStyleSheet ? m_parentStyleSheet->findDocument() : 0;
     bool needsSiteSpecificQuirks = document && document->settings() && document->settings()->needsSiteSpecificQuirks();
@@ -82,13 +81,13 @@ void StyleRuleImport::setCSSStyleSheet(const String& href, const KURL& baseURL, 
 #endif
 
     String sheetText = sheet->sheetText(enforceMIMEType, &validMIMEType);
-    m_styleSheet->parseString(sheetText, cssParserMode);
+    m_styleSheet->parseString(sheetText);
 
     if (!document || !document->securityOrigin()->canRequest(baseURL))
         crossOriginCSS = true;
 
     if (crossOriginCSS && !validMIMEType && !m_styleSheet->hasSyntacticallyValidCSSHeader())
-        m_styleSheet = CSSStyleSheet::create(this, href, baseURL, charset);
+        m_styleSheet = StyleSheetInternal::create(this, href, baseURL, charset);
 
     if (isStrictParserMode(cssParserMode) && needsSiteSpecificQuirks) {
         // Work around <https://bugs.webkit.org/show_bug.cgi?id=28350>.
@@ -98,9 +97,8 @@ void StyleRuleImport::setCSSStyleSheet(const String& href, const KURL& baseURL, 
         // while the other lacks the second trailing newline.
         if (baseURL.string().endsWith(slashKHTMLFixesDotCss) && !sheetText.isNull() && mediaWikiKHTMLFixesStyleSheet.startsWith(sheetText)
                 && sheetText.length() >= mediaWikiKHTMLFixesStyleSheet.length() - 1) {
-            ASSERT(m_styleSheet->length() == 1);
-            ExceptionCode ec;
-            m_styleSheet->deleteRule(0, ec);
+            ASSERT(m_styleSheet->childRules().size() == 1);
+            m_styleSheet->clearRules();
         }
     }
 
@@ -136,8 +134,8 @@ void StyleRuleImport::requestStyleSheet()
 
     // Check for a cycle in our import chain.  If we encounter a stylesheet
     // in our parent chain with the same URL, then just bail.
-    CSSStyleSheet* rootSheet = m_parentStyleSheet;
-    for (CSSStyleSheet* sheet = m_parentStyleSheet; sheet; sheet = sheet->parentStyleSheet()) {
+    StyleSheetInternal* rootSheet = m_parentStyleSheet;
+    for (StyleSheetInternal* sheet = m_parentStyleSheet; sheet; sheet = sheet->parentStyleSheet()) {
         // FIXME: This is wrong if the finalURL was updated via document::updateBaseURL.
         if (absHref == sheet->finalURL().string())
             return;
@@ -166,6 +164,12 @@ CSSImportRule::CSSImportRule(StyleRuleImport* importRule, CSSStyleSheet* parent)
 {
 }
 
+CSSImportRule::~CSSImportRule()
+{
+    if (m_styleSheetCSSOMWrapper)
+        m_styleSheetCSSOMWrapper->clearOwnerRule();
+}
+
 MediaList* CSSImportRule::media()
 {
     return m_importRule->mediaQueries()->ensureMediaList(parentStyleSheet());
@@ -186,5 +190,16 @@ String CSSImportRule::cssText() const
     
     return result.toString();
 }
+
+CSSStyleSheet* CSSImportRule::styleSheet() const
+{ 
+    if (!m_importRule->styleSheet())
+        return 0;
+
+    if (!m_styleSheetCSSOMWrapper)
+        m_styleSheetCSSOMWrapper = CSSStyleSheet::create(m_importRule->styleSheet(), const_cast<CSSImportRule*>(this));
+    return m_styleSheetCSSOMWrapper.get(); 
+}
+
 
 } // namespace WebCore

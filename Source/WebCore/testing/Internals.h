@@ -100,6 +100,8 @@ public:
 
     PassRefPtr<ClientRectList> inspectorHighlightRects(Document*, ExceptionCode&);
 
+    void setBackgroundBlurOnNode(Node*, int blurLength, ExceptionCode&);
+
     unsigned markerCountForNode(Node*, const String&, ExceptionCode&);
     PassRefPtr<Range> markerRangeForNode(Node*, const String& markerType, unsigned index, ExceptionCode&);
     String markerDescriptionForNode(Node*, const String& markerType, unsigned index, ExceptionCode&);
@@ -120,6 +122,7 @@ public:
     unsigned lengthFromRange(Element* scope, const Range*, ExceptionCode&);
     String rangeAsText(const Range*, ExceptionCode&);
 
+    void setDelegatesScrolling(bool enabled, Document*, ExceptionCode&);
 #if ENABLE(TOUCH_ADJUSTMENT)
     PassRefPtr<WebKitPoint> touchPositionAdjustedToBestClickableNode(long x, long y, long width, long height, Document*, ExceptionCode&);
     Node* touchNodeAdjustedToBestClickableNode(long x, long y, long width, long height, Document*, ExceptionCode&);
@@ -129,8 +132,6 @@ public:
     int lastSpellCheckRequestSequence(Document*, ExceptionCode&);
     int lastSpellCheckProcessedSequence(Document*, ExceptionCode&);
     
-    void setMediaPlaybackRequiresUserGesture(Document*, bool enabled, ExceptionCode&);
-
     Vector<String> userPreferredLanguages() const;
     void setUserPreferredLanguages(const Vector<String>&);
 
@@ -148,6 +149,8 @@ public:
 
     bool hasSpellingMarker(Document*, int from, int length, ExceptionCode&);
     bool hasGrammarMarker(Document*, int from, int length, ExceptionCode&);
+
+    unsigned numberOfScrollableAreas(Document*, ExceptionCode&);
 
     static const char* internalsId;
 

@@ -209,7 +209,7 @@ QRect RenderThemeQStyle::inflateButtonRect(const QRect& originalRect) const
 void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle* renderStyle) const
 {
     QSize size(0, 0);
-    const QFontMetrics fm(renderStyle->font().font());
+    const QFontMetrics fm(renderStyle->font().syntheticFont());
     QStyle* style = qStyle();
 
     switch (renderStyle->appearance()) {
@@ -499,7 +499,7 @@ double RenderThemeQStyle::animationDurationForProgressBar(RenderProgress* render
         return 0;
 
     QStyleOptionProgressBarV2 option;
-    option.rect.setSize(renderProgress->size());
+    option.rect.setSize(renderProgress->pixelSnappedSize());
     // FIXME: Until http://bugreports.qt.nokia.com/browse/QTBUG-9171 is fixed,
     // we simulate one square animating across the progress bar.
     return (option.rect.width() / qStyle()->pixelMetric(QStyle::PM_ProgressBarChunkWidth, &option)) * animationRepeatIntervalForProgressBar(renderProgress);

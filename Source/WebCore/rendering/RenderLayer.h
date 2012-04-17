@@ -420,6 +420,7 @@ public:
 #if USE(ACCELERATED_COMPOSITING)
     // Enclosing compositing layer; if includeSelf is true, may return this.
     RenderLayer* enclosingCompositingLayer(bool includeSelf = true) const;
+    RenderLayer* enclosingCompositingLayerForRepaint(bool includeSelf = true) const;
     // Ancestor compositing layer, excluding this.
     RenderLayer* ancestorCompositingLayer() const { return enclosingCompositingLayer(false); }
 #endif
@@ -582,7 +583,7 @@ public:
 #endif
 
 private:
-    void updateZOrderListsSlowCase();
+    void rebuildZOrderLists();
 
     void computeRepaintRects(LayoutPoint* offsetFromRoot = 0);
     void clearRepaintRects();
@@ -702,6 +703,8 @@ private:
 
     IntSize scrollbarOffset(const Scrollbar*) const;
     
+    void updateScrollableAreaSet(bool hasOverflow);
+
     void childVisibilityChanged(bool newVisibility);
     void dirtyVisibleDescendantStatus();
     void updateVisibilityStatus();
@@ -902,7 +905,7 @@ inline void RenderLayer::updateZOrderLists()
 {
     if (!m_zOrderListsDirty || !isStackingContext())
         return;
-    updateZOrderListsSlowCase();
+    rebuildZOrderLists();
 }
 
 #if !ASSERT_DISABLED

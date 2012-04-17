@@ -711,6 +711,8 @@ http/tests/security/cookies/first-party-cookie-allow-xslt.xml
 http/tests/security/cookies/third-party-cookie-blocking-user-action.html
 http/tests/security/cookies/third-party-cookie-blocking.html
 http/tests/security/cookies/third-party-cookie-blocking-xslt.xml
+http/tests/xmlhttprequest/access-control-preflight-credential-sync.html
+http/tests/xmlhttprequest/access-control-preflight-credential-async.html
 
 # WebKitTestRunner needs to print history delegate information
 # <https://bugs.webkit.org/show_bug.cgi?id=42704>
@@ -1262,6 +1264,10 @@ http/tests/navigation/new-window-redirect-history.html
 http/tests/navigation/post-basic.html
 http/tests/navigation/post-goback1.html
 
+# [WK2] http/tests/navigation/anchor-frames-cross-origin.html fails.
+# https://bugs.webkit.org/show_bug.cgi?id=83581
+http/tests/navigation/anchor-frames-cross-origin.html
+
 # Unexplained plugin failures
 platform/mac/plugins/testplugin-onnew-onpaint.html
 plugins/no-mime-with-valid-extension.html
@@ -1410,6 +1416,8 @@ editing/pasteboard/file-input-files-access.html
 fast/dom/Window/window-postmessage-clone-frames.html
 fast/events/drag-file-crash.html
 fast/events/drag-to-navigate.html
+fast/events/drop-handler-should-not-stop-navigate.html
+fast/events/drop-with-file-paths.html
 fast/events/dropzone-004.html
 fast/events/file-input-hidden-in-ondrop.html
 fast/events/input-element-display-none-in-dragleave-crash.html

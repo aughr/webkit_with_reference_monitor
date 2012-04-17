@@ -294,9 +294,9 @@ bool V8DOMWindowShell::initContextIfNeeded()
         v8::V8::AddMessageListener(&v8UncaughtExceptionHandler);
 
         v8::V8::SetFailedAccessCheckCallbackFunction(reportUnsafeJavaScriptAccess);
-
+#if ENABLE(JAVASCRIPT_DEBUGGER)
         ScriptProfiler::initialize();
-
+#endif
         V8BindingPerIsolateData::ensureInitialized(v8::Isolate::GetCurrent());
 
         isV8Initialized = true;
@@ -592,12 +592,6 @@ void V8DOMWindowShell::updateSecurityOrigin()
 {
     v8::HandleScope scope;
     setSecurityToken();
-}
-
-void V8DOMWindowShell::setLocation(DOMWindow* window, const String& locationString)
-{
-    State<V8Binding>* state = V8BindingState::Only();
-    window->setLocation(locationString, state->activeWindow(), state->firstWindow());
 }
 
 } // WebCore

@@ -94,8 +94,10 @@ class Reviewer(Committer):
 
 watchers_who_are_not_contributors = [
     Account("Chromium Compositor Bugs", ["cc-bugs@google.com"], ""),
+    Account("Chromium Media Reviews", ["feature-media-reviews@chromium.org"], ""),
     Account("David Levin", ["levin+threading@chromium.org"], ""),
     Account("David Levin", ["levin+watchlist@chromium.org"], ""),
+    Account("Kent Tamura", ["tkent+wkapi@chromium.org"], ""),
 ]
 
 
@@ -116,8 +118,8 @@ contributors_who_are_not_committers = [
     Contributor("Annie Sullivan", "sullivan@chromium.org", "annie"),
     Contributor("Aryeh Gregor", "ayg@aryeh.name", "AryehGregor"),
     Contributor("Balazs Ankes", "bank@inf.u-szeged.hu", 'abalazs'),
+    Contributor("Brian Salomon", "bsalomon@google.com"),
     Contributor("Commit Queue", "commit-queue@webkit.org"),
-    Contributor("Dana Jansens", "danakj@chromium.org", "danakj"),
     Contributor("Daniel Sievers", "sievers@chromium.org"),
     Contributor("Dave Barton", "dbarton@mathscribe.com"),
     Contributor("Dave Tharp", "dtharp@codeaurora.org", "dtharp"),
@@ -136,7 +138,6 @@ contributors_who_are_not_committers = [
     Contributor("Janos Badics", "jbadics@inf.u-szeged.hu", 'dicska'),
     Contributor("John Bates", ["jbates@google.com", "jbates@chromium.org"], "jbates"),
     Contributor("John Bauman", ["jbauman@chromium.org", "jbauman@google.com"], "jbauman"),
-    Contributor("Kaustubh Atrawalkar", ["kaustubh@motorola.com"], "silverroots"),
     Contributor("Kulanthaivel Palanichamy", "kulanthaivel@codeaurora.org", "kvel"),
     Contributor(u"Michael Br\u00fcning", "michael.bruning@nokia.com", "mibrunin"),
     Contributor("Nandor Huszka", "hnandor@inf.u-szeged.hu", "hnandor"),
@@ -148,6 +149,7 @@ contributors_who_are_not_committers = [
     Contributor("Szilard Ledan-Muntean", "szledan@inf.u-szeged.hu", "szledan"),
     Contributor("Tab Atkins", ["tabatkins@google.com", "jackalmage@gmail.com"], "tabatkins"),
     Contributor("Tamas Czene", ["tczene@inf.u-szeged.hu", "Czene.Tamas@stud.u-szeged.hu"], "tczene"),
+    Contributor("Tom Hudson", "tomhudson@google.com"),
     Contributor("WebKit Review Bot", "webkit.review.bot@gmail.com", "sheriff-bot"),
     Contributor("Wyatt Carss", ["wcarss@chromium.org", "wcarss@google.com"], "wcarss"),
     Contributor("Zoltan Arvai", "zarvai@inf.u-szeged.hu", "azbest_hu"),
@@ -189,6 +191,7 @@ committers_unable_to_review = [
     Committer("Antoine Labour", "piman@chromium.org", "piman"),
     Committer("Anton D'Auria", "adauria@apple.com", "antonlefou"),
     Committer("Anton Muhin", "antonm@chromium.org", "antonm"),
+    Committer("Arko Saha", "arko@motorola.com", "arkos"),
     Committer("Balazs Kelemen", "kbalazs@webkit.org", "kbalazs"),
     Committer("Ben Murdoch", "benm@google.com", "benm"),
     Committer("Ben Wells", "benwells@chromium.org", "benwells"),
@@ -209,6 +212,7 @@ committers_unable_to_review = [
     Committer("Collin Jackson", "collinj@webkit.org", "collinjackson"),
     Committer("Cris Neckar", "cdn@chromium.org", "cneckar"),
     Committer("Dan Winship", "danw@gnome.org", "danw"),
+    Committer("Dana Jansens", "danakj@chromium.org", "danakj"),
     Committer("Daniel Cheng", "dcheng@chromium.org", "dcheng"),
     Committer("David Grogan", ["dgrogan@chromium.org", "dgrogan@google.com"], "dgrogan"),
     Committer("David Smith", ["catfish.man@gmail.com", "dsmith@webkit.org"], "catfishman"),
@@ -226,6 +230,7 @@ committers_unable_to_review = [
     Committer("Evan Stade", "estade@chromium.org", "estade"),
     Committer("Fady Samuel", "fsamuel@chromium.org", "fsamuel"),
     Committer("Feng Qian", "feng@chromium.org"),
+    Committer("Florin Malita", ["fmalita@chromium.org", "fmalita@google.com"], "fmalita"),
     Committer("Fumitoshi Ukai", "ukai@chromium.org", "ukai"),
     Committer("Gabor Loki", "loki@webkit.org", "loki04"),
     Committer("Gabor Rapcsanyi", ["rgabor@webkit.org", "rgabor@inf.u-szeged.hu"], "rgabor"),
@@ -270,6 +275,7 @@ committers_unable_to_review = [
     Committer("Julie Parent", ["jparent@google.com", "jparent@chromium.org"], "jparent"),
     Committer("Jungshik Shin", "jshin@chromium.org"),
     Committer("Justin Schuh", "jschuh@chromium.org", "jschuh"),
+    Committer("Kaustubh Atrawalkar", ["kaustubh@motorola.com"], "silverroots"),
     Committer("Keishi Hattori", "keishi@webkit.org", "keishi"),
     Committer("Kelly Norton", "knorton@google.com"),
     Committer("Kenichi Ishibashi", "bashi@chromium.org", "bashi"),
@@ -318,12 +324,14 @@ committers_unable_to_review = [
     Committer("Peter Beverloo", ["peter@chromium.org", "beverloo@google.com"], "beverloo"),
     Committer("Peter Kasting", ["pkasting@google.com", "pkasting@chromium.org"], "pkasting"),
     Committer("Peter Varga", ["pvarga@webkit.org", "pvarga@inf.u-szeged.hu"], "stampho"),
+    Committer("Philip Rogers", ["pdr@google.com", "pdr@chromium.org"], "pdr"),
     Committer("Pierre d'Herbemont", ["pdherbemont@free.fr", "pdherbemont@apple.com"], "pdherbemont"),
     Committer("Pierre-Olivier Latour", "pol@apple.com", "pol"),
     Committer("Pierre Rossi", "pierre.rossi@gmail.com", "elproxy"),
     Committer("Pratik Solanki", "psolanki@apple.com", "psolanki"),
     Committer("Qi Zhang", ["qi.2.zhang@nokia.com", "qi.zhang02180@gmail.com"], "qi"),
     Committer("Rafael Antognolli", "antognolli@profusion.mobi", "antognolli"),
+    Committer("Rafael Brandao", "rafael.lobo@openbossa.org", "rafaelbrandao"),
     Committer("Rafael Weinstein", "rafaelw@chromium.org", "rafaelw"),
     Committer("Raphael Kubo da Costa", ["rakuco@webkit.org", "rakuco@FreeBSD.org"], "rakuco"),
     Committer("Ravi Kasibhatla", "ravi.kasibhatla@motorola.com", "kphanee"),
@@ -368,6 +376,7 @@ committers_unable_to_review = [
     Committer("Zeno Albisser", ["zeno@webkit.org", "zeno.albisser@nokia.com"], "zalbisser"),
     Committer("Zhenyao Mo", "zmo@google.com", "zhenyao"),
     Committer("Zoltan Horvath", ["zoltan@webkit.org", "hzoltan@inf.u-szeged.hu", "horvath.zoltan.6@stud.u-szeged.hu"], "zoltan"),
+    Committer(u"\u017dan Dober\u0161ek", "zandobersek@gmail.com", "zdobersek"),
 ]
 
 

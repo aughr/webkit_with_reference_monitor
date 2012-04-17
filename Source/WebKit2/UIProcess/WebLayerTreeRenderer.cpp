@@ -73,6 +73,17 @@ void WebLayerTreeRenderer::callOnMainTread(const Function<void()>& function)
         MainThreadGuardedInvoker<WebLayerTreeRenderer>::call(this, function);
 }
 
+static IntPoint boundedScrollPosition(const IntPoint& scrollPosition, const IntRect& visibleContentRect, const FloatSize& contentSize)
+{
+    IntSize size(contentSize.width(), contentSize.height());
+    int scrollPositionX = std::max(scrollPosition.x(), 0);
+    scrollPositionX = std::min(scrollPositionX, size.width() - visibleContentRect.width());
+
+    int scrollPositionY = std::max(scrollPosition.y(), 0);
+    scrollPositionY = std::min(scrollPositionY, size.height() - visibleContentRect.height());
+    return IntPoint(scrollPositionX, scrollPositionY);
+}
+
 WebLayerTreeRenderer::WebLayerTreeRenderer(LayerTreeHostProxy* layerTreeHostProxy)
     : m_layerTreeHostProxy(layerTreeHostProxy)
     , m_rootLayerID(0)
@@ -91,13 +102,14 @@ PassOwnPtr<GraphicsLayer> WebLayerTreeRenderer::createLayer(WebLayerID layerID)
     return adoptPtr(newLayer);
 }
 
-void WebLayerTreeRenderer::paintToCurrentGLContext(const TransformationMatrix& matrix, float opacity, const FloatRect& clipRect)
+void WebLayerTreeRenderer::paintToCurrentGLContext(const TransformationMatrix& matrix, float opacity, const FloatRect& clipRect, TextureMapper::PaintFlags PaintFlags)
 {
     if (!m_textureMapper)
         m_textureMapper = TextureMapper::create(TextureMapper::OpenGLMode);
     ASSERT(m_textureMapper->accelerationMode() == TextureMapper::OpenGLMode);
 
     syncRemoteContent();
+    adjustPositionForFixedLayers();
     GraphicsLayer* currentRootLayer = rootLayer();
     if (!currentRootLayer)
         return;
@@ -108,8 +120,7 @@ void WebLayerTreeRenderer::paintToCurrentGLContext(const TransformationMatrix& m
         return;
 
     layer->setTextureMapper(m_textureMapper.get());
-    m_textureMapper->beginPainting();
-    m_textureMapper->bindSurface(0);
+    m_textureMapper->beginPainting(PaintFlags);
     m_textureMapper->beginClip(TransformationMatrix(), clipRect);
 
     if (currentRootLayer->opacity() != opacity || currentRootLayer->transform() != matrix) {
@@ -121,18 +132,6 @@ void WebLayerTreeRenderer::paintToCurrentGLContext(const TransformationMatrix& m
     layer->paint();
     m_textureMapper->endClip();
     m_textureMapper->endPainting();
-
-    syncAnimations();
-}
-
-void WebLayerTreeRenderer::syncAnimations()
-{
-    TextureMapperLayer* layer = toTextureMapperLayer(rootLayer());
-    ASSERT(layer);
-
-    layer->syncAnimationsRecursively();
-    if (layer->descendantsOrSelfHaveRunningAnimations())
-        callOnMainThread(bind(&WebLayerTreeRenderer::updateViewport, this));
 }
 
 void WebLayerTreeRenderer::paintToGraphicsContext(QPainter* painter)
@@ -149,10 +148,14 @@ void WebLayerTreeRenderer::paintToGraphicsContext(QPainter* painter)
     GraphicsContext graphicsContext(painter);
     m_textureMapper->setGraphicsContext(&graphicsContext);
     m_textureMapper->beginPainting();
-    m_textureMapper->bindSurface(0);
     layer->paint();
     m_textureMapper->endPainting();
     m_textureMapper->setGraphicsContext(0);
+}
+
+void WebLayerTreeRenderer::setContentsSize(const WebCore::FloatSize& contentsSize)
+{
+    m_contentsSize = contentsSize;
 }
 
 void WebLayerTreeRenderer::setVisibleContentsRect(const IntRect& rect, float scale)
@@ -167,14 +170,49 @@ void WebLayerTreeRenderer::updateViewport()
         m_layerTreeHostProxy->updateViewport();
 }
 
-void WebLayerTreeRenderer::syncLayerParameters(const WebLayerInfo& layerInfo)
+void WebLayerTreeRenderer::adjustPositionForFixedLayers()
 {
-    WebLayerID id = layerInfo.id;
+    if (m_fixedLayers.isEmpty())
+        return;
+
+    IntPoint scrollPosition = boundedScrollPosition(m_visibleContentsRect.location(), m_visibleContentsRect, m_contentsSize);
+
+    LayerMap::iterator end = m_fixedLayers.end();
+    for (LayerMap::iterator it = m_fixedLayers.begin(); it != end; ++it)
+        toTextureMapperLayer(it->second)->setScrollPositionDeltaIfNeeded(IntPoint(scrollPosition.x() - m_renderedContentsScrollPosition.x(), scrollPosition.y() - m_renderedContentsScrollPosition.y()));
+}
+
+void WebLayerTreeRenderer::didChangeScrollPosition(const IntPoint& position)
+{
+    m_pendingRenderedContentsScrollPosition = boundedScrollPosition(position, m_visibleContentsRect, m_contentsSize);
+}
+
+void WebLayerTreeRenderer::setLayerChildren(WebLayerID id, const Vector<WebLayerID>& childIDs)
+{
     ensureLayer(id);
     LayerMap::iterator it = m_layers.find(id);
     GraphicsLayer* layer = it->second;
+    Vector<GraphicsLayer*> children;
 
-    layer->setName(layerInfo.name);
+    for (size_t i = 0; i < childIDs.size(); ++i) {
+        WebLayerID childID = childIDs[i];
+        GraphicsLayer* child = layerByID(childID);
+        if (!child) {
+            child = createLayer(childID).leakPtr();
+            m_layers.add(childID, child);
+        }
+        children.append(child);
+    }
+    layer->setChildren(children);
+}
+
+void WebLayerTreeRenderer::setLayerState(WebLayerID id, const WebLayerInfo& layerInfo)
+{
+    ensureLayer(id);
+    LayerMap::iterator it = m_layers.find(id);
+    ASSERT(it != m_layers.end());
+
+    GraphicsLayer* layer = it->second;
 
     layer->setReplicatedByLayer(layerByID(layerInfo.replica));
     layer->setMaskLayer(layerByID(layerInfo.mask));
@@ -188,6 +226,12 @@ void WebLayerTreeRenderer::syncLayerParameters(const WebLayerInfo& layerInfo)
     layer->setContentsOpaque(layerInfo.contentsOpaque);
     layer->setContentsRect(layerInfo.contentsRect);
     layer->setDrawsContent(layerInfo.drawsContent);
+    toGraphicsLayerTextureMapper(layer)->setFixedToViewport(layerInfo.fixedToViewport);
+
+    if (layerInfo.fixedToViewport)
+        m_fixedLayers.add(id, layer);
+    else
+        m_fixedLayers.remove(id);
 
     assignImageToLayer(layer, layerInfo.imageBackingStoreID);
 
@@ -195,38 +239,6 @@ void WebLayerTreeRenderer::syncLayerParameters(const WebLayerInfo& layerInfo)
     layer->setMasksToBounds(layerInfo.isRootLayer ? false : layerInfo.masksToBounds);
     layer->setOpacity(layerInfo.opacity);
     layer->setPreserves3D(layerInfo.preserves3D);
-    Vector<GraphicsLayer*> children;
-
-    for (size_t i = 0; i < layerInfo.children.size(); ++i) {
-        WebLayerID childID = layerInfo.children[i];
-        GraphicsLayer* child = layerByID(childID);
-        if (!child) {
-            child = createLayer(childID).leakPtr();
-            m_layers.add(childID, child);
-        }
-        children.append(child);
-    }
-    layer->setChildren(children);
-
-    for (size_t i = 0; i < layerInfo.animations.size(); ++i) {
-        const WebKit::WebLayerAnimation anim = layerInfo.animations[i];
-
-        switch (anim.operation) {
-        case WebKit::WebLayerAnimation::AddAnimation: {
-            const IntSize boxSize = anim.boxSize;
-            layer->addAnimation(anim.keyframeList, boxSize, anim.animation.get(), anim.name, anim.startTime);
-            break;
-        }
-        case WebKit::WebLayerAnimation::RemoveAnimation:
-            layer->removeAnimation(anim.name);
-            break;
-        case WebKit::WebLayerAnimation::PauseAnimation:
-            double offset = WTF::currentTime() - anim.startTime;
-            layer->pauseAnimation(anim.name, offset);
-            break;
-        }
-    }
-
     if (layerInfo.isRootLayer && m_rootLayerID != id)
         setRootLayerID(id);
 }
@@ -239,6 +251,7 @@ void WebLayerTreeRenderer::deleteLayer(WebLayerID layerID)
 
     layer->removeFromParent();
     m_layers.remove(layerID);
+    m_fixedLayers.remove(layerID);
     delete layer;
 }
 
@@ -293,11 +306,10 @@ void WebLayerTreeRenderer::removeTile(WebLayerID layerID, int tileID)
     getBackingStore(layerID)->removeTile(tileID);
 }
 
-void WebLayerTreeRenderer::updateTile(WebLayerID layerID, int tileID, const IntRect& sourceRect, const IntRect& targetRect, PassRefPtr<ShareableBitmap> weakBitmap)
+void WebLayerTreeRenderer::updateTile(WebLayerID layerID, int tileID, const TileUpdate& update)
 {
-    RefPtr<ShareableBitmap> bitmap = weakBitmap;
     RefPtr<LayerBackingStore> backingStore = getBackingStore(layerID);
-    backingStore->updateTile(tileID, sourceRect, targetRect, bitmap.get());
+    backingStore->updateTile(tileID, update.sourceRect, update.targetRect, update.surface, update.offset);
     m_backingStoresWithPendingBuffers.add(backingStore);
 }
 
@@ -305,8 +317,8 @@ void WebLayerTreeRenderer::createImage(int64_t imageID, PassRefPtr<ShareableBitm
 {
     RefPtr<ShareableBitmap> bitmap = weakBitmap;
     RefPtr<TextureMapperTiledBackingStore> backingStore = TextureMapperTiledBackingStore::create();
-    backingStore->updateContents(m_textureMapper.get(), bitmap->createImage().get(), BitmapTexture::BGRAFormat);
     m_directlyCompositedImages.set(imageID, backingStore);
+    backingStore->updateContents(m_textureMapper.get(), bitmap->createImage().get());
 }
 
 void WebLayerTreeRenderer::destroyImage(int64_t imageID)
@@ -337,6 +349,8 @@ void WebLayerTreeRenderer::commitTileOperations()
 
 void WebLayerTreeRenderer::flushLayerChanges()
 {
+    m_renderedContentsScrollPosition = m_pendingRenderedContentsScrollPosition;
+
     m_rootLayer->syncCompositingState(FloatRect());
     commitTileOperations();
 

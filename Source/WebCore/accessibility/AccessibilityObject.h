@@ -506,7 +506,8 @@ public:
     virtual LayoutRect boundingBoxRect() const { return LayoutRect(); }
     IntRect pixelSnappedBoundingBoxRect() const { return pixelSnappedIntRect(boundingBoxRect()); }
     virtual LayoutRect elementRect() const = 0;
-    virtual LayoutSize size() const { return elementRect().size(); }
+    LayoutSize size() const { return elementRect().size(); }
+    IntSize pixelSnappedSize() const { return elementRect().pixelSnappedSize(); }
     virtual IntPoint clickPoint();
     static IntRect boundingBoxForQuads(RenderObject*, const Vector<FloatQuad>&);
     
@@ -560,7 +561,11 @@ public:
     virtual void updateChildrenIfNecessary();
     virtual void setNeedsToUpdateChildren() { }
     virtual void clearChildren();
+#if PLATFORM(MAC)
     virtual void detachFromParent();
+#else
+    virtual void detachFromParent() { }
+#endif
 
     virtual void selectedChildren(AccessibilityChildrenVector&) { }
     virtual void visibleChildren(AccessibilityChildrenVector&) { }

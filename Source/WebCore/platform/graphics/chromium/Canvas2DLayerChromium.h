@@ -52,14 +52,11 @@ public:
 
     void setTextureId(unsigned);
 
-    virtual void setNeedsDisplayRect(const FloatRect&);
+    virtual void setNeedsDisplayRect(const FloatRect&) OVERRIDE;
 
-    virtual bool drawsContent() const;
-    virtual void paintContentsIfDirty(const CCOcclusionTracker*);
-
-    virtual void updateCompositorResources(GraphicsContext3D*, CCTextureUpdater&);
-    virtual void pushPropertiesTo(CCLayerImpl*);
-    virtual void unreserveContentsTexture();
+    virtual bool drawsContent() const OVERRIDE;
+    virtual void update(CCTextureUpdater&, const CCOcclusionTracker*) OVERRIDE;
+    virtual void pushPropertiesTo(CCLayerImpl*) OVERRIDE;
 
     void setCanvas(SkCanvas*);
 

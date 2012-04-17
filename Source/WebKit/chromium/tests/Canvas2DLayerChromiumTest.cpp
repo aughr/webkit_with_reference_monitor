@@ -56,9 +56,9 @@ namespace {
 
 class FakeCCLayerTreeHost : public CCLayerTreeHost {
 public:
-    static PassRefPtr<FakeCCLayerTreeHost> create()
+    static PassOwnPtr<FakeCCLayerTreeHost> create()
     {
-        RefPtr<FakeCCLayerTreeHost> host = adoptRef(new FakeCCLayerTreeHost);
+        OwnPtr<FakeCCLayerTreeHost> host(adoptPtr(new FakeCCLayerTreeHost));
         host->initialize();
         return host.release();
     }
@@ -97,12 +97,12 @@ protected:
         RefPtr<GraphicsContext3D> mainContext = GraphicsContext3DPrivate::createGraphicsContextFromWebContext(adoptPtr(new MockCanvasContext()), GraphicsContext3D::RenderDirectlyToHostWindow);
         RefPtr<GraphicsContext3D> implContext = GraphicsContext3DPrivate::createGraphicsContextFromWebContext(adoptPtr(new MockCanvasContext()), GraphicsContext3D::RenderDirectlyToHostWindow);
 
-        MockCanvasContext& implMock = *static_cast<MockCanvasContext*>(GraphicsContext3DPrivate::extractWebGraphicsContext3D(implContext.get()));
         MockCanvasContext& mainMock = *static_cast<MockCanvasContext*>(GraphicsContext3DPrivate::extractWebGraphicsContext3D(mainContext.get()));
+        MockCanvasContext& implMock = *static_cast<MockCanvasContext*>(GraphicsContext3DPrivate::extractWebGraphicsContext3D(implContext.get()));
 
         MockTextureAllocator allocatorMock;
         MockTextureCopier copierMock;
-        CCTextureUpdater updater(&allocatorMock, &copierMock);
+        CCTextureUpdater updater;
 
         const IntSize size(300, 150);
 
@@ -111,9 +111,9 @@ protected:
            thread = adoptPtr(webKitPlatformSupport()->createThread("Canvas2DLayerChromiumTest"));
         WebCompositor::initialize(thread.get());
 
-        RefPtr<FakeCCLayerTreeHost> layerTreeHost = FakeCCLayerTreeHost::create();
+        OwnPtr<FakeCCLayerTreeHost> layerTreeHost(FakeCCLayerTreeHost::create());
         // Force an update, so that we get a valid TextureManager.
-        layerTreeHost->updateLayers();
+        layerTreeHost->updateLayers(updater);
 
         const WebGLId backTextureId = 1;
         const WebGLId frontTextureId = 2;
@@ -145,7 +145,7 @@ protected:
 
         canvas->setNeedsDisplay();
         EXPECT_TRUE(canvas->needsDisplay());
-        canvas->paintContentsIfDirty(0);
+        canvas->update(updater, 0);
         EXPECT_FALSE(canvas->needsDisplay());
         {
             DebugScopedSetImplThread scopedImplThread;
@@ -153,7 +153,7 @@ protected:
             OwnPtr<CCLayerImpl> layerImpl = canvas->createCCLayerImpl();
             EXPECT_EQ(0u, static_cast<CCTextureLayerImpl*>(layerImpl.get())->textureId());
 
-            canvas->updateCompositorResources(implContext.get(), updater);
+            updater.update(implContext.get(), &allocatorMock, &copierMock, 1);
             canvas->pushPropertiesTo(layerImpl.get());
 
             if (threaded)

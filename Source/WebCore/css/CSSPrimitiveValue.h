@@ -272,9 +272,12 @@ public:
 
     bool isQuirkValue() { return m_isQuirkValue; }
 
-    void addSubresourceStyleURLs(ListHashSet<KURL>&, const CSSStyleSheet*);
+    void addSubresourceStyleURLs(ListHashSet<KURL>&, const StyleSheetInternal*);
 
     Length viewportPercentageLength();
+    
+    PassRefPtr<CSSPrimitiveValue> cloneForCSSOM() const;
+    void setCSSOMSafe() { m_isCSSOMSafe = true; }
 
 private:
     // FIXME: int vs. unsigned overloading is too subtle to distinguish the color and identifier cases.

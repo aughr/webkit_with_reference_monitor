@@ -186,6 +186,7 @@ fast/dom/shadow/link-in-shadow-tree.html
 fast/dom/shadow/multiple-shadowroot.html
 fast/dom/shadow/multiple-shadowroot-rendering.html
 fast/dom/shadow/multiple-shadowroot-adopt.html
+fast/dom/shadow/selections-in-shadow.html
 fast/dom/shadow/selection-shouldnt-expose-shadow-dom.html
 fast/dom/shadow/shadow-boundary-events.html
 fast/dom/shadow/shadow-content-crash.html
@@ -316,6 +317,9 @@ http/tests/websocket/tests/hybi/handshake-fail-by-extensions-header.html
 # https://bugs.webkit.org/show_bug.cgi?id=64731
 http/tests/media/media-source/
 
+# Encrypted Media Extensions are not enabled.
+media/encrypted-media/
+
 # Font feature settings is not implemented.
 css3/font-feature-settings-rendering.html
 
@@ -395,6 +399,11 @@ batterystatus
 
 # Network Information API is not supported yet. http://webkit.org/b/73528
 networkinformation
+
+# EXIF orientation support has not yet been implemented for this platform
+# http://webkit.org/b/19688
+fast/images/exif-orientation.html
+fast/images/exif-orientation-css.html
 
 # =========================================================================== #
 #       Drag and Drop Support in DRT.                                         #
@@ -517,6 +526,7 @@ fast/events/dropzone-002.html
 fast/events/dropzone-003.html
 fast/events/dropzone-004.html
 fast/events/dropzone-005.html
+fast/events/drop-with-file-paths.html
 fast/events/moving-text-should-fire-drop-and-dragend-events.html
 fast/events/moving-text-should-fire-drop-and-dragend-events-2.html
 
@@ -635,6 +645,10 @@ http/tests/notifications/icon-exists-show-alert-during-load.html
 # [Qt] new test http/tests/misc/xslt-bad-import.html is failing
 # https://bugs.webkit.org/show_bug.cgi?id=72252
 http/tests/misc/xslt-bad-import.html
+
+# [Qt] http/tests/xmlhttprequest/xmlhttprequest-check-head-readystate-for-404.html times out
+# https://bugs.webkit.org/show_bug.cgi?id=84016
+http/tests/xmlhttprequest/xmlhttprequest-check-head-readystate-for-404.html
 
 # =========================================================================== #
 #       Failing xmlhttprequest tests                                          #
@@ -1090,6 +1104,10 @@ svg/repaint/filter-repaint.svg
 # Needs layoutTestController.enableAutoResizeMode()
 fast/autoresize
 
+# Needs layoutTestController.setBackingScaleFactor()
+fast/canvas/2d.backingStorePixelRatio.html
+fast/canvas/2d.imageDataHD.html
+
 # This requires didClearWindowObjectForFrameInIsolatedWorld foo in FrameLoaderClient
 http/tests/security/isolatedWorld/didClearWindowObject.html
 # This needs more investigation
@@ -1166,6 +1184,10 @@ fast/preloader/document-write-2.html
 # ERROR: LayoutTestController::overridePreference() does not support the 'WebKitPageCacheSupportsPluginsPreferenceKey' preference
 # http://trac.webkit.org/changeset/106305
 plugins/crash-restoring-plugin-page-from-page-cache.html
+
+# ReferenceError: Can't find variable: MediaKeyError
+# http://trac.webkit.org/changeset/114067
+fast/events/constructors/media-key-event-constructor.html
 
 # ============================================================================= #
 # Failing SVG tests
@@ -1955,6 +1977,24 @@ fast/viewport/viewport-133.html
 # https://bugs.webkit.org/show_bug.cgi?id=82308
 fast/dom/shadow/drag-to-meter-in-shadow-crash.html
 
+# [Qt] REGRESSION(r113511): fast/forms/input-autofilled.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=83418
+fast/forms/input-autofilled.html
+
+# [Qt] REGRESSION(r113520): fast/transforms/scrollIntoView-transformed.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=83419
+fast/transforms/scrollIntoView-transformed.html
+
+# [Qt] REGRESSION(r114059): It made these tests fail
+# https://bugs.webkit.org/show_bug.cgi?id=83432
+fast/dom/dom-parse-serialize-display.html
+fast/dom/dom-parse-serialize-xmldecl.html
+fast/dom/dom-parse-serialize.html
+fast/xmlhttprequest/xmlhttprequest-get.xhtml
+
+# [Qt]REGRESSION(r114217): It broke fast/repaint/line-flow-with-floats-in-regions.html
+# https://bugs.webkit.org/show_bug.cgi?id=84013
+fast/repaint/line-flow-with-floats-in-regions.html
 
 # ============================================================================= #
 # failing fonts tests
@@ -2366,6 +2406,10 @@ editing/text-iterator/basic-iteration.html
 # This test tickles another crasher on Qt.
 fast/loader/reload-zero-byte-plugin.html
 
+# These test -apple- and -khtml- prefixed CSS properties, which we don't support.
+inspector/styles/vendor-prefixes.html
+fast/css/apple-prefix.html
+
 # Failing after http://trac.webkit.org/changeset/92375
 # https://bugs.webkit.org/show_bug.cgi?id=65721
 fast/replaced/table-percent-height.html
@@ -2563,3 +2607,6 @@ fast/block/lineboxcontain/font.html
 # [Qt] REGRESSION(r113138 ): It made fast/workers/worker-multi-startup.html crash on 32 bit
 # https://bugs.webkit.org/show_bug.cgi?id=83133
 fast/workers/worker-multi-startup.html
+
+# Failing reftests, we skip them until we find out how we have to gardening after them
+fast/multicol/cell-shrinkback.html

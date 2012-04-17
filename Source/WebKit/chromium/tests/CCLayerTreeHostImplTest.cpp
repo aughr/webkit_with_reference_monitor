@@ -28,6 +28,7 @@
 #include "cc/CCQuadCuller.h"
 
 #include "CCAnimationTestCommon.h"
+#include "CCLayerTestCommon.h"
 #include "FakeWebGraphicsContext3D.h"
 #include "GraphicsContext3DPrivate.h"
 #include "LayerRendererChromium.h"
@@ -37,6 +38,7 @@
 #include "cc/CCTileDrawQuad.h"
 #include <gtest/gtest.h>
 
+using namespace CCLayerTestCommon;
 using namespace WebCore;
 using namespace WebKit;
 using namespace WebKitTests;
@@ -53,11 +55,11 @@ public:
         m_hostImpl = CCLayerTreeHostImpl::create(settings, this);
     }
 
-    virtual void didLoseContextOnImplThread() { }
-    virtual void onSwapBuffersCompleteOnImplThread() { }
-    virtual void setNeedsRedrawOnImplThread() { m_didRequestRedraw = true; }
-    virtual void setNeedsCommitOnImplThread() { m_didRequestCommit = true; }
-    virtual void postAnimationEventsToMainThreadOnImplThread(PassOwnPtr<CCAnimationEventsVector>, double wallClockTime) { }
+    virtual void didLoseContextOnImplThread() OVERRIDE { }
+    virtual void onSwapBuffersCompleteOnImplThread() OVERRIDE { }
+    virtual void setNeedsRedrawOnImplThread() OVERRIDE { m_didRequestRedraw = true; }
+    virtual void setNeedsCommitOnImplThread() OVERRIDE { m_didRequestCommit = true; }
+    virtual void postAnimationEventsToMainThreadOnImplThread(PassOwnPtr<CCAnimationEventsVector>, double wallClockTime) OVERRIDE { }
 
     static void expectClearedScrollDeltasRecursive(CCLayerImpl* layer)
     {
@@ -316,7 +318,7 @@ TEST_F(CCLayerTreeHostImplTest, pinchGesture)
         scrollLayer->setScrollDelta(IntSize());
         scrollLayer->setScrollPosition(IntPoint(50, 50));
 
-        float pageScaleDelta = 0.1;
+        float pageScaleDelta = 0.1f;
         m_hostImpl->pinchGestureBegin();
         m_hostImpl->pinchGestureUpdate(pageScaleDelta, IntPoint(0, 0));
         m_hostImpl->pinchGestureEnd();
@@ -481,7 +483,7 @@ TEST_F(CCLayerTreeHostImplTest, didDrawCalledOnAllLayers)
     layer1->addChild(DidDrawCheckLayer::create(2));
     DidDrawCheckLayer* layer2 = static_cast<DidDrawCheckLayer*>(layer1->children()[0].get());
 
-    layer1->setOpacity(0.3);
+    layer1->setOpacity(0.3f);
     layer1->setPreserves3D(false);
 
     EXPECT_FALSE(root->didDrawCalled());
@@ -585,7 +587,7 @@ class BlendStateCheckLayer : public CCLayerImpl {
 public:
     static PassOwnPtr<BlendStateCheckLayer> create(int id) { return adoptPtr(new BlendStateCheckLayer(id)); }
 
-    virtual void appendQuads(CCQuadCuller& quadList, const CCSharedQuadState* sharedQuadState, bool&)
+    virtual void appendQuads(CCQuadCuller& quadList, const CCSharedQuadState* sharedQuadState, bool&) OVERRIDE
     {
         m_quadsAppended = true;
 
@@ -598,6 +600,7 @@ public:
         testBlendingDrawQuad->setQuadVisibleRect(m_quadVisibleRect);
         EXPECT_EQ(m_blend, testBlendingDrawQuad->needsBlending());
         EXPECT_EQ(m_hasRenderSurface, !!renderSurface());
+        quadList.append(testBlendingDrawQuad.release());
     }
 
     void setExpectation(bool blend, bool hasRenderSurface)
@@ -841,6 +844,88 @@ TEST_F(CCLayerTreeHostImplTest, blendingOffWhenDrawingOpaqueLayers)
 
 }
 
+TEST_F(CCLayerTreeHostImplTest, viewportCovered)
+{
+    m_hostImpl->initializeLayerRenderer(createContext());
+    m_hostImpl->setBackgroundColor(Color::gray);
+
+    IntSize viewportSize(100, 100);
+    m_hostImpl->setViewportSize(viewportSize);
+
+    m_hostImpl->setRootLayer(BlendStateCheckLayer::create(0));
+    BlendStateCheckLayer* root = static_cast<BlendStateCheckLayer*>(m_hostImpl->rootLayer());
+    root->setExpectation(false, true);
+    root->setOpaque(true);
+
+    // No gutter rects
+    {
+        IntRect layerRect(0, 0, 100, 100);
+        root->setPosition(layerRect.location());
+        root->setBounds(layerRect.size());
+        root->setContentBounds(layerRect.size());
+        root->setQuadRect(IntRect(IntPoint(), layerRect.size()));
+        root->setQuadVisibleRect(IntRect(IntPoint(), layerRect.size()));
+
+        CCLayerTreeHostImpl::FrameData frame;
+        EXPECT_TRUE(m_hostImpl->prepareToDraw(frame));
+        ASSERT_EQ(1u, frame.renderPasses.size());
+
+        size_t numGutterQuads = 0;
+        for (size_t i = 0; i < frame.renderPasses[0]->quadList().size(); ++i)
+            numGutterQuads += (frame.renderPasses[0]->quadList()[i]->material() == CCDrawQuad::SolidColor) ? 1 : 0;
+        EXPECT_EQ(0u, numGutterQuads);
+        EXPECT_EQ(1u, frame.renderPasses[0]->quadList().size());
+
+        verifyQuadsExactlyCoverRect(frame.renderPasses[0]->quadList(), IntRect(-layerRect.location(), viewportSize));
+    }
+
+    // Empty visible content area (fullscreen gutter rect)
+    {
+        IntRect layerRect(0, 0, 0, 0);
+        root->setPosition(layerRect.location());
+        root->setBounds(layerRect.size());
+        root->setContentBounds(layerRect.size());
+        root->setQuadRect(IntRect(IntPoint(), layerRect.size()));
+        root->setQuadVisibleRect(IntRect(IntPoint(), layerRect.size()));
+
+        CCLayerTreeHostImpl::FrameData frame;
+        EXPECT_TRUE(m_hostImpl->prepareToDraw(frame));
+        ASSERT_EQ(1u, frame.renderPasses.size());
+
+        size_t numGutterQuads = 0;
+        for (size_t i = 0; i < frame.renderPasses[0]->quadList().size(); ++i)
+            numGutterQuads += (frame.renderPasses[0]->quadList()[i]->material() == CCDrawQuad::SolidColor) ? 1 : 0;
+        EXPECT_EQ(1u, numGutterQuads);
+        EXPECT_EQ(1u, frame.renderPasses[0]->quadList().size());
+
+        verifyQuadsExactlyCoverRect(frame.renderPasses[0]->quadList(), IntRect(-layerRect.location(), viewportSize));
+    }
+
+    // Content area in middle of clip rect (four surrounding gutter rects)
+    {
+        IntRect layerRect(50, 50, 20, 20);
+        root->setPosition(layerRect.location());
+        root->setBounds(layerRect.size());
+        root->setContentBounds(layerRect.size());
+        root->setQuadRect(IntRect(IntPoint(), layerRect.size()));
+        root->setQuadVisibleRect(IntRect(IntPoint(), layerRect.size()));
+
+        CCLayerTreeHostImpl::FrameData frame;
+        EXPECT_TRUE(m_hostImpl->prepareToDraw(frame));
+        ASSERT_EQ(1u, frame.renderPasses.size());
+
+        size_t numGutterQuads = 0;
+        for (size_t i = 0; i < frame.renderPasses[0]->quadList().size(); ++i)
+            numGutterQuads += (frame.renderPasses[0]->quadList()[i]->material() == CCDrawQuad::SolidColor) ? 1 : 0;
+        EXPECT_EQ(4u, numGutterQuads);
+        EXPECT_EQ(5u, frame.renderPasses[0]->quadList().size());
+
+        verifyQuadsExactlyCoverRect(frame.renderPasses[0]->quadList(), IntRect(-layerRect.location(), viewportSize));
+    }
+
+}
+
+
 class ReshapeTrackerContext: public FakeWebGraphicsContext3D {
 public:
     ReshapeTrackerContext() : m_reshapeCalled(false) { }
@@ -964,7 +1049,7 @@ TEST_F(CCLayerTreeHostImplTest, partialSwapReceivesDamageRect)
     // expected damage rect: IntRect(IntPoint::zero(), IntSize(500, 500));
     // expected swap rect: flipped damage rect, but also clamped to viewport
     layerTreeHostImpl->setViewportSize(IntSize(10, 10));
-    root->setOpacity(0.7); // this will damage everything
+    root->setOpacity(0.7f); // this will damage everything
     EXPECT_TRUE(layerTreeHostImpl->prepareToDraw(frame));
     layerTreeHostImpl->drawLayers(frame);
     layerTreeHostImpl->swapBuffers();
@@ -981,7 +1066,7 @@ class ContextLostNotificationCheckLayer : public CCLayerImpl {
 public:
     static PassOwnPtr<ContextLostNotificationCheckLayer> create(int id) { return adoptPtr(new ContextLostNotificationCheckLayer(id)); }
 
-    virtual void didLoseContext()
+    virtual void didLoseContext() OVERRIDE
     {
         m_didLoseContextCalled = true;
     }

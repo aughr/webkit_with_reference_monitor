@@ -27,7 +27,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import codecs
 import mimetypes
 import time
 import urllib2
@@ -85,7 +84,6 @@ class FileUploader(object):
     def __init__(self, url, timeout_seconds):
         self._url = url
         self._timeout_seconds = timeout_seconds
-        self._deadline = time.time() + self._timeout_seconds
 
     def upload_single_text_file(self, filesystem, content_type, filename):
         return self._upload_data(content_type, filesystem.read_text_file(filename))
@@ -93,9 +91,7 @@ class FileUploader(object):
     def upload_as_multipart_form_data(self, filesystem, files, attrs):
         file_objs = []
         for filename, path in files:
-            # FIXME: We should talk to the filesytem via a Host object.
-            with codecs.open(path, "rb") as file:
-                file_objs.append(('file', filename, file.read()))
+            file_objs.append(('file', filename, filesystem.read_binary_file(path)))
 
         # FIXME: We should use the same variable names for the formal and actual parameters.
         content_type, data = _encode_multipart_form_data(attrs, file_objs)
@@ -103,11 +99,10 @@ class FileUploader(object):
 
     def _upload_data(self, content_type, data):
         def callback():
-            now = time.time()
-            if now > self._deadline:
-                # This shouldn't happen, but just to be safe ...
-                raise NetworkTimeout()
+            # FIXME: Setting a timeout, either globally using socket.setdefaulttimeout()
+            # or in urlopen(), doesn't appear to work on Mac 10.5 with Python 2.7.
+            # For now we will ignore the timeout value and hope for the best.
             request = urllib2.Request(self._url, data, {"Content-Type": content_type})
-            return urllib2.urlopen(request, timeout=(self._deadline - now))
+            return urllib2.urlopen(request)
 
         return NetworkTransaction(timeout_seconds=self._timeout_seconds).run(callback)

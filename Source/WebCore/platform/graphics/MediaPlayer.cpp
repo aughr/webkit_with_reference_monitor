@@ -152,6 +152,12 @@ public:
     virtual bool sourceAppend(const unsigned char*, unsigned) { return false; }
     virtual void sourceEndOfStream(MediaPlayer::EndOfStreamStatus status) { }
 #endif
+
+#if ENABLE(ENCRYPTED_MEDIA)
+    virtual MediaPlayer::MediaKeyException generateKeyRequest(const String&, const unsigned char*, unsigned) OVERRIDE { return MediaPlayer::InvalidPlayerState; }
+    virtual MediaPlayer::MediaKeyException addKey(const String&, const unsigned char*, unsigned, const unsigned char*, unsigned, const String&) OVERRIDE { return MediaPlayer::InvalidPlayerState; }
+    virtual MediaPlayer::MediaKeyException cancelKeyRequest(const String&, const String&) OVERRIDE { return MediaPlayer::InvalidPlayerState; }
+#endif
 };
 
 static PassOwnPtr<MediaPlayerPrivateInterface> createNullMediaPlayer(MediaPlayer* player) 
@@ -186,7 +192,7 @@ public:
 };
 
 static void addMediaEngine(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType, MediaEngineGetSitesInMediaCache, MediaEngineClearMediaCache, MediaEngineClearMediaCacheForSite);
-static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, const String& codecs, MediaPlayerFactory* current = 0);
+static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, const String& codecs, const String& keySystem, MediaPlayerFactory* current = 0);
 static MediaPlayerFactory* nextMediaEngine(MediaPlayerFactory* current);
 
 static Vector<MediaPlayerFactory*>& installedMediaEngines() 
@@ -243,7 +249,7 @@ static const AtomicString& codecs()
     return codecs;
 }
 
-static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, const String& codecs, MediaPlayerFactory* current)
+static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, const String& codecs, const String& keySystem, MediaPlayerFactory* current)
 {
     if (type.isEmpty())
         return 0;
@@ -269,7 +275,13 @@ static MediaPlayerFactory* bestMediaEngineForTypeAndCodecs(const String& type, c
                 current = 0;
             continue;
         }
+#if ENABLE(ENCRYPTED_MEDIA)
+        MediaPlayer::SupportsType engineSupport = engines[ndx]->supportsTypeAndCodecs(type, codecs, keySystem);
+#else
+        UNUSED_PARAM(keySystem);
+        ASSERT(keySystem.isEmpty());
         MediaPlayer::SupportsType engineSupport = engines[ndx]->supportsTypeAndCodecs(type, codecs);
+#endif
         if (engineSupport > supported) {
             supported = engineSupport;
             engine = engines[ndx];
@@ -331,7 +343,7 @@ MediaPlayer::~MediaPlayer()
     m_mediaPlayerClient = 0;
 }
 
-bool MediaPlayer::load(const KURL& url, const ContentType& contentType)
+bool MediaPlayer::load(const KURL& url, const ContentType& contentType, const String& keySystem)
 {
     String type = contentType.type().lower();
     String typeCodecs = contentType.parameter(codecs());
@@ -356,6 +368,7 @@ bool MediaPlayer::load(const KURL& url, const ContentType& contentType)
     m_url = urlString;
     m_contentMIMEType = type;
     m_contentTypeCodecs = typeCodecs;
+    m_keySystem = keySystem.lower();
     loadWithNextMediaEngine(0);
     return m_currentMediaEngine;
 }
@@ -368,7 +381,7 @@ void MediaPlayer::loadWithNextMediaEngine(MediaPlayerFactory* current)
     if (m_contentMIMEType.isEmpty())
         engine = nextMediaEngine(current);
     else
-        engine = bestMediaEngineForTypeAndCodecs(m_contentMIMEType, m_contentTypeCodecs, current);
+        engine = bestMediaEngineForTypeAndCodecs(m_contentMIMEType, m_contentTypeCodecs, m_keySystem, current);
 
     // Don't delete and recreate the player unless it comes from a different engine.
     if (!engine) {
@@ -451,6 +464,23 @@ bool MediaPlayer::sourceAppend(const unsigned char* data, unsigned length)
 void MediaPlayer::sourceEndOfStream(MediaPlayer::EndOfStreamStatus status)
 {
     return m_private->sourceEndOfStream(status);
+}
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA)
+MediaPlayer::MediaKeyException MediaPlayer::generateKeyRequest(const String& keySystem, const unsigned char* initData, unsigned initDataLength)
+{
+    return m_private->generateKeyRequest(keySystem.lower(), initData, initDataLength);
+}
+
+MediaPlayer::MediaKeyException MediaPlayer::addKey(const String& keySystem, const unsigned char* key, unsigned keyLength, const unsigned char* initData, unsigned initDataLength, const String& sessionId)
+{
+    return m_private->addKey(keySystem.lower(), key, keyLength, initData, initDataLength, sessionId);
+}
+
+MediaPlayer::MediaKeyException MediaPlayer::cancelKeyRequest(const String& keySystem, const String& sessionId)
+{
+    return m_private->cancelKeyRequest(keySystem.lower(), sessionId);
 }
 #endif
 
@@ -667,21 +697,29 @@ void MediaPlayer::paintCurrentFrameInContext(GraphicsContext* p, const IntRect& 
     m_private->paintCurrentFrameInContext(p, r);
 }
 
-MediaPlayer::SupportsType MediaPlayer::supportsType(const ContentType& contentType)
+MediaPlayer::SupportsType MediaPlayer::supportsType(const ContentType& contentType, const String& keySystem)
 {
     String type = contentType.type().lower();
+    // The codecs string is not lower-cased because MP4 values are case sensitive
+    // per http://tools.ietf.org/html/rfc4281#page-7.
     String typeCodecs = contentType.parameter(codecs());
+    String system = keySystem.lower();
 
     // 4.8.10.3 MIME types - The canPlayType(type) method must return the empty string if type is a type that the 
     // user agent knows it cannot render or is the type "application/octet-stream"
     if (type == applicationOctetStream())
         return IsNotSupported;
 
-    MediaPlayerFactory* engine = bestMediaEngineForTypeAndCodecs(type, typeCodecs);
+    MediaPlayerFactory* engine = bestMediaEngineForTypeAndCodecs(type, typeCodecs, system);
     if (!engine)
         return IsNotSupported;
 
+#if ENABLE(ENCRYPTED_MEDIA)
+    return engine->supportsTypeAndCodecs(type, typeCodecs, system);
+#else
+    ASSERT(system.isEmpty());
     return engine->supportsTypeAndCodecs(type, typeCodecs);
+#endif
 }
 
 void MediaPlayer::getSupportedTypes(HashSet<String>& types)
@@ -848,7 +886,7 @@ void MediaPlayer::networkStateChanged()
     if (m_private->networkState() >= FormatError
         && m_private->readyState() < HaveMetadata
         && installedMediaEngines().size() > 1) {
-        if ( m_contentMIMEType.isEmpty() || bestMediaEngineForTypeAndCodecs(m_contentMIMEType, m_contentTypeCodecs, m_currentMediaEngine)) {
+        if (m_contentMIMEType.isEmpty() || bestMediaEngineForTypeAndCodecs(m_contentMIMEType, m_contentTypeCodecs, m_keySystem, m_currentMediaEngine)) {
             m_reloadTimer.startOneShot(0);
             return;
         }
@@ -931,7 +969,33 @@ AudioSourceProvider* MediaPlayer::audioSourceProvider()
     return m_private->audioSourceProvider();
 }
 #endif // WEB_AUDIO
-    
+
+#if ENABLE(ENCRYPTED_MEDIA)
+void MediaPlayer::keyAdded(const String& keySystem, const String& sessionId)
+{
+    if (m_mediaPlayerClient)
+        m_mediaPlayerClient->mediaPlayerKeyAdded(this, keySystem, sessionId);
+}
+
+void MediaPlayer::keyError(const String& keySystem, const String& sessionId, MediaPlayerClient::MediaKeyErrorCode errorCode, unsigned short systemCode)
+{
+    if (m_mediaPlayerClient)
+        m_mediaPlayerClient->mediaPlayerKeyError(this, keySystem, sessionId, errorCode, systemCode);
+}
+
+void MediaPlayer::keyMessage(const String& keySystem, const String& sessionId, const unsigned char* message, unsigned messageLength)
+{
+    if (m_mediaPlayerClient)
+        m_mediaPlayerClient->mediaPlayerKeyMessage(this, keySystem, sessionId, message, messageLength);
+}
+
+void MediaPlayer::keyNeeded(const String& keySystem, const String& sessionId, const unsigned char* initData, unsigned initDataLength)
+{
+    if (m_mediaPlayerClient)
+        m_mediaPlayerClient->mediaPlayerKeyNeeded(this, keySystem, sessionId, initData, initDataLength);
+}
+#endif
+
 String MediaPlayer::referrer() const
 {
     if (!m_mediaPlayerClient)

@@ -26646,6 +26646,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\loader\EmptyClients.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\loader\EmptyClients.h"
 				>
 			</File>
@@ -28654,6 +28658,14 @@
 				</File>
 				<File
 					RelativePath="..\platform\graphics\ImageObserver.h"
+					>
+				</File>
+				<File
+					RelativePath="..\platform\graphics\ImageOrientation.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\platform\graphics\ImageOrientation.h"
 					>
 				</File>
 				<File
@@ -37251,6 +37263,14 @@
 			</File>
 			<File
 				RelativePath="..\rendering\FixedTableLayout.h"
+				>
+			</File>
+			<File
+				RelativePath="..\rendering\FlowThreadController.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\rendering\FlowThreadController.h"
 				>
 			</File>
 			<File
@@ -53110,6 +53130,62 @@
 				>
 			</File>
 			<File
+				RelativePath="..\dom\TreeScopeAdjuster.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_All|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\dom\TreeScopeAdjuster.h"
+				>
+			</File>
+			<File
 				RelativePath="..\dom\TreeScopeAdopter.cpp"
 				>
 				<FileConfiguration
@@ -54591,6 +54667,118 @@
 			</File>
 			<File
 				RelativePath="..\editing\DeleteSelectionCommand.h"
+				>
+			</File>
+			<File
+				RelativePath="..\editing\DictationAlternative.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_All|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\editing\DictationAlternative.h"
+				>
+			</File>
+			<File
+				RelativePath="..\editing\DictationCommand.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_All|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\editing\DictationCommand.h"
 				>
 			</File>
 			<File
@@ -56749,6 +56937,62 @@
 				RelativePath="..\editing\TextGranularity.h"
 				>
 			</File>
+			<File
+				RelativePath="..\editing\TextInsertionBaseCommand.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_All|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\editing\TextInsertionBaseCommand.h"
+				>
+	        </File>
 			<File
 				RelativePath="..\editing\TextIterator.cpp"
 				>
@@ -73573,10 +73817,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\BinarySearch.js"
-					>
-				</File>
-				<File
 					RelativePath="..\inspector\front-end\BottomUpProfileDataGridTree.js"
 					>
 				</File>
@@ -73618,6 +73858,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\ConsoleView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\ContentProvider.js"
 					>
 				</File>
 				<File
@@ -73685,14 +73929,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\DetailedHeapshotGridNodes.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\DetailedHeapshotView.js"
-					>
-				</File>
-				<File
 					RelativePath="..\inspector\front-end\dialog.css"
 					>
 				</File>
@@ -73706,6 +73942,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\DOMBreakpointsSidebarPane.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\DOMExtension.js"
 					>
 				</File>
 				<File
@@ -73801,7 +74041,15 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\HeapSnapshotGridNodes.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\HeapSnapshotProxy.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\HeapSnapshotView.js"
 					>
 				</File>
 				<File
@@ -73925,6 +74173,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\NetworkRequest.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\Object.js"
 					>
 				</File>
@@ -73950,10 +74202,6 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\UglifyJS\parse-js.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\PartialQuickSort.js"
 					>
 				</File>
 				<File
@@ -74001,35 +74249,39 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\RequestCookiesView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RequestHeadersView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RequestHTMLView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RequestJSONView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RequestPreviewView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RequestResponseView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RequestTimingView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RequestView.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\Resource.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\ResourceCategory.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\ResourceCookiesView.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\ResourceHeadersView.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\ResourceHTMLView.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\ResourceJSONView.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\ResourcePreviewView.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\ResourceResponseView.js"
 					>
 				</File>
 				<File
@@ -74045,11 +74297,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\ResourceTimingView.js"
+					RelativePath="..\inspector\front-end\ResourceTreeModel.js"
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\ResourceTreeModel.js"
+					RelativePath="..\inspector\front-end\ResourceType.js"
 					>
 				</File>
 				<File

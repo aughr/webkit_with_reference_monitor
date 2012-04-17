@@ -472,14 +472,12 @@ inline v8::Handle<v8::Value> toV8(Node* impl, bool forceNewObject = false)
 END
     }
 
-    if (IsRefPtrType($implClassName)) {
-        push(@headerContent, <<END);
+    push(@headerContent, <<END);
 inline v8::Handle<v8::Value> toV8(PassRefPtr< ${nativeType} > impl${forceNewObjectParameter})
 {
     return toV8(impl.get()${forceNewObjectCall});
 }
 END
-    }
 
     if (IsConstructorTemplate($dataNode, "Event")) {
         push(@headerContent, "\nbool fill${implClassName}Init(${implClassName}Init&, const Dictionary&);\n");
@@ -912,6 +910,7 @@ END
     # the newly created wrapper into an internal field of the holder object.
     if (!IsNodeSubType($dataNode) && $attrName ne "self" && (IsWrapperType($returnType) && ($attribute->type =~ /^readonly/ || $attribute->signature->extendedAttributes->{"Replaceable"})
         && $returnType ne "EventTarget" && $returnType ne "SerializedScriptValue" && $returnType ne "DOMWindow" 
+        && $returnType ne "MessagePortArray"
         && $returnType !~ /SVG/ && $returnType !~ /HTML/ && !IsDOMNodeType($returnType))) {
 
         my $arrayType = $codeGenerator->GetArrayType($returnType);
@@ -986,6 +985,20 @@ END
         } else {
             push(@implContentDecls, "    return toV8(WTF::getPtr(${tearOffType}::create($result)));\n");
         }
+    } elsif ($attribute->signature->type eq "MessagePortArray") {
+        AddToImplIncludes("V8Array.h");
+        AddToImplIncludes("MessagePort.h");
+        my $getterFunc = $codeGenerator->WK_lcfirst($attribute->signature->name);
+        push(@implContentDecls, <<END);
+    MessagePortArray* ports = imp->${getterFunc}();
+    if (!ports)
+        return v8::Array::New(0);
+    MessagePortArray portsCopy(*ports);
+    v8::Local<v8::Array> portArray = v8::Array::New(portsCopy.size());
+    for (size_t i = 0; i < portsCopy.size(); ++i)
+        portArray->Set(v8::Integer::New(i), toV8(portsCopy[i].get()));
+    return portArray;
+END
     } else {
         if ($attribute->signature->type eq "SerializedScriptValue" && $attrExt->{"CachedAttribute"}) {
             my $getterFunc = $codeGenerator->WK_lcfirst($attribute->signature->name);
@@ -996,7 +1009,7 @@ END
     return value;
 END
         } else {
-            push(@implContentDecls, "    " . ReturnNativeToJSValue($attribute->signature, $result, "    ").";\n");
+            push(@implContentDecls, "    " . ReturnNativeToJSValue($attribute->signature, $result).";\n");
         }
     }
 
@@ -1208,7 +1221,7 @@ sub GetFunctionTemplateCallbackName
         }
         return "V8${interfaceName}::${name}Callback";
     } else {
-        return "${interfaceName}Internal::${name}Callback";
+        return "${interfaceName}V8Internal::${name}Callback";
     }
 }
 
@@ -1601,7 +1614,7 @@ sub GenerateParametersCheck
                     die "IDL error: TransferList refers to a nonexistent argument";
                 }
 
-                AddToImplIncludes("ArrayBuffer.h");
+                AddToImplIncludes("wtf/ArrayBuffer.h");
                 AddToImplIncludes("MessagePort.h");
                 $TransferListName = ucfirst($transferListName);
                 $parameterCheckString .= "    MessagePortArray messagePortArray$TransferListName;\n";
@@ -1752,13 +1765,7 @@ END
         push(@implContent, "        goto fail;\n");
     }
 
-    my $DOMObject = "DOMObject";
-    if (IsNodeSubType($dataNode)) {
-        $DOMObject = "DOMNode";
-    } elsif ($dataNode->extendedAttributes->{"ActiveDOMObject"}) {
-        $DOMObject = "ActiveDOMObject";
-    }
-
+    my $DOMObject = GetDomMapName($dataNode, $implClassName);
     push(@implContent, <<END);
 
     V8DOMWrapper::setDOMWrapper(wrapper, &info, impl.get());
@@ -1932,14 +1939,7 @@ END
         push(@implContent, "        goto fail;\n");
     }
 
-    my $DOMObject = "DOMObject";
-    # A DOMObject that is an ActiveDOMObject and also a DOMNode should be treated as an DOMNode here.
-    # setJSWrapperForDOMNode() will look if node is active and choose correct map to add node to.
-    if (IsNodeSubType($dataNode)) {
-        $DOMObject = "DOMNode";
-    } elsif ($dataNode->extendedAttributes->{"ActiveDOMObject"}) {
-        $DOMObject = "ActiveDOMObject";
-    }
+    my $DOMObject = GetDomMapName($dataNode, $implClassName);
     push(@implContent, <<END);
 
     V8DOMWrapper::setDOMWrapper(wrapper, &V8${implClassName}Constructor::info, impl.get());
@@ -2059,15 +2059,15 @@ sub GenerateSingleBatchedAttribute
             $getter = "V8${customAccessor}AccessorGetter";
         } else {
             $data = "&V8${constructorType}::info";
-            $getter = "${interfaceName}Internal::${interfaceName}ConstructorGetter";
+            $getter = "${interfaceName}V8Internal::${interfaceName}ConstructorGetter";
         }
         $setter = "0";
         $propAttr = "v8::ReadOnly";
 
     } else {
         # Default Getter and Setter
-        $getter = "${interfaceName}Internal::${attrName}AttrGetter";
-        $setter = "${interfaceName}Internal::${attrName}AttrSetter";
+        $getter = "${interfaceName}V8Internal::${attrName}AttrGetter";
+        $setter = "${interfaceName}V8Internal::${attrName}AttrSetter";
 
         # Custom Setter
         if ($attrExt->{"CustomSetter"} || $attrExt->{"V8CustomSetter"} || $attrExt->{"Custom"} || $attrExt->{"V8Custom"}) {
@@ -2330,7 +2330,7 @@ sub GenerateImplementation
     push(@implContentDecls, "namespace WebCore {\n\n");
     my $parentClassInfo = $parentClass ? "&${parentClass}::info" : "0";
     push(@implContentDecls, "WrapperTypeInfo ${className}::info = { ${className}::GetTemplate, ${className}::derefObject, ${toActive}, ${parentClassInfo} };\n\n");   
-    push(@implContentDecls, "namespace ${interfaceName}Internal {\n\n");
+    push(@implContentDecls, "namespace ${interfaceName}V8Internal {\n\n");
     push(@implContentDecls, "template <typename T> void V8_USE(T) { }\n\n");
 
     my $hasConstructors = 0;
@@ -2525,7 +2525,7 @@ END
         push(@implContent, $codeGenerator->GenerateCompileTimeCheckForEnumsIfNeeded($dataNode));
     }
 
-    push(@implContentDecls, "} // namespace ${interfaceName}Internal\n\n");
+    push(@implContentDecls, "} // namespace ${interfaceName}V8Internal\n\n");
 
     if ($dataNode->extendedAttributes->{"NamedConstructor"} && !($dataNode->extendedAttributes->{"V8CustomConstructor"} || $dataNode->extendedAttributes->{"CustomConstructor"})) {
         GenerateNamedConstructorCallback($dataNode->constructor, $dataNode, $interfaceName);
@@ -2713,7 +2713,7 @@ END
             push(@implContent, <<END);
 
     // $commentInfo
-    ${conditional}$template->SetAccessor(v8::String::New("$name"), ${interfaceName}Internal::${name}AttrGetter, 0, v8::Handle<v8::Value>(), v8::ALL_CAN_READ, static_cast<v8::PropertyAttribute>($property_attributes));
+    ${conditional}$template->SetAccessor(v8::String::New("$name"), ${interfaceName}V8Internal::${name}AttrGetter, 0, v8::Handle<v8::Value>(), v8::ALL_CAN_READ, static_cast<v8::PropertyAttribute>($property_attributes));
 END
             $num_callbacks++;
             next;
@@ -2865,15 +2865,7 @@ END
 
 void ${className}::derefObject(void* object)
 {
-END
-
-    if (IsRefPtrType($interfaceName)) {
-        push(@implContent, <<END);
     static_cast<${nativeType}*>(object)->deref();
-END
-    }
-
-    push(@implContent, <<END);
 }
 
 } // namespace WebCore
@@ -3093,7 +3085,7 @@ sub GenerateToV8Converters
     my $className = shift;
     my $nativeType = shift;
 
-    my $domMapFunction = GetDomMapFunction($dataNode, $interfaceName);
+    my $domMapName = GetDomMapName($dataNode, $interfaceName);
     my $forceNewObjectInput = IsDOMNodeType($interfaceName) ? ", bool forceNewObject" : "";
     my $forceNewObjectCall = IsDOMNodeType($interfaceName) ? ", forceNewObject" : "";
     my $wrapSlowArgumentType = GetPassRefPtrType($nativeType);
@@ -3182,7 +3174,7 @@ END
 END
     }
     push(@implContent, <<END);
-    ${domMapFunction}.set(impl.leakRef(), wrapperHandle);
+    V8DOMWrapper::setJSWrapperFor${domMapName}(impl, wrapperHandle);
     return wrapper;
 }
 END
@@ -3190,13 +3182,18 @@ END
 
 sub GetDomMapFunction
 {
+    return "get" . GetDomMapName(@_) . "Map()";
+}
+
+sub GetDomMapName
+{
     my $dataNode = shift;
     my $type = shift;
-    return "getDOMSVGElementInstanceMap()" if $type eq "SVGElementInstance";
-    return "getActiveDOMNodeMap()" if (IsNodeSubType($dataNode) && $dataNode->extendedAttributes->{"ActiveDOMObject"});
-    return "getDOMNodeMap()" if (IsNodeSubType($dataNode));
-    return "getActiveDOMObjectMap()" if $dataNode->extendedAttributes->{"ActiveDOMObject"};
-    return "getDOMObjectMap()";
+
+    return "ActiveDOMNode" if (IsNodeSubType($dataNode) && $dataNode->extendedAttributes->{"ActiveDOMObject"});
+    return "DOMNode" if IsNodeSubType($dataNode);
+    return "ActiveDOMObject" if $dataNode->extendedAttributes->{"ActiveDOMObject"};
+    return "DOMObject";
 }
 
 sub GetNativeTypeForConversions
@@ -3324,7 +3321,7 @@ sub GenerateFunctionCallString()
     }
 
     $return .= ".release()" if ($returnIsRef);
-    $result .= $indent . ReturnNativeToJSValue($function->signature, $return, $indent) . ";\n";
+    $result .= $indent . ReturnNativeToJSValue($function->signature, $return) . ";\n";
 
     return $result;
 }
@@ -3741,7 +3738,6 @@ sub NativeToJSValue
 {
     my $signature = shift;
     my $value = shift;
-    my $indent = shift;
     my $type = GetTypeFromSignature($signature);
 
     return "v8Boolean($value)" if $type eq "boolean";
