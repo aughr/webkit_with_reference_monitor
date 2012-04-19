@@ -39,6 +39,7 @@ namespace JSC {
         {
             SecurityLabelObject* label = new (NotNull, allocateCell<SecurityLabelObject>(globalData.heap)) SecurityLabelObject(globalData, structure);
             label->finishCreation(globalData);
+            ASSERT(label->m_label.isNull());
             return label;
         }
 

@@ -47,7 +47,10 @@ namespace JSC {
         if ((length1 + length2) < length1)
             return throwOutOfMemoryError(exec);
 
-        return JSString::create(globalData, s1, s2);
+        JSString* string = JSString::create(globalData, s1, s2);
+        string->mergeSecurityLabel(exec, s1->securityLabel());
+        string->mergeSecurityLabel(exec, s2->securityLabel());
+        return string;
     }
 
     ALWAYS_INLINE JSValue jsString(ExecState* exec, const UString& u1, const UString& u2, const UString& u3)

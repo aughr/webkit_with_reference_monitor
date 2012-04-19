@@ -46,14 +46,24 @@ NEVER_INLINE JSValue jsAddSlowCase(CallFrame* callFrame, JSValue v1, JSValue v2)
     // exception for the Date exception in defaultValue()
     JSValue p1 = v1.toPrimitive(callFrame);
     JSValue p2 = v2.toPrimitive(callFrame);
+    
+    SecurityLabel label;
+    label.merge(p1.securityLabel());
+    label.merge(p2.securityLabel());
+    
+    JSValue result;
 
     if (p1.isString())
-        return jsString(callFrame, asString(p1), p2.toString(callFrame));
+        result = jsString(callFrame, asString(p1), p2.toString(callFrame));
 
-    if (p2.isString())
-        return jsString(callFrame, p1.toString(callFrame), asString(p2));
+    else if (p2.isString())
+        result = jsString(callFrame, p1.toString(callFrame), asString(p2));
 
-    return jsNumber(p1.toNumber(callFrame) + p2.toNumber(callFrame));
+    else
+        result = jsNumber(p1.toNumber(callFrame) + p2.toNumber(callFrame));
+    
+    result = result.mergeSecurityLabel(callFrame, label);
+    return result;
 }
 
 JSValue jsTypeStringForValue(CallFrame* callFrame, JSValue v)

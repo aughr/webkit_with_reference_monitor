@@ -54,6 +54,7 @@ namespace JSC {
 
         Register(const JSValue&);
         Register& operator=(const JSValue&);
+        Register& operator=(EncodedJSValue);
         JSValue jsValue() const;
         EncodedJSValue encodedJSValue() const;
         
@@ -114,6 +115,12 @@ namespace JSC {
     ALWAYS_INLINE Register& Register::operator=(const JSValue& v)
     {
         u.value = JSValue::encode(v);
+        return *this;
+    }
+    
+    ALWAYS_INLINE Register& Register::operator=(EncodedJSValue v)
+    {
+        u.value = v;
         return *this;
     }
 

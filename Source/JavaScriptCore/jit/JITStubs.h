@@ -420,7 +420,8 @@ extern "C" {
     JSObject* JIT_STUB cti_op_push_scope(STUB_ARGS_DECLARATION);
     JSObject* JIT_STUB cti_op_put_by_id_transition_realloc(STUB_ARGS_DECLARATION);
     JSPropertyNameIterator* JIT_STUB cti_op_get_pnames(STUB_ARGS_DECLARATION);
-    int JIT_STUB cti_op_eq(STUB_ARGS_DECLARATION);
+    EncodedJSValue JIT_STUB cti_op_eq(STUB_ARGS_DECLARATION);
+    EncodedJSValue JIT_STUB cti_op_neq(STUB_ARGS_DECLARATION);
     int JIT_STUB cti_op_eq_strings(STUB_ARGS_DECLARATION);
     int JIT_STUB cti_op_jless(STUB_ARGS_DECLARATION);
     int JIT_STUB cti_op_jlesseq(STUB_ARGS_DECLARATION);

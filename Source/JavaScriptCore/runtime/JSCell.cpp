@@ -130,19 +130,19 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned ident
 }
 
 SecurityLabel JSCell::securityLabelCell(const JSCell* cell) {
-    if (cell->m_label.get() == NULL)
-        return SecurityLabel();
+    if (cell->m_label)
+        return cell->m_label->securityLabel();
     else
-        return cell->m_label.get()->securityLabel();
+        return SecurityLabel();
 }
 
 void JSCell::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::ExecState* exec, SecurityLabel label) {
     if (label.isNull())
         return;
-    if (cell->m_label.get() == NULL)
-        cell->m_label.set(exec->globalData(), cell, constructSecurityLabel(exec, exec->lexicalGlobalObject(), label));
-    else
+    if (cell->m_label)
         cell->m_label->merge(label);
+    else
+        cell->m_label.set(exec->globalData(), cell, constructSecurityLabel(exec, exec->lexicalGlobalObject(), label));
 }
 
 JSObject* JSCell::toThisObject(JSCell* cell, ExecState* exec)

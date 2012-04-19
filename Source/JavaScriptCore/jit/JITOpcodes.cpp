@@ -1404,21 +1404,16 @@ void JIT::emitSlow_op_eq(Instruction* currentInstruction, Vector<SlowCaseEntry>:
     JITStubCall stubCall(this, cti_op_eq);
     stubCall.addArgument(regT0);
     stubCall.addArgument(regT1);
-    stubCall.call();
-    emitTagAsBoolImmediate(regT0);
-    emitPutVirtualRegister(currentInstruction[1].u.operand);
+    stubCall.call(currentInstruction[1].u.operand);
 }
 
 void JIT::emitSlow_op_neq(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
     linkSlowCase(iter);
-    JITStubCall stubCall(this, cti_op_eq);
+    JITStubCall stubCall(this, cti_op_neq);
     stubCall.addArgument(regT0);
     stubCall.addArgument(regT1);
-    stubCall.call();
-    xor32(TrustedImm32(0x1), regT0);
-    emitTagAsBoolImmediate(regT0);
-    emitPutVirtualRegister(currentInstruction[1].u.operand);
+    stubCall.call(currentInstruction[1].u.operand);
 }
 
 void JIT::emitSlow_op_stricteq(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)

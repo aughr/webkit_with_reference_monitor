@@ -429,6 +429,9 @@ template <typename ClassType, bool destructor, typename StructureType> inline vo
 
     // initialize the inheritor ID
     storePtr(TrustedImmPtr(0), Address(result, JSObject::offsetOfInheritorID()));
+    
+    // initialize the object's security label pointer
+    storePtr(TrustedImmPtr(0), Address(result, JSCell::labelOffset()));
 
     // initialize the object's property storage pointer
     addPtr(TrustedImm32(sizeof(JSObject)), result, storagePtr);

@@ -1070,6 +1070,12 @@ template<typename T> static T throwExceptionFromOpCall(JITStackFrame& jitStackFr
     return throwExceptionFromOpCall<T>(jitStackFrame, newCallFrame, returnAddressSlot);
 }
 
+static ALWAYS_INLINE SecurityLabel labelFor(JSValue v1, JSValue v2) {
+    SecurityLabel label = v1.securityLabel();
+    label.merge(v2.securityLabel());
+    return label;
+}
+
 #if CPU(ARM_THUMB2) && COMPILER(GCC)
 
 #define DEFINE_STUB_FUNCTION(rtype, op) \
@@ -1344,7 +1350,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_pre_inc)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber(v.toNumber(callFrame) + 1);
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, v.securityLabel());
 }
 
 DEFINE_STUB_FUNCTION(int, timeout_check)
@@ -2140,7 +2146,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_mul)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber(src1.toNumber(callFrame) * src2.toNumber(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(JSObject*, op_new_func)
@@ -2536,7 +2542,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_sub)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber(src1.toNumber(callFrame) - src2.toNumber(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(void, op_put_by_val)
@@ -2634,7 +2640,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_less)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsBoolean(jsLess<true>(callFrame, stackFrame.args[0].jsValue(), stackFrame.args[1].jsValue()));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(stackFrame.args[0].jsValue(), stackFrame.args[1].jsValue()));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_lesseq)
@@ -2644,7 +2650,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_lesseq)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsBoolean(jsLessEq<true>(callFrame, stackFrame.args[0].jsValue(), stackFrame.args[1].jsValue()));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(stackFrame.args[0].jsValue(), stackFrame.args[1].jsValue()));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_greater)
@@ -2654,7 +2660,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_greater)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsBoolean(jsLess<false>(callFrame, stackFrame.args[1].jsValue(), stackFrame.args[0].jsValue()));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(stackFrame.args[0].jsValue(), stackFrame.args[1].jsValue()));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_greatereq)
@@ -2664,7 +2670,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_greatereq)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsBoolean(jsLessEq<false>(callFrame, stackFrame.args[1].jsValue(), stackFrame.args[0].jsValue()));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(stackFrame.args[0].jsValue(), stackFrame.args[1].jsValue()));
 }
 
 DEFINE_STUB_FUNCTION(void*, op_load_varargs)
@@ -2695,7 +2701,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_negate)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber(-src.toNumber(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, src.securityLabel());
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_base)
@@ -2782,7 +2788,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_div)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber(src1.toNumber(callFrame) / src2.toNumber(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_pre_dec)
@@ -2794,7 +2800,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_pre_dec)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber(v.toNumber(callFrame) - 1);
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, v.securityLabel());
 }
 
 DEFINE_STUB_FUNCTION(int, op_jless)
@@ -2859,7 +2865,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_not)
 
     JSValue result = jsBoolean(!src.toBoolean(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, src.securityLabel());
 }
 
 DEFINE_STUB_FUNCTION(int, op_jtrue)
@@ -2886,31 +2892,24 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_post_inc)
     double number = v.toNumber(callFrame);
     CHECK_FOR_EXCEPTION_AT_END();
 
-    callFrame->registers()[stackFrame.args[1].int32()] = jsNumber(number + 1);
-    return JSValue::encode(jsNumber(number));
+    callFrame->registers()[stackFrame.args[1].int32()] = JSValue::encode(jsNumber(number + 1), callFrame, v.securityLabel());
+    return JSValue::encode(jsNumber(number), callFrame, v.securityLabel());
 }
-
-DEFINE_STUB_FUNCTION(int, op_eq)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue src1 = stackFrame.args[0].jsValue();
-    JSValue src2 = stackFrame.args[1].jsValue();
-
-#if USE(JSVALUE32_64)
-    start:
+    
+static inline bool opEqInline64(JSValue src1, JSValue src2, JITStackFrame& stackFrame) {
+start:
     if (src2.isUndefined()) {
         return src1.isNull() || 
-               (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
-               || src1.isUndefined();
+        (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
+        || src1.isUndefined();
     }
     
     if (src2.isNull()) {
         return src1.isUndefined() || 
-               (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
-               || src1.isNull();
+        (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
+        || src1.isNull();
     }
-
+    
     if (src1.isInt32()) {
         if (src2.isDouble())
             return src1.asInt32() == src2.asDouble();
@@ -2918,7 +2917,7 @@ DEFINE_STUB_FUNCTION(int, op_eq)
         CHECK_FOR_EXCEPTION();
         return src1.asInt32() == d;
     }
-
+    
     if (src1.isDouble()) {
         if (src2.isInt32())
             return src1.asDouble() == src2.asInt32();
@@ -2926,7 +2925,7 @@ DEFINE_STUB_FUNCTION(int, op_eq)
         CHECK_FOR_EXCEPTION();
         return src1.asDouble() == d;
     }
-
+    
     if (src1.isTrue()) {
         if (src2.isFalse())
             return false;
@@ -2934,7 +2933,7 @@ DEFINE_STUB_FUNCTION(int, op_eq)
         CHECK_FOR_EXCEPTION();
         return d == 1.0;
     }
-
+    
     if (src1.isFalse()) {
         if (src2.isTrue())
             return false;
@@ -2948,43 +2947,69 @@ DEFINE_STUB_FUNCTION(int, op_eq)
     
     if (src1.isNull())
         return src2.isCell() && src2.asCell()->structure()->typeInfo().masqueradesAsUndefined();
-
+    
     JSCell* cell1 = src1.asCell();
-
+    
     if (cell1->isString()) {
         if (src2.isInt32())
             return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == src2.asInt32();
-            
+        
         if (src2.isDouble())
             return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == src2.asDouble();
-
+        
         if (src2.isTrue())
             return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == 1.0;
-
+        
         if (src2.isFalse())
             return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == 0.0;
-
+        
         JSCell* cell2 = src2.asCell();
         if (cell2->isString())
             return jsCast<JSString*>(cell1)->value(stackFrame.callFrame) == jsCast<JSString*>(cell2)->value(stackFrame.callFrame);
-
+        
         src2 = asObject(cell2)->toPrimitive(stackFrame.callFrame);
         CHECK_FOR_EXCEPTION();
         goto start;
     }
-
+    
     if (src2.isObject())
         return asObject(cell1) == asObject(src2);
     src1 = asObject(cell1)->toPrimitive(stackFrame.callFrame);
     CHECK_FOR_EXCEPTION();
     goto start;
-    
-#else // USE(JSVALUE32_64)
+}
+
+DEFINE_STUB_FUNCTION(EncodedJSValue, op_eq)
+{
+    STUB_INIT_STACK_FRAME(stackFrame);
+
+    JSValue src1 = stackFrame.args[0].jsValue();
+    JSValue src2 = stackFrame.args[1].jsValue();
+
     CallFrame* callFrame = stackFrame.callFrame;
-    
+#if USE(JSVALUE32_64)
+    return JSValue::encode(jsBoolean(opEqInline64(src1, src2, stackFrame)), callFrame, labelFor(src1, src2));
+#else // USE(JSVALUE32_64)
     bool result = JSValue::equalSlowCaseInline(callFrame, src1, src2);
     CHECK_FOR_EXCEPTION_AT_END();
-    return result;
+    return JSValue::encode(jsBoolean(result), callFrame, labelFor(src1, src2));;
+#endif // USE(JSVALUE32_64)
+}
+    
+DEFINE_STUB_FUNCTION(EncodedJSValue, op_neq)
+{
+    STUB_INIT_STACK_FRAME(stackFrame);
+    
+    JSValue src1 = stackFrame.args[0].jsValue();
+    JSValue src2 = stackFrame.args[1].jsValue();
+    
+    CallFrame* callFrame = stackFrame.callFrame;
+#if USE(JSVALUE32_64)
+    return JSValue::encode(jsBoolean(!opEqInline64(src1, src2, stackFrame)), callFrame, labelFor(src1, src2));
+#else // USE(JSVALUE32_64)
+    bool result = JSValue::equalSlowCaseInline(callFrame, src1, src2);
+    CHECK_FOR_EXCEPTION_AT_END();
+    return JSValue::encode(jsBoolean(!result), callFrame, labelFor(src1, src2));;
 #endif // USE(JSVALUE32_64)
 }
 
@@ -3016,7 +3041,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_lshift)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber((val.toInt32(callFrame)) << (shift.toUInt32(callFrame) & 0x1f));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(val, shift));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_bitand)
@@ -3030,7 +3055,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_bitand)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber(src1.toInt32(callFrame) & src2.toInt32(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_rshift)
@@ -3044,7 +3069,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_rshift)
     JSValue result = jsNumber((val.toInt32(callFrame)) >> (shift.toUInt32(callFrame) & 0x1f));
 
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(val, shift));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_with_base)
@@ -3102,7 +3127,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_mod)
     double d = dividendValue.toNumber(callFrame);
     JSValue result = jsNumber(fmod(d, divisorValue.toNumber(callFrame)));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(dividendValue, divisorValue));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_post_dec)
@@ -3116,8 +3141,8 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_post_dec)
     double number = v.toNumber(callFrame);
     CHECK_FOR_EXCEPTION_AT_END();
 
-    callFrame->registers()[stackFrame.args[1].int32()] = jsNumber(number - 1);
-    return JSValue::encode(jsNumber(number));
+    callFrame->registers()[stackFrame.args[1].int32()] = JSValue::encode(jsNumber(number - 1), callFrame, v.securityLabel());
+    return JSValue::encode(jsNumber(number), callFrame, v.securityLabel());
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_urshift)
@@ -3130,7 +3155,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_urshift)
     CallFrame* callFrame = stackFrame.callFrame;
     JSValue result = jsNumber((val.toUInt32(callFrame)) >> (shift.toUInt32(callFrame) & 0x1f));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(val, shift));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_bitxor)
@@ -3144,7 +3169,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_bitxor)
 
     JSValue result = jsNumber(src1.toInt32(callFrame) ^ src2.toInt32(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(JSObject*, op_new_regexp)
@@ -3173,7 +3198,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_bitor)
 
     JSValue result = jsNumber(src1.toInt32(callFrame) | src2.toInt32(callFrame));
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
+    return JSValue::encode(result, callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_eval)
@@ -3277,9 +3302,10 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_stricteq)
     JSValue src1 = stackFrame.args[0].jsValue();
     JSValue src2 = stackFrame.args[1].jsValue();
     
+    CallFrame* callFrame = stackFrame.callFrame;
     bool result = JSValue::strictEqual(stackFrame.callFrame, src1, src2);
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(jsBoolean(result));
+    return JSValue::encode(jsBoolean(result), callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_to_primitive)
@@ -3305,9 +3331,10 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_nstricteq)
     JSValue src1 = stackFrame.args[0].jsValue();
     JSValue src2 = stackFrame.args[1].jsValue();
 
+    CallFrame* callFrame = stackFrame.callFrame;
     bool result = !JSValue::strictEqual(stackFrame.callFrame, src1, src2);
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(jsBoolean(result));
+    return JSValue::encode(jsBoolean(result), callFrame, labelFor(src1, src2));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_to_jsnumber)
@@ -3319,7 +3346,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_to_jsnumber)
 
     double number = src.toNumber(callFrame);
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(jsNumber(number));
+    return JSValue::encode(jsNumber(number), callFrame, src.securityLabel());
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_in)

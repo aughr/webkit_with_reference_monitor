@@ -89,6 +89,7 @@ namespace JSC {
         Structure* structure() const;
         void setStructure(JSGlobalData&, Structure*);
         void clearStructure() { m_structure.clear(); }
+        void clearLabel() { m_label.clear(); }
 
         // Extracting the value.
         JS_EXPORT_PRIVATE bool getString(ExecState* exec, UString&) const;
@@ -133,6 +134,11 @@ namespace JSC {
         static ptrdiff_t structureOffset()
         {
             return OBJECT_OFFSETOF(JSCell, m_structure);
+        }
+        
+        static ptrdiff_t labelOffset()
+        {
+            return OBJECT_OFFSETOF(JSCell, m_label);
         }
 
         static ptrdiff_t classInfoOffset()
@@ -190,6 +196,7 @@ namespace JSC {
         UNUSED_PARAM(globalData);
 #endif
         ASSERT(m_structure);
+        ASSERT(!m_label);
     }
 
     inline Structure* JSCell::structure() const
@@ -349,6 +356,7 @@ namespace JSC {
             result = static_cast<JSCell*>(heap.allocateWithoutDestructor(sizeof(T)));
         }
         result->clearStructure();
+        result->clearLabel();
         return result;
     }
     
