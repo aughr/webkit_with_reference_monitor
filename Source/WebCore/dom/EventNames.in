@@ -44,3 +44,4 @@ DeviceOrientationEvent conditional=DEVICE_ORIENTATION
 OrientationEvent interfaceName=Event, conditional=ORIENTATION_EVENTS
 MediaKeyEvent conditional=ENCRYPTED_MEDIA
 TrackEvent conditional=VIDEO_TRACK
+SecurityEvent

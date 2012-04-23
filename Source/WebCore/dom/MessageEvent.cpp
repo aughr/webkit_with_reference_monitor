@@ -135,19 +135,6 @@ void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bo
     m_source = source;
     m_ports = ports;
 }
-    
-void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, SecurityLabel data, const String& origin, DOMWindow* source)
-{
-    if (dispatched())
-        return;
-
-    initEvent(type, canBubble, cancelable);
-
-    m_dataType = DataTypeLabel;
-    m_dataAsLabel = data;
-    m_origin = origin;
-    m_source = source;
-}
 
 // FIXME: Remove this when we have custom ObjC binding support.
 SerializedScriptValue* MessageEvent::data() const

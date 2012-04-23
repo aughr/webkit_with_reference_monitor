@@ -39,7 +39,6 @@
 #include "JSMessagePortCustom.h"
 #include "MessageEvent.h"
 #include <runtime/JSArray.h>
-#include <runtime/SecurityLabelObject.h>
 
 using namespace JSC;
 
@@ -81,10 +80,6 @@ JSValue JSMessageEvent::data(ExecState* exec) const
 
     case MessageEvent::DataTypeArrayBuffer:
         result = toJS(exec, globalObject(), event->dataAsArrayBuffer());
-        break;
-            
-    case MessageEvent::DataTypeLabel:
-        result = constructSecurityLabel(exec, globalObject(), event->dataAsLabel());
         break;
     }
 

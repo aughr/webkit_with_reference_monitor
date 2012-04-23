@@ -45,7 +45,7 @@
 #include "JSDocument.h"
 #include "JSEvent.h"
 #include "JSEventListener.h"
-#include "MessageEvent.h"
+#include "SecurityEvent.h"
 #include "XMLHttpRequest.h"
 #include <runtime/JSObject.h>
 #include <runtime/Error.h>
@@ -121,8 +121,7 @@ JSValue JSXMLHttpRequest::send(ExecState* exec)
     if (impl()->scriptExecutionContext()->isDocument()) {
         DOMWindow* window = activeDOMWindow(exec);
         if (window) {
-            RefPtr<MessageEvent> event = MessageEvent::create();
-            event->initMessageEvent(eventNames().xmlhttpsendEvent, false, true, val.toString(exec)->securityLabel(), impl()->url(), window);
+            RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().xmlhttpsendEvent, val.toString(exec)->securityLabel(), "", impl()->url(), window);
             window->dispatchEvent(event);
             if (event->defaultPrevented()) {
                 reportException(exec, jsString(exec, requestDenied));
