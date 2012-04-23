@@ -84,6 +84,7 @@ public:
 
     void initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, const ScriptValue& data, const String& origin, const String& lastEventId, DOMWindow* source, PassOwnPtr<MessagePortArray>);
     void initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<SerializedScriptValue> data, const String& origin, const String& lastEventId, DOMWindow* source, PassOwnPtr<MessagePortArray>);
+    void initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, SecurityLabel data, const String& origin, DOMWindow* source);
 
     const String& origin() const { return m_origin; }
     const String& lastEventId() const { return m_lastEventId; }
@@ -104,7 +105,8 @@ public:
         DataTypeSerializedScriptValue,
         DataTypeString,
         DataTypeBlob,
-        DataTypeArrayBuffer
+        DataTypeArrayBuffer,
+        DataTypeLabel
     };
     DataType dataType() const { return m_dataType; }
     ScriptValue dataAsScriptValue() const { ASSERT(m_dataType == DataTypeScriptValue); return m_dataAsScriptValue; }
@@ -112,6 +114,7 @@ public:
     String dataAsString() const { ASSERT(m_dataType == DataTypeString); return m_dataAsString; }
     Blob* dataAsBlob() const { ASSERT(m_dataType == DataTypeBlob); return m_dataAsBlob.get(); }
     ArrayBuffer* dataAsArrayBuffer() const { ASSERT(m_dataType == DataTypeArrayBuffer); return m_dataAsArrayBuffer.get(); }
+    SecurityLabel dataAsLabel() const { ASSERT(m_dataType == DataTypeLabel); return m_dataAsLabel; }
 
 private:
     MessageEvent();
@@ -129,6 +132,7 @@ private:
     String m_dataAsString;
     RefPtr<Blob> m_dataAsBlob;
     RefPtr<ArrayBuffer> m_dataAsArrayBuffer;
+    SecurityLabel m_dataAsLabel;
     String m_origin;
     String m_lastEventId;
     RefPtr<DOMWindow> m_source;

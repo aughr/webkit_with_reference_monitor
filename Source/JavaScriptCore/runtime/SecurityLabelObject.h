@@ -71,8 +71,8 @@ namespace JSC {
         WTF::SecurityLabel m_label;
     };
     
-    SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*);
-    SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*, SecurityLabel);
+    JS_EXPORT_PRIVATE SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*);
+    JS_EXPORT_PRIVATE SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*, SecurityLabel);
     
     inline bool SecurityLabelObject::isNull() const {
         return m_label.isNull();
