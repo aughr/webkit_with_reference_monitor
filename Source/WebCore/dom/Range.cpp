@@ -1111,6 +1111,23 @@ String Range::text() const
     return plainText(this);
 }
 
+SecurityLabel Range::securityLabel(ExceptionCode& ec) const
+{
+    if (!m_start.container()) {
+        ec = INVALID_STATE_ERR;
+        return SecurityLabel();
+    }
+
+    SecurityLabel label;
+
+    Node* pastLast = pastLastNode();
+    for (Node* n = firstNode(); n != pastLast; n = n->traverseNextNode()) {
+        label.merge(n->securityLabel());
+    }
+
+    return label;
+}
+
 static inline void removeElementPreservingChildren(PassRefPtr<DocumentFragment> fragment, HTMLElement* element)
 {
     ExceptionCode ignoredExceptionCode;

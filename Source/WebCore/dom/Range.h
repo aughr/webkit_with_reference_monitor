@@ -88,6 +88,8 @@ public:
 
     String toHTML() const;
     String text() const;
+    
+    SecurityLabel securityLabel(ExceptionCode& = ASSERT_NO_EXCEPTION) const;
 
     PassRefPtr<DocumentFragment> createContextualFragment(const String& html, ExceptionCode&, FragmentScriptingPermission = FragmentScriptingAllowed);
     static PassRefPtr<DocumentFragment> createDocumentFragmentForElement(const String& markup, Element*,  FragmentScriptingPermission = FragmentScriptingAllowed);

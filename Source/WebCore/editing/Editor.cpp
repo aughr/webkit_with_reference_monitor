@@ -75,6 +75,7 @@
 #include "RenderTextControl.h"
 #include "RenderedPosition.h"
 #include "ReplaceSelectionCommand.h"
+#include "SecurityEvent.h"
 #include "Settings.h"
 #include "SimplifyMarkupCommand.h"
 #include "Sound.h"
@@ -652,6 +653,18 @@ bool Editor::dispatchCPPEvent(const AtomicString &eventType, ClipboardAccessPoli
     RefPtr<Clipboard> clipboard = newGeneralClipboard(policy, m_frame);
 
     ExceptionCode ec = 0;
+    
+    RefPtr<Range> range = selectedRange();
+    if (range) {
+        SecurityLabel label = range->securityLabel();
+        if (HTMLTextFormControlElement* textFormControlOfSelectionStart = enclosingTextFormControl(m_frame->selection()->start()))
+            label.merge(textFormControlOfSelectionStart->securityLabel());
+        RefPtr<SecurityEvent> securityEvt = SecurityEvent::create("check" + eventType, label, "", "", m_frame->existingDOMWindow());
+        m_frame->document()->dispatchEvent(securityEvt, ec);
+        if (securityEvt->defaultPrevented())
+            return false;
+    }
+
     RefPtr<Event> evt = ClipboardEvent::create(eventType, true, true, clipboard);
     target->dispatchEvent(evt, ec);
     bool noDefaultProcessing = evt->defaultPrevented();
