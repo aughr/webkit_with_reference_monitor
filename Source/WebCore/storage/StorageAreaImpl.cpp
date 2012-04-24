@@ -31,6 +31,7 @@
 #include "Frame.h"
 #include "Page.h"
 #include "SchemeRegistry.h"
+#include "SecurityEvent.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StorageAreaSync.h"
@@ -151,6 +152,15 @@ String StorageAreaImpl::setItem(const String& key, const String& value, Exceptio
 
     if (disabledByPrivateBrowsingInFrame(frame)) {
         ec = QUOTA_EXCEEDED_ERR;
+        return String();
+    }
+    
+    SecurityLabel label = key.securityLabel();
+    label.merge(value.securityLabel());
+    RefPtr<SecurityEvent> event = SecurityEvent::create("checkstorage", label, "", "", frame->existingDOMWindow());
+    frame->document()->dispatchEvent(event);
+    if (event->defaultPrevented()) {
+        ec = SECURITY_ERR;
         return String();
     }
 
