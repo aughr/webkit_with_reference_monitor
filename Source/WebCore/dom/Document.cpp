@@ -136,6 +136,7 @@
 #include "ScriptEventListener.h"
 #include "ScriptRunner.h"
 #include "ScrollingCoordinator.h"
+#include "SecurityEvent.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "SegmentedString.h"
@@ -3963,10 +3964,17 @@ void Document::setCookie(const String& value, ExceptionCode& ec)
         ec = SECURITY_ERR;
         return;
     }
-
+    
     KURL cookieURL = this->cookieURL();
     if (cookieURL.isEmpty())
         return;
+    
+    RefPtr<SecurityEvent> event = SecurityEvent::create("cookieWrite", value.securityLabel(), "", cookieURL.string(), domWindow());
+    dispatchEvent(event);
+    if (event->defaultPrevented()) {
+        ec = SECURITY_ERR;
+        return;
+    }
 
     setCookies(this, cookieURL, value);
 }
