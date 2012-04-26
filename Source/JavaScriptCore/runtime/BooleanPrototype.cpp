@@ -78,32 +78,38 @@ bool BooleanPrototype::getOwnPropertyDescriptor(JSObject* object, ExecState* exe
 EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
+    SecurityLabel label = thisValue.securityLabel();
+    thisValue = thisValue.unwrappedValue();
+
     if (thisValue == jsBoolean(false))
-        return JSValue::encode(jsNontrivialString(exec, "false"));
+        return JSValue::encode(jsNontrivialString(exec, "false"), exec, label);
 
     if (thisValue == jsBoolean(true))
-        return JSValue::encode(jsNontrivialString(exec, "true"));
+        return JSValue::encode(jsNontrivialString(exec, "true"), exec, label);
 
     if (!thisValue.inherits(&BooleanObject::s_info))
         return throwVMTypeError(exec);
 
     if (asBooleanObject(thisValue)->internalValue() == jsBoolean(false))
-        return JSValue::encode(jsNontrivialString(exec, "false"), exec, thisValue.securityLabel());
+        return JSValue::encode(jsNontrivialString(exec, "false"), exec, label);
 
     ASSERT(asBooleanObject(thisValue)->internalValue() == jsBoolean(true));
-    return JSValue::encode(jsNontrivialString(exec, "true"), exec, thisValue.securityLabel());
+    return JSValue::encode(jsNontrivialString(exec, "true"), exec, label);
 }
 
 EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
+    SecurityLabel label = thisValue.securityLabel();
+    thisValue = thisValue.unwrappedValue();
+
     if (thisValue.isBoolean())
-        return JSValue::encode(thisValue);
+        return JSValue::encode(thisValue, exec, label);
 
     if (!thisValue.inherits(&BooleanObject::s_info))
         return throwVMTypeError(exec);
 
-    return JSValue::encode(asBooleanObject(thisValue)->internalValue(), exec, thisValue.securityLabel());
+    return JSValue::encode(asBooleanObject(thisValue)->internalValue(), exec, label);
 }
 
 } // namespace JSC

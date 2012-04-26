@@ -274,6 +274,8 @@ JSString* JSValue::toStringSlowCase(ExecState* exec) const
         return globalData.smallStrings.nullString(&globalData);
     if (isUndefined())
         return globalData.smallStrings.undefinedString(&globalData);
+    if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(asCell())->toString(exec);
 
     ASSERT(isCell());
     JSValue value = asCell()->toPrimitive(exec, PreferString);

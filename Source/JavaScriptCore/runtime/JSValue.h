@@ -183,6 +183,7 @@ namespace JSC {
         bool isNumber() const;
         bool isString() const;
         bool isPrimitive() const;
+        bool isLabeledValue() const;
         bool isGetterSetter() const;
         bool isObject() const;
         bool inherits(const ClassInfo*) const;
@@ -194,10 +195,13 @@ namespace JSC {
 
         // Extracting integer values.
         bool getUInt32(uint32_t&) const;
+
+        // Extracting the wrapped value.
+        JSValue unwrappedValue() const;
         
         // Basic conversions.
         JSValue toPrimitive(ExecState*, PreferredPrimitiveType = NoPreference) const;
-        bool getPrimitiveNumber(ExecState*, double& number, JSValue&);
+        bool getPrimitiveNumber(ExecState*, double& number, JSValue&) const;
 
         bool toBoolean(ExecState*) const;
 

@@ -818,6 +818,8 @@ inline JSValue JSValue::get(ExecState* exec, const Identifier& propertyName, Pro
         return slot.getValue(exec, propertyName);
     }
     JSCell* cell = asCell();
+    if (cell->isLabeledValue())
+        return static_cast<const JSLabeledValue*>(cell)->value().get(exec, propertyName, slot);
     while (true) {
         if (cell->fastGetOwnPropertySlot(exec, propertyName, slot))
             return slot.getValue(exec, propertyName);
@@ -880,8 +882,10 @@ inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label)
     if (isString()) {
         const JSString *string = static_cast<const JSString*>(asCell());
         cell = JSString::create(exec->globalData(), string->value(exec).impl());
+    } else if (isCell()) {
+        cell = asCell();
     } else {
-        cell = toObject(exec);
+        cell = JSLabeledValue::create(exec, label, *this);
     }
     cell->mergeSecurityLabel(exec, label);
     return JSValue(cell);

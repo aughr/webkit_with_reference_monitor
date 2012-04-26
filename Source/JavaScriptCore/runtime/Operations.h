@@ -222,6 +222,9 @@ namespace JSC {
     template<bool leftFirst>
     ALWAYS_INLINE bool jsLess(CallFrame* callFrame, JSValue v1, JSValue v2)
     {
+        v1 = v1.unwrappedValue();
+        v2 = v2.unwrappedValue();
+
         if (v1.isInt32() && v2.isInt32())
             return v1.asInt32() < v2.asInt32();
 
@@ -256,6 +259,9 @@ namespace JSC {
     template<bool leftFirst>
     ALWAYS_INLINE bool jsLessEq(CallFrame* callFrame, JSValue v1, JSValue v2)
     {
+        v1 = v1.unwrappedValue();
+        v2 = v2.unwrappedValue();
+
         if (v1.isInt32() && v2.isInt32())
             return v1.asInt32() <= v2.asInt32();
 

@@ -337,6 +337,8 @@
 		2600B5A7152BAAA70091EE5F /* JSStringJoiner.h in Headers */ = {isa = PBXBuildFile; fileRef = 2600B5A5152BAAA70091EE5F /* JSStringJoiner.h */; };
 		41359CF30FDD89AD00206180 /* DateConversion.h in Headers */ = {isa = PBXBuildFile; fileRef = D21202290AD4310C00ED79B6 /* DateConversion.h */; };
 		451539B912DC994500EF7AC4 /* Yarr.h in Headers */ = {isa = PBXBuildFile; fileRef = 451539B812DC994500EF7AC4 /* Yarr.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		517FC9CB1548C80300A8B708 /* JSLabeledValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 517FC9CA1548C80300A8B708 /* JSLabeledValue.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		517FC9CE1548CEAF00A8B708 /* JSLabeledValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 517FC9CD1548CEAF00A8B708 /* JSLabeledValue.cpp */; };
 		51BD33371535D8B7009FF4BA /* SecurityLabelPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD33361535D8B6009FF4BA /* SecurityLabelPrototype.h */; };
 		51BD33391535D90B009FF4BA /* SecurityLabelPrototype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51BD33381535D90B009FF4BA /* SecurityLabelPrototype.cpp */; };
 		51BD333B1535D9C8009FF4BA /* SecurityLabelObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD333A1535D9C7009FF4BA /* SecurityLabelObject.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1895,6 +1897,8 @@
 				BC756FC70E2031B200DE7D12 /* JSGlobalObjectFunctions.h */,
 				BC3C4C9F1458F5450025FB62 /* JSGlobalThis.cpp */,
 				8604F503143CE1C100B295F5 /* JSGlobalThis.h */,
+				517FC9CD1548CEAF00A8B708 /* JSLabeledValue.cpp */,
+				517FC9CA1548C80300A8B708 /* JSLabeledValue.h */,
 				65EA4C99092AF9E20093D800 /* JSLock.cpp */,
 				65EA4C9A092AF9E20093D800 /* JSLock.h */,
 				A72700780DAC605600E548D7 /* JSNotAnObject.cpp */,
@@ -2611,6 +2615,7 @@
 				51BD333B1535D9C8009FF4BA /* SecurityLabelObject.h in Headers */,
 				0F1E3A461534CBAF000F9456 /* DFGArgumentPosition.h in Headers */,
 				0F1E3A471534CBB9000F9456 /* DFGDoubleFormatState.h in Headers */,
+				517FC9CB1548C80300A8B708 /* JSLabeledValue.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3179,6 +3184,7 @@
 				51F8283315349251006118A6 /* SecurityTagConstructor.cpp in Sources */,
 				51BD33391535D90B009FF4BA /* SecurityLabelPrototype.cpp in Sources */,
 				51BD333D1535DA2C009FF4BA /* SecurityLabelObject.cpp in Sources */,
+				517FC9CE1548CEAF00A8B708 /* JSLabeledValue.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

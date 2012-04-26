@@ -43,6 +43,7 @@
 #include "JSByteArray.h"
 #include "JSClassRef.h"
 #include "JSFunction.h"
+#include "JSLabeledValue.h"
 #include "JSLock.h"
 #include "JSNotAnObject.h"
 #include "JSPropertyNameIterator.h"
@@ -159,6 +160,7 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, ThreadStackType thread
     staticScopeStructure.set(*this, JSStaticScopeObject::createStructure(*this, 0, jsNull()));
     strictEvalActivationStructure.set(*this, StrictEvalActivation::createStructure(*this, 0, jsNull()));
     stringStructure.set(*this, JSString::createStructure(*this, 0, jsNull()));
+    labeledValueStructure.set(*this, JSLabeledValue::createStructure(*this, 0, jsNull()));
     notAnObjectStructure.set(*this, JSNotAnObject::createStructure(*this, 0, jsNull()));
     propertyNameIteratorStructure.set(*this, JSPropertyNameIterator::createStructure(*this, 0, jsNull()));
     getterSetterStructure.set(*this, GetterSetter::createStructure(*this, 0, jsNull()));

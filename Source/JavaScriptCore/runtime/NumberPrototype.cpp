@@ -98,6 +98,8 @@ bool NumberPrototype::getOwnPropertyDescriptor(JSObject* object, ExecState* exec
 
 static ALWAYS_INLINE bool toThisNumber(JSValue thisValue, double& x)
 {
+    thisValue = thisValue.unwrappedValue();
+
     if (thisValue.isInt32()) {
         x = thisValue.asInt32();
         return true;

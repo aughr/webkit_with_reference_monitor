@@ -1099,29 +1099,41 @@ DFGHandlerEncoded DFG_OPERATION lookupExceptionHandlerInStub(ExecState* exec, St
     return dfgHandlerEncoded(exec, catchRoutine);
 }
 
-double DFG_OPERATION dfgConvertJSValueToNumber(ExecState* exec, EncodedJSValue value)
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToNumber(ExecState* exec, EncodedJSValue value)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
     
-    return JSValue::decode(value).toNumber(exec);
+    JSValue decoded = JSValue::decode(value);
+    return JSValue::encode(jsNumber(decoded.toNumber(exec)), exec, decoded.securityLabel());
 }
 
-size_t DFG_OPERATION dfgConvertJSValueToInt32(ExecState* exec, EncodedJSValue value)
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToInt32(ExecState* exec, EncodedJSValue value)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
     
     // toInt32/toUInt32 return the same value; we want the value zero extended to fill the register.
-    return JSValue::decode(value).toUInt32(exec);
+    JSValue decoded = JSValue::decode(value);
+    return JSValue::encode(jsNumber(decoded.toUInt32(exec)), exec, decoded.securityLabel());
 }
 
-size_t DFG_OPERATION dfgConvertJSValueToBoolean(ExecState* exec, EncodedJSValue encodedOp)
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToBoolean(ExecState* exec, EncodedJSValue encodedOp)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
     
-    return JSValue::decode(encodedOp).toBoolean(exec);
+    JSValue decoded = JSValue::decode(encodedOp);
+    return JSValue::encode(jsNumber(decoded.toBoolean(exec)), exec, decoded.securityLabel());
+}
+
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToNotBoolean(ExecState* exec, EncodedJSValue encodedOp)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+    
+    JSValue decoded = JSValue::decode(encodedOp);
+    return JSValue::encode(jsBoolean(!decoded.toBoolean(exec)), exec, decoded.securityLabel());
 }
 
 #if DFG_ENABLE(VERBOSE_SPECULATION_FAILURE)

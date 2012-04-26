@@ -77,6 +77,7 @@ namespace JSC {
     public:
         // Querying the type.
         bool isString() const;
+        bool isLabeledValue() const;
         bool isObject() const;
         bool isGetterSetter() const;
         bool inherits(const ClassInfo*) const;
@@ -222,6 +223,11 @@ namespace JSC {
     {
         return isCell() && asCell()->isString();
     }
+    
+    inline bool JSValue::isLabeledValue() const
+    {
+        return isCell() && asCell()->isLabeledValue();
+    }
 
     inline bool JSValue::isPrimitive() const
     {
@@ -278,7 +284,7 @@ namespace JSC {
         return isCell() ? asCell()->toPrimitive(exec, preferredType) : asValue();
     }
 
-    inline bool JSValue::getPrimitiveNumber(ExecState* exec, double& number, JSValue& value)
+    inline bool JSValue::getPrimitiveNumber(ExecState* exec, double& number, JSValue& value) const
     {
         if (isInt32()) {
             number = asInt32();

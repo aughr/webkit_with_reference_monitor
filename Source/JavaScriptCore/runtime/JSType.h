@@ -31,6 +31,7 @@ enum JSType {
     NullType,
     StringType,
     LeafType,
+    LabeledType,
 
     // The CompoundType value must come before any JSType that may have children.
     CompoundType,

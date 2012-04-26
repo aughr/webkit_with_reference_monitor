@@ -381,6 +381,8 @@ void SpeculativeJIT::nonSpeculativeValueToNumber(Node& node)
     JITCompiler::Jump isInteger = m_jit.branchPtr(MacroAssembler::AboveOrEqual, jsValueGpr, GPRInfo::tagTypeNumberRegister);
     JITCompiler::Jump nonNumeric = m_jit.branchTestPtr(MacroAssembler::Zero, jsValueGpr, GPRInfo::tagTypeNumberRegister);
 
+    dataLog("spec jitting\n");
+
     // First, if we get here we have a double encoded as a JSValue
     m_jit.move(jsValueGpr, gpr);
     JITCompiler::Jump hasUnboxedDouble = m_jit.jump();
@@ -388,8 +390,7 @@ void SpeculativeJIT::nonSpeculativeValueToNumber(Node& node)
     // Next handle cells (& other JS immediates)
     nonNumeric.link(&m_jit);
     silentSpillAllRegisters(gpr);
-    callOperation(dfgConvertJSValueToNumber, FPRInfo::returnValueFPR, jsValueGpr);
-    boxDouble(FPRInfo::returnValueFPR, gpr);
+    callOperation(dfgConvertJSValueToNumber, gpr, jsValueGpr);
     silentFillAllRegisters(gpr);
     JITCompiler::Jump hasCalledToNumber = m_jit.jump();
     
@@ -1769,12 +1770,14 @@ void SpeculativeJIT::compileLogicalNot(Node& node)
     JITCompiler::Jump fastCase = m_jit.branchTestPtr(JITCompiler::Zero, resultGPR, TrustedImm32(static_cast<int32_t>(~1)));
     
     silentSpillAllRegisters(resultGPR);
-    callOperation(dfgConvertJSValueToBoolean, resultGPR, arg1GPR);
+    callOperation(dfgConvertJSValueToNotBoolean, resultGPR, arg1GPR);
     silentFillAllRegisters(resultGPR);
+    JITCompiler::Jump hasCalledToNotBoolean = m_jit.jump();
     
     fastCase.link(&m_jit);
     
     m_jit.xorPtr(TrustedImm32(static_cast<int32_t>(ValueTrue)), resultGPR);
+    hasCalledToNotBoolean.link(&m_jit);
     jsValueResult(resultGPR, m_compileIndex, DataFormatJSBoolean, UseChildrenCalledExplicitly);
 }
 

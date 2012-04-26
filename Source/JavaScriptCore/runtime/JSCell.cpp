@@ -24,6 +24,7 @@
 #include "JSCell.h"
 
 #include "JSFunction.h"
+#include "JSLabeledValue.h"
 #include "JSString.h"
 #include "JSObject.h"
 #include "NumberObject.h"
@@ -154,6 +155,8 @@ JSValue JSCell::toPrimitive(ExecState* exec, PreferredPrimitiveType preferredTyp
 {
     if (isString())
         return static_cast<const JSString*>(this)->toPrimitive(exec, preferredType);
+    if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(this)->toPrimitive(exec, preferredType);
     return static_cast<const JSObject*>(this)->toPrimitive(exec, preferredType);
 }
 
@@ -161,6 +164,8 @@ bool JSCell::getPrimitiveNumber(ExecState* exec, double& number, JSValue& value)
 {
     if (isString())
         return static_cast<const JSString*>(this)->getPrimitiveNumber(exec, number, value);
+    if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(this)->getPrimitiveNumber(exec, number, value);
     return static_cast<const JSObject*>(this)->getPrimitiveNumber(exec, number, value);
 }
 
@@ -168,6 +173,8 @@ double JSCell::toNumber(ExecState* exec) const
 { 
     if (isString())
         return static_cast<const JSString*>(this)->toNumber(exec);
+    if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(this)->toNumber(exec);
     return static_cast<const JSObject*>(this)->toNumber(exec);
 }
 
@@ -175,6 +182,8 @@ JSObject* JSCell::toObject(ExecState* exec, JSGlobalObject* globalObject) const
 {
     if (isString())
         return static_cast<const JSString*>(this)->toObject(exec, globalObject);
+    if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(this)->toObject(exec, globalObject);
     ASSERT(isObject());
     return jsCast<JSObject*>(const_cast<JSCell*>(this));
 }

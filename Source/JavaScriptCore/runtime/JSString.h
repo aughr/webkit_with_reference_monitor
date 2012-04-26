@@ -25,6 +25,7 @@
 #include "CallFrame.h"
 #include "CommonIdentifiers.h"
 #include "Identifier.h"
+#include "JSLabeledValue.h"
 #include "PropertyDescriptor.h"
 #include "PropertySlot.h"
 #include "Structure.h"
@@ -437,6 +438,8 @@ namespace JSC {
 
     inline bool JSCell::toBoolean(ExecState* exec) const
     {
+        if (isLabeledValue())
+            return static_cast<const JSLabeledValue*>(this)->toBoolean(exec);
         if (isString()) 
             return static_cast<const JSString*>(this)->toBoolean(exec);
         return !structure()->typeInfo().masqueradesAsUndefined();
@@ -484,6 +487,8 @@ namespace JSC {
             return globalData.propertyNames->nullKeyword.ustring();
         if (value.isUndefined())
             return globalData.propertyNames->undefinedKeyword.ustring();
+        if (value.isLabeledValue())
+            return static_cast<const JSLabeledValue*>(value.asCell())->value().toUString(exec);
         return value.toString(exec)->value(exec);
     }
 

@@ -23,6 +23,7 @@
 #include "Operations.h"
 
 #include "Error.h"
+#include "JSLabeledValue.h"
 #include "JSObject.h"
 #include "JSString.h"
 #include <math.h>
@@ -33,7 +34,7 @@ namespace JSC {
 
 bool JSValue::equalSlowCase(ExecState* exec, JSValue v1, JSValue v2)
 {
-    return equalSlowCaseInline(exec, v1, v2);
+    return equalSlowCaseInline(exec, v1.unwrappedValue(), v2.unwrappedValue());
 }
 
 bool JSValue::strictEqualSlowCase(ExecState* exec, JSValue v1, JSValue v2)
@@ -75,6 +76,10 @@ JSValue jsTypeStringForValue(CallFrame* callFrame, JSValue v)
         return globalData.smallStrings.booleanString(&globalData);
     if (v.isNumber())
         return globalData.smallStrings.numberString(&globalData);
+    if (v.isLabeledValue()) {
+        const JSLabeledValue* labeledValue = static_cast<const JSLabeledValue*>(v.asCell());
+        return jsTypeStringForValue(callFrame, labeledValue->value()).mergeSecurityLabel(callFrame, labeledValue->securityLabel());
+    }
     if (v.isString())
         return globalData.smallStrings.stringString(&globalData);
     if (v.isObject()) {
@@ -96,7 +101,7 @@ bool jsIsObjectType(JSValue v)
         return v.isNull();
 
     JSType type = v.asCell()->structure()->typeInfo().type();
-    if (type == NumberType || type == StringType)
+    if (type == NumberType || type == StringType || type == LabeledType)
         return false;
     if (type >= ObjectType) {
         if (asObject(v)->structure()->typeInfo().masqueradesAsUndefined())

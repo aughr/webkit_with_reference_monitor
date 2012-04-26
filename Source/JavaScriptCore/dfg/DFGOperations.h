@@ -203,10 +203,11 @@ DFGHandlerEncoded DFG_OPERATION lookupExceptionHandler(ExecState*, uint32_t);
 DFGHandlerEncoded DFG_OPERATION lookupExceptionHandlerInStub(ExecState*, StructureStubInfo*);
 
 // These operations implement the implicitly called ToInt32, ToNumber, and ToBoolean conversions from ES5.
-double DFG_OPERATION dfgConvertJSValueToNumber(ExecState*, EncodedJSValue);
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToNumber(ExecState*, EncodedJSValue);
 // This conversion returns an int32_t within a size_t such that the value is zero extended to fill the register.
-size_t DFG_OPERATION dfgConvertJSValueToInt32(ExecState*, EncodedJSValue);
-size_t DFG_OPERATION dfgConvertJSValueToBoolean(ExecState*, EncodedJSValue);
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToInt32(ExecState*, EncodedJSValue);
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToBoolean(ExecState*, EncodedJSValue);
+EncodedJSValue DFG_OPERATION dfgConvertJSValueToNotBoolean(ExecState*, EncodedJSValue);
 
 #if DFG_ENABLE(VERBOSE_SPECULATION_FAILURE)
 void DFG_OPERATION debugOperationPrintSpeculationFailure(ExecState*, void*);

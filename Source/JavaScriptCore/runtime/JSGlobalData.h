@@ -185,6 +185,7 @@ namespace JSC {
         Strong<Structure> staticScopeStructure;
         Strong<Structure> strictEvalActivationStructure;
         Strong<Structure> stringStructure;
+        Strong<Structure> labeledValueStructure;
         Strong<Structure> notAnObjectStructure;
         Strong<Structure> propertyNameIteratorStructure;
         Strong<Structure> getterSetterStructure;

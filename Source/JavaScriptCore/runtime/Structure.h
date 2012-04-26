@@ -338,6 +338,11 @@ namespace JSC {
         return m_structure->typeInfo().type() == StringType;
     }
 
+    inline bool JSCell::isLabeledValue() const
+    {
+        return m_structure->typeInfo().type() == LabeledType;
+    }
+
     inline bool JSCell::isGetterSetter() const
     {
         return m_structure->typeInfo().type() == GetterSetterType;
