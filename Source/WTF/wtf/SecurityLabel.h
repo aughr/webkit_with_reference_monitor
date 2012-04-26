@@ -74,8 +74,8 @@ namespace WTF {
 
         bool isNull() const { return m_impl == NULL; }
 
-        void add(const SecurityTag& tag);        
-        bool hasTag(const SecurityTag& tag) const;
+        WTF_EXPORT_PRIVATE void add(const SecurityTag& tag);        
+        WTF_EXPORT_PRIVATE bool hasTag(const SecurityTag& tag) const;
         WTF_EXPORT_PRIVATE void merge(const SecurityLabel& other);
     private:
         void duplicateOrInit();

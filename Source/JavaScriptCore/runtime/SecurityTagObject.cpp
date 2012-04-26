@@ -30,8 +30,9 @@ namespace JSC {
     
     const ClassInfo SecurityTagObject::s_info = { "SecurityTag", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagObject) };
     
-    SecurityTagObject::SecurityTagObject(JSGlobalData& globalData, Structure* structure)
+    SecurityTagObject::SecurityTagObject(JSGlobalData& globalData, Structure* structure, WTF::SecurityTag tag)
     : JSNonFinalObject(globalData, structure)
+    , m_tag(tag)
     {
     }
     
@@ -44,6 +45,12 @@ namespace JSC {
     SecurityTagObject* constructSecurityTag(ExecState* exec, JSGlobalObject* globalObject)
     {
         SecurityTagObject* object = SecurityTagObject::create(exec->globalData(), globalObject->securityTagStructure());
+        return object;
+    }
+
+    SecurityTagObject* constructSecurityTag(ExecState* exec, JSGlobalObject* globalObject, WTF::SecurityTag tag)
+    {
+        SecurityTagObject* object = SecurityTagObject::create(exec->globalData(), globalObject->securityTagStructure(), tag);
         return object;
     }
     

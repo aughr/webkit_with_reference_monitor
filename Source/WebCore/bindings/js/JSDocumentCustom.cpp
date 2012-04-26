@@ -42,6 +42,7 @@
 #include "SVGDocument.h"
 #endif
 
+#include <runtime/SecurityTagObject.h>
 #include <wtf/GetPtr.h>
 
 using namespace JSC;
@@ -120,4 +121,15 @@ JSValue JSDocument::createTouchList(ExecState* exec)
 }
 #endif
 
+JSValue JSDocument::securityTag(ExecState* exec) const
+{
+    if (JSValue cachedValue = m_securityTag.get())
+        return cachedValue;
+    
+    JSValue result = constructSecurityTag(exec, globalObject(), impl()->securityTag());;
+    
+    // Save the result so we don't have to deserialize the value again.
+    const_cast<JSDocument*>(this)->m_securityTag.set(exec->globalData(), this, result);
+    return result;
+}
 } // namespace WebCore

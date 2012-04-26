@@ -356,6 +356,10 @@ module core {
         readonly attribute [Conditional=PAGE_VISIBILITY_API] DOMString webkitVisibilityState;
         readonly attribute [Conditional=PAGE_VISIBILITY_API] boolean webkitHidden;
 
+#if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
+        // SecurityLabel stuff
+        readonly attribute [CachedAttribute, CustomGetter] DOMObject securityTag;
+#endif
     };
 
 }

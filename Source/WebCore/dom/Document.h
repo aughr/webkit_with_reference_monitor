@@ -1144,6 +1144,8 @@ public:
 
     IntSize viewportSize() const;
 
+    WTF::SecurityTag securityTag() const { return m_tag; }
+
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
 
@@ -1481,6 +1483,8 @@ private:
 
     Timer<Document> m_pendingTasksTimer;
     Vector<OwnPtr<Task> > m_pendingTasks;    
+
+    WTF::SecurityTag m_tag;
 };
 
 // Put these methods here, because they require the Document definition, but we really want to inline them.
@@ -1504,6 +1508,8 @@ inline Node::Node(Document* document, ConstructionType type, SecurityLabel label
     trackForDebugging();
 #endif
     InspectorCounters::incrementCounter(InspectorCounters::NodeCounter);
+    if (m_document)
+        m_label.merge(m_document->securityLabel());
 }
 
 Node* eventTargetNodeForDocument(Document*);

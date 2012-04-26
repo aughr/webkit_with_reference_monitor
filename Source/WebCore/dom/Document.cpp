@@ -545,6 +545,8 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
 
     static int docID = 0;
     m_docID = docID++;
+
+    m_label.add(m_tag);
     
     InspectorCounters::incrementCounter(InspectorCounters::DocumentCounter);
 }

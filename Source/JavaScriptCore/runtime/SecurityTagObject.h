@@ -20,26 +20,26 @@
 #ifndef SecurityTagObject_h
 #define SecurityTagObject_h
 
-#include "JSWrapperObject.h"
+#include "JSObject.h"
 
 namespace JSC {
     
     class SecurityTagObject : public JSNonFinalObject {
     protected:
-        SecurityTagObject(JSGlobalData&, Structure*);
+        SecurityTagObject(JSGlobalData&, Structure*, WTF::SecurityTag=WTF::SecurityTag());
         void finishCreation(JSGlobalData&);
         
     public:
         typedef JSNonFinalObject Base;
         
-        static SecurityTagObject* create(JSGlobalData& globalData, Structure* structure)
+        static SecurityTagObject* create(JSGlobalData& globalData, Structure* structure, WTF::SecurityTag tag=WTF::SecurityTag())
         {
-            SecurityTagObject* tag = new (NotNull, allocateCell<SecurityTagObject>(globalData.heap)) SecurityTagObject(globalData, structure);
-            tag->finishCreation(globalData);
-            return tag;
+            SecurityTagObject* tagObject = new (NotNull, allocateCell<SecurityTagObject>(globalData.heap)) SecurityTagObject(globalData, structure, tag);
+            tagObject->finishCreation(globalData);
+            return tagObject;
         }
         
-        static const ClassInfo s_info;
+        static JS_EXPORTDATA const ClassInfo s_info;
         
         static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
         {
@@ -51,7 +51,8 @@ namespace JSC {
         WTF::SecurityTag m_tag;
     };
     
-    SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*);
+    JS_EXPORT_PRIVATE SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*);
+    JS_EXPORT_PRIVATE SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*, WTF::SecurityTag);
     
     SecurityTagObject* asSecurityTagObject(JSValue);
     

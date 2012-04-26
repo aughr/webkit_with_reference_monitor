@@ -339,11 +339,11 @@
 		451539B912DC994500EF7AC4 /* Yarr.h in Headers */ = {isa = PBXBuildFile; fileRef = 451539B812DC994500EF7AC4 /* Yarr.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		51BD33371535D8B7009FF4BA /* SecurityLabelPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD33361535D8B6009FF4BA /* SecurityLabelPrototype.h */; };
 		51BD33391535D90B009FF4BA /* SecurityLabelPrototype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51BD33381535D90B009FF4BA /* SecurityLabelPrototype.cpp */; };
-		51BD333B1535D9C8009FF4BA /* SecurityLabelObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD333A1535D9C7009FF4BA /* SecurityLabelObject.h */; };
+		51BD333B1535D9C8009FF4BA /* SecurityLabelObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD333A1535D9C7009FF4BA /* SecurityLabelObject.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		51BD333D1535DA2C009FF4BA /* SecurityLabelObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51BD333C1535DA2C009FF4BA /* SecurityLabelObject.cpp */; };
 		51F8282515348B62006118A6 /* SecurityTagPrototype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F8282415348B62006118A6 /* SecurityTagPrototype.cpp */; };
 		51F8282B15348EC9006118A6 /* SecurityTagPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F8282A15348EC9006118A6 /* SecurityTagPrototype.h */; };
-		51F8282D15348F9A006118A6 /* SecurityTagObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F8282C15348F9A006118A6 /* SecurityTagObject.h */; };
+		51F8282D15348F9A006118A6 /* SecurityTagObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F8282C15348F9A006118A6 /* SecurityTagObject.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		51F8282F15349012006118A6 /* SecurityTagObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F8282E15349012006118A6 /* SecurityTagObject.cpp */; };
 		51F828311534917A006118A6 /* SecurityTagConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F828301534917A006118A6 /* SecurityTagConstructor.h */; };
 		51F8283315349251006118A6 /* SecurityTagConstructor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F8283215349251006118A6 /* SecurityTagConstructor.cpp */; };
@@ -985,6 +985,8 @@
 		449097EE0F8F81B50076A327 /* FeatureDefines.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = FeatureDefines.xcconfig; sourceTree = "<group>"; };
 		451539B812DC994500EF7AC4 /* Yarr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Yarr.h; path = yarr/Yarr.h; sourceTree = "<group>"; };
 		45E12D8806A49B0F00E9DF84 /* jsc.cpp */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.cpp.cpp; path = jsc.cpp; sourceTree = "<group>"; tabWidth = 4; };
+		517FC9CA1548C80300A8B708 /* JSLabeledValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSLabeledValue.h; sourceTree = "<group>"; };
+		517FC9CD1548CEAF00A8B708 /* JSLabeledValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSLabeledValue.cpp; sourceTree = "<group>"; };
 		51BD33361535D8B6009FF4BA /* SecurityLabelPrototype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityLabelPrototype.h; sourceTree = "<group>"; };
 		51BD33381535D90B009FF4BA /* SecurityLabelPrototype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityLabelPrototype.cpp; sourceTree = "<group>"; };
 		51BD333A1535D9C7009FF4BA /* SecurityLabelObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityLabelObject.h; sourceTree = "<group>"; };
