@@ -43,6 +43,7 @@
 #include "PlatformScreen.h"
 #include "QualifiedName.h"
 #include "ScriptExecutionContext.h"
+#include "SecurityEvent.h"
 #include "SecurityPolicy.h"
 #include "StringWithDirection.h"
 #include "Timer.h"
@@ -766,6 +767,8 @@ public:
     EventListener* getWindowAttributeEventListener(const AtomicString& eventType);
     void dispatchWindowEvent(PassRefPtr<Event>, PassRefPtr<EventTarget> = 0);
     void dispatchWindowLoadEvent();
+
+    bool dispatchSecurityEvent(PassRefPtr<SecurityEvent>);
 
     PassRefPtr<Event> createEvent(const String& eventType, ExceptionCode&);
 

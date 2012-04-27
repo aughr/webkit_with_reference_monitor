@@ -226,6 +226,7 @@ namespace WebCore {
     macro(webkitnetworkinfochange) \
     \
     macro(xmlhttpsend) \
+    macro(checkbeforeload) \
     \
 
 // end of DOM_EVENT_NAMES_FOR_EACH

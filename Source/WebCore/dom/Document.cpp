@@ -3854,6 +3854,12 @@ void Document::dispatchWindowLoadEvent()
     m_loadEventFinished = true;
 }
 
+bool Document::dispatchSecurityEvent(PassRefPtr<SecurityEvent> event)
+{
+    // FIXME: this needs to fire on all documents
+    return dispatchEvent(event);
+}
+
 void Document::enqueueWindowEvent(PassRefPtr<Event> event)
 {
     event->setTarget(domWindow());
@@ -3902,7 +3908,7 @@ void Document::addListenerTypeIfNeeded(const AtomicString& eventType)
         addListenerType(ANIMATIONITERATION_LISTENER);
     else if (eventType == eventNames().webkitTransitionEndEvent)
         addListenerType(TRANSITIONEND_LISTENER);
-    else if (eventType == eventNames().beforeloadEvent)
+    else if (eventType == eventNames().beforeloadEvent || eventType == eventNames().checkbeforeloadEvent)
         addListenerType(BEFORELOAD_LISTENER);
 #if ENABLE(TOUCH_EVENTS)
     else if (eventType == eventNames().touchstartEvent

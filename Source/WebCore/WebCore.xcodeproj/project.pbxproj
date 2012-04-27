@@ -1569,7 +1569,7 @@
 		51FB5504113E3E9100821176 /* JSCloseEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 51FB5502113E3E9100821176 /* JSCloseEvent.h */; };
 		51FB5505113E3E9100821176 /* JSCloseEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51FB5503113E3E9100821176 /* JSCloseEvent.cpp */; };
 		51FCAFB21545D4DF00005AC5 /* JSSecurityEventCustom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51FCAFB01545D4AD00005AC5 /* JSSecurityEventCustom.cpp */; };
-		51FCAFB31545D4EF00005AC5 /* SecurityEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 5148FCA21545CB6E000B973C /* SecurityEvent.h */; };
+		51FCAFB31545D4EF00005AC5 /* SecurityEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 5148FCA21545CB6E000B973C /* SecurityEvent.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		51FCAFB41545D4F200005AC5 /* SecurityEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5148FCA11545CB6E000B973C /* SecurityEvent.cpp */; };
 		521D46F611AEC98100514613 /* KillRingMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 521D46F511AEC98100514613 /* KillRingMac.mm */; };
 		521D46F811AEC9B100514613 /* KillRing.h in Headers */ = {isa = PBXBuildFile; fileRef = 521D46F711AEC9B100514613 /* KillRing.h */; };

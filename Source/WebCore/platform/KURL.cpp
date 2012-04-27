@@ -1391,8 +1391,11 @@ void KURL::parse(const char* url, const String* originalString)
     // it was already in a String, reuse it to avoid extra allocation.
     if (originalString && *originalString == buffer)
         m_string = *originalString;
-    else
+    else {
         m_string = String(buffer.data(), m_fragmentEnd);
+        if (originalString)
+            m_string.mergeSecurityLabel(originalString->securityLabel());
+    }
 
     m_isValid = true;
 }

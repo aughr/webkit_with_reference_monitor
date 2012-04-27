@@ -304,6 +304,17 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const KURL& url
         return 0;
     }
 
+    // fire checkbeforeload event to allow reference monitor to validate request
+    if (document()->hasListenerType(Document::BEFORELOAD_LISTENER)) {
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
+        if (!document()->dispatchSecurityEvent(securityEvent)) {
+            if (!forPreload)
+                FrameLoader::reportLocalLoadFailed(document()->frame(), url.string());
+            LOG(ResourceLoading, "CachedResourceLoader::requestResource URL was not allowed by checkbeforeload.");
+            return 0;
+        }
+    }
+
     // Some types of resources can be loaded only from the same origin.  Other
     // types of resources, like Images, Scripts, and CSS, can be loaded from
     // any URL.
