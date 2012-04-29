@@ -182,6 +182,9 @@ namespace JSC {
         const ClassInfo* m_classInfo;
         WriteBarrier<SecurityLabelObject> m_label;
         WriteBarrier<Structure> m_structure;
+#if USE(JSVALUE32_64)
+        void* m_blank;
+#endif
     };
 
     inline JSCell::JSCell(CreatingEarlyCellTag)

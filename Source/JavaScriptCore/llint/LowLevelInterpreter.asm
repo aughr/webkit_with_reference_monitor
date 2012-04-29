@@ -88,7 +88,7 @@ const HashFlags8BitBuffer = 64
 if JSVALUE64
     const JSFinalObjectSizeClassIndex = 2
 else
-    const JSFinalObjectSizeClassIndex = 3
+    const JSFinalObjectSizeClassIndex = 4
 end
 
 # This must match wtf/Vector.h

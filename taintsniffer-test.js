@@ -190,6 +190,11 @@ function runTests() {
   assertFunc(isTainted(eeee), true, "Equals Equals" , "eeee = a == 2");
   assertFunc(isTainted(eeee1), true, "Equals Equals ", "eeee1 = 2 == a");
 
+  var eeee_b = taint("foo") == "foo";
+  var eeee1_b = "bar" == taint("bar");
+  assertFunc(isTainted(eeee_b), true, "Equals Equals" , "eeee = a == 2");
+  assertFunc(isTainted(eeee1_b), true, "Equals Equals", "eeee1 = 2 == a");
+
   var eeee_a = taint("foo") === "foo";
   var eeee1_a = "bar" === taint("bar");
   assertFunc(isTainted(eeee_a), true, "Equals Equals Equals" , "eeee = a === 2");

@@ -422,7 +422,7 @@ extern "C" {
     JSPropertyNameIterator* JIT_STUB cti_op_get_pnames(STUB_ARGS_DECLARATION);
     EncodedJSValue JIT_STUB cti_op_eq(STUB_ARGS_DECLARATION);
     EncodedJSValue JIT_STUB cti_op_neq(STUB_ARGS_DECLARATION);
-    int JIT_STUB cti_op_eq_strings(STUB_ARGS_DECLARATION);
+    EncodedJSValue JIT_STUB cti_op_eq_strings(STUB_ARGS_DECLARATION);
     int JIT_STUB cti_op_jless(STUB_ARGS_DECLARATION);
     int JIT_STUB cti_op_jlesseq(STUB_ARGS_DECLARATION);
     int JIT_STUB cti_op_jgreater(STUB_ARGS_DECLARATION);

@@ -1002,7 +1002,7 @@ void JIT::emitSlow_op_eq(Instruction* currentInstruction, Vector<SlowCaseEntry>:
     unsigned op1 = currentInstruction[2].u.operand;
     unsigned op2 = currentInstruction[3].u.operand;
 
-    JumpList storeResult;
+    JumpList returnResult;
     JumpList genericCase;
 
     genericCase.append(getSlowCase(iter)); // tags not equal
@@ -1015,8 +1015,9 @@ void JIT::emitSlow_op_eq(Instruction* currentInstruction, Vector<SlowCaseEntry>:
     JITStubCall stubCallEqStrings(this, cti_op_eq_strings);
     stubCallEqStrings.addArgument(regT0);
     stubCallEqStrings.addArgument(regT2);
-    stubCallEqStrings.call();
-    storeResult.append(jump());
+    stubCallEqStrings.addArgument(TrustedImm32(0x0));
+    stubCallEqStrings.call(dst);
+    returnResult.append(jump());
 
     // Generic case.
     genericCase.append(getSlowCase(iter)); // doubles
@@ -1024,10 +1025,9 @@ void JIT::emitSlow_op_eq(Instruction* currentInstruction, Vector<SlowCaseEntry>:
     JITStubCall stubCallEq(this, cti_op_eq);
     stubCallEq.addArgument(op1);
     stubCallEq.addArgument(op2);
-    stubCallEq.call(regT0);
+    stubCallEq.call(dst);
 
-    storeResult.link(this);
-    emitStoreBool(dst, regT0);
+    returnResult.link(this);
 }
 
 void JIT::emit_op_neq(Instruction* currentInstruction)
@@ -1050,7 +1050,7 @@ void JIT::emitSlow_op_neq(Instruction* currentInstruction, Vector<SlowCaseEntry>
 {
     unsigned dst = currentInstruction[1].u.operand;
 
-    JumpList storeResult;
+    JumpList returnResult;
     JumpList genericCase;
 
     genericCase.append(getSlowCase(iter)); // tags not equal
@@ -1063,20 +1063,19 @@ void JIT::emitSlow_op_neq(Instruction* currentInstruction, Vector<SlowCaseEntry>
     JITStubCall stubCallEqStrings(this, cti_op_eq_strings);
     stubCallEqStrings.addArgument(regT0);
     stubCallEqStrings.addArgument(regT2);
-    stubCallEqStrings.call(regT0);
-    storeResult.append(jump());
+    stubCallEqStrings.addArgument(TrustedImm32(0x1));
+    stubCallEqStrings.call(dst);
+    returnResult.append(jump());
 
     // Generic case.
     genericCase.append(getSlowCase(iter)); // doubles
     genericCase.link(this);
-    JITStubCall stubCallEq(this, cti_op_eq);
+    JITStubCall stubCallEq(this, cti_op_neq);
     stubCallEq.addArgument(regT1, regT0);
     stubCallEq.addArgument(regT3, regT2);
-    stubCallEq.call(regT0);
+    stubCallEq.call(dst);
 
-    storeResult.link(this);
-    xor32(TrustedImm32(0x1), regT0);
-    emitStoreBool(dst, regT0);
+    returnResult.link(this);
 }
 
 void JIT::compileOpStrictEq(Instruction* currentInstruction, CompileOpStrictEqType type)

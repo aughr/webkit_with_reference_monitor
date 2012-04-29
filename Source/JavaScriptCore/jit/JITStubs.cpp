@@ -2897,11 +2897,13 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_post_inc)
 }
 
 #if !defined(NDEBUG)
-static inline bool opEqInline64(JSValue src1, JSValue src2, JITStackFrame& stackFrame, StackHack& stackHack) {
+static inline bool opEqInline3264(JSValue src1, JSValue src2, JITStackFrame& stackFrame, StackHack& stackHack) {
 #else
-static inline bool opEqInline64(JSValue src1, JSValue src2, JITStackFrame& stackFrame) {
+static inline bool opEqInline3264(JSValue src1, JSValue src2, JITStackFrame& stackFrame) {
 #endif
 start:
+    src1 = src1.unwrappedValue();
+    src2 = src2.unwrappedValue();
     if (src2.isUndefined()) {
         return src1.isNull() || 
         (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
@@ -2993,9 +2995,9 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_eq)
     CallFrame* callFrame = stackFrame.callFrame;
 #if USE(JSVALUE32_64)
 #if !defined(NDEBUG)
-    return JSValue::encode(jsBoolean(opEqInline64(src1, src2, stackFrame, stackHack)), callFrame, labelFor(src1, src2));
+    return JSValue::encode(jsBoolean(opEqInline3264(src1, src2, stackFrame, stackHack)), callFrame, labelFor(src1, src2));
 #else
-    return JSValue::encode(jsBoolean(opEqInline64(src1, src2, stackFrame)), callFrame, labelFor(src1, src2));
+    return JSValue::encode(jsBoolean(opEqInline3264(src1, src2, stackFrame)), callFrame, labelFor(src1, src2));
 #endif
 #else // USE(JSVALUE32_64)
     bool result = JSValue::equalSlowCaseInline(callFrame, src1, src2);
@@ -3013,7 +3015,11 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_neq)
     
     CallFrame* callFrame = stackFrame.callFrame;
 #if USE(JSVALUE32_64)
-    return JSValue::encode(jsBoolean(!opEqInline64(src1, src2, stackFrame)), callFrame, labelFor(src1, src2));
+#if !defined(NDEBUG)
+    return JSValue::encode(jsBoolean(!opEqInline3264(src1, src2, stackFrame, stackHack)), callFrame, labelFor(src1, src2));
+#else
+    return JSValue::encode(jsBoolean(!opEqInline3264(src1, src2, stackFrame)), callFrame, labelFor(src1, src2));
+#endif
 #else // USE(JSVALUE32_64)
     bool result = JSValue::equalSlowCaseInline(callFrame, src1, src2);
     CHECK_FOR_EXCEPTION_AT_END();
@@ -3021,17 +3027,23 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_neq)
 #endif // USE(JSVALUE32_64)
 }
 
-DEFINE_STUB_FUNCTION(int, op_eq_strings)
+DEFINE_STUB_FUNCTION(EncodedJSValue, op_eq_strings)
 {
 #if USE(JSVALUE32_64)
     STUB_INIT_STACK_FRAME(stackFrame);
 
     JSString* string1 = stackFrame.args[0].jsString();
     JSString* string2 = stackFrame.args[1].jsString();
+    bool neq = stackFrame.args[2].int32();
 
     ASSERT(string1->isString());
     ASSERT(string2->isString());
-    return string1->value(stackFrame.callFrame) == string2->value(stackFrame.callFrame);
+    SecurityLabel label = string1->securityLabel();
+    label.merge(string2->securityLabel());
+    bool result = string1->value(stackFrame.callFrame) == string2->value(stackFrame.callFrame);
+    if (neq)
+        result = !result;
+    return JSValue::encode(jsBoolean(result), stackFrame.callFrame, label);
 #else
     UNUSED_PARAM(args);
     ASSERT_NOT_REACHED();

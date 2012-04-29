@@ -99,7 +99,7 @@ void Data::performAssertions(JSGlobalData& globalData)
 #if USE(JSVALUE64)
     ASSERT(&globalData.heap.allocatorForObjectWithoutDestructor(sizeof(JSFinalObject)) - &globalData.heap.firstAllocatorWithoutDestructors() == 2);
 #else
-    ASSERT(&globalData.heap.allocatorForObjectWithoutDestructor(sizeof(JSFinalObject)) - &globalData.heap.firstAllocatorWithoutDestructors() == 3);
+    ASSERT(&globalData.heap.allocatorForObjectWithoutDestructor(sizeof(JSFinalObject)) - &globalData.heap.firstAllocatorWithoutDestructors() == 4);
 #endif
     ASSERT(FirstConstantRegisterIndex == 0x40000000);
     ASSERT(GlobalCode == 0);

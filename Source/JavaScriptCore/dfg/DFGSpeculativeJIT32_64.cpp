@@ -399,8 +399,7 @@ void SpeculativeJIT::nonSpeculativeValueToNumber(Node& node)
     // Next handle cells (& other JS immediates)
     nonNumeric.link(&m_jit);
     silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
-    callOperation(dfgConvertJSValueToNumber, FPRInfo::returnValueFPR, tagGPR, payloadGPR);
-    boxDouble(FPRInfo::returnValueFPR, resultTagGPR, resultPayloadGPR);
+    callOperation(dfgConvertJSValueToNumber, resultTagGPR, resultPayloadGPR, tagGPR, payloadGPR);
     silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
     JITCompiler::Jump hasCalledToNumber = m_jit.jump();
     
@@ -444,26 +443,28 @@ void SpeculativeJIT::nonSpeculativeValueToInt32(Node& node)
     }
 
     JSValueOperand op1(this, node.child1());
-    GPRTemporary result(this);
+    GPRTemporary resultTag(this);
+    GPRTemporary resultPayload(this);
     GPRReg tagGPR = op1.tagGPR();
     GPRReg payloadGPR = op1.payloadGPR();
-    GPRReg resultGPR = result.gpr();
+    GPRReg resultTagGPR = resultTag.gpr();
+    GPRReg resultPayloadGPR = resultPayload.gpr();
     op1.use();
 
     JITCompiler::Jump isInteger = m_jit.branch32(MacroAssembler::Equal, tagGPR, TrustedImm32(JSValue::Int32Tag));
 
     // First handle non-integers
-    silentSpillAllRegisters(resultGPR);
-    callOperation(dfgConvertJSValueToInt32, GPRInfo::returnValueGPR, tagGPR, payloadGPR);
-    m_jit.move(GPRInfo::returnValueGPR, resultGPR);
-    silentFillAllRegisters(resultGPR);
+    silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
+    callOperation(dfgConvertJSValueToInt32, resultTagGPR, resultPayloadGPR, tagGPR, payloadGPR);
+    silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
     JITCompiler::Jump hasCalledToInt32 = m_jit.jump();
 
     // Then handle integers.
     isInteger.link(&m_jit);
-    m_jit.move(payloadGPR, resultGPR);
+    m_jit.move(payloadGPR, resultPayloadGPR);
+    m_jit.move(TrustedImm32(JSValue::Int32Tag), resultTagGPR);
     hasCalledToInt32.link(&m_jit);
-    integerResult(resultGPR, m_compileIndex, UseChildrenCalledExplicitly);
+    jsValueResult(resultTagGPR, resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
 }
 
 void SpeculativeJIT::nonSpeculativeUInt32ToNumber(Node& node)
@@ -1657,26 +1658,29 @@ void SpeculativeJIT::compileLogicalNot(Node& node)
     }
 
     JSValueOperand arg1(this, node.child1());
+    GPRTemporary resultTag(this, arg1, true);
     GPRTemporary resultPayload(this, arg1, false);
     GPRReg arg1TagGPR = arg1.tagGPR();
     GPRReg arg1PayloadGPR = arg1.payloadGPR();
+    GPRReg resultTagGPR = resultPayload.gpr();
     GPRReg resultPayloadGPR = resultPayload.gpr();
         
     arg1.use();
 
     JITCompiler::Jump fastCase = m_jit.branch32(JITCompiler::Equal, arg1TagGPR, TrustedImm32(JSValue::BooleanTag));
         
-    silentSpillAllRegisters(resultPayloadGPR);
-    callOperation(dfgConvertJSValueToBoolean, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR);
-    silentFillAllRegisters(resultPayloadGPR);
+    silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
+    callOperation(dfgConvertJSValueToBoolean, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR);
+    silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
     JITCompiler::Jump doNot = m_jit.jump();
         
     fastCase.link(&m_jit);
+    m_jit.move(arg1TagGPR, resultTagGPR);
     m_jit.move(arg1PayloadGPR, resultPayloadGPR);
 
     doNot.link(&m_jit);
     m_jit.xor32(TrustedImm32(1), resultPayloadGPR);
-    booleanResult(resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
+    jsValueResult(resultTagGPR, resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
 }
 
 void SpeculativeJIT::emitObjectOrOtherBranch(Edge nodeUse, BlockIndex taken, BlockIndex notTaken, const ClassInfo* classInfo, bool needSpeculationCheck)
@@ -1758,8 +1762,10 @@ void SpeculativeJIT::emitBranch(Node& node)
         GPRReg valueTagGPR = value.tagGPR();
         GPRReg valuePayloadGPR = value.payloadGPR();
 
-        GPRTemporary result(this);
-        GPRReg resultGPR = result.gpr();
+        GPRTemporary resultTag(this);
+        GPRTemporary resultPayload(this);
+        GPRReg resultTagGPR = resultTag.gpr();
+        GPRReg resultPayloadGPR = resultPayload.gpr();
     
         use(node.child1());
     
@@ -1771,11 +1777,11 @@ void SpeculativeJIT::emitBranch(Node& node)
         jump(taken, ForceJump);
 
         slowPath.link(&m_jit);
-        silentSpillAllRegisters(resultGPR);
-        callOperation(dfgConvertJSValueToBoolean, resultGPR, valueTagGPR, valuePayloadGPR);
-        silentFillAllRegisters(resultGPR);
+        silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
+        callOperation(dfgConvertJSValueToBoolean, resultTagGPR, resultPayloadGPR, valueTagGPR, valuePayloadGPR);
+        silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
     
-        branchTest32(JITCompiler::NonZero, resultGPR, taken);
+        branchTest32(JITCompiler::NonZero, resultPayloadGPR, taken);
         jump(notTaken);
     
         noResult(m_compileIndex, UseChildrenCalledExplicitly);
