@@ -225,6 +225,7 @@ void JSGlobalData::clearBuiltinStructures()
     staticScopeStructure.clear();
     strictEvalActivationStructure.clear();
     stringStructure.clear();
+    labeledValueStructure.clear();
     notAnObjectStructure.clear();
     propertyNameIteratorStructure.clear();
     getterSetterStructure.clear();

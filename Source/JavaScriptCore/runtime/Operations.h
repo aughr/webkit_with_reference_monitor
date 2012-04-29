@@ -204,6 +204,9 @@ namespace JSC {
 
     inline bool JSValue::strictEqual(ExecState* exec, JSValue v1, JSValue v2)
     {
+        v1 = v1.unwrappedValue();
+        v2 = v2.unwrappedValue();
+
         if (v1.isInt32() && v2.isInt32())
             return v1 == v2;
 

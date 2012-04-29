@@ -368,7 +368,7 @@ macro strictEq(equalityOperation, slowPath)
     loadConstantOrVariable(t0, t1)
     loadConstantOrVariable(t2, t0)
     move t0, t2
-    orp t1, t2
+    andp t1, t2
     btpz t2, tagMask, .slow
     bpaeq t0, tagTypeNumber, .leftOK
     btpnz t0, tagTypeNumber, .slow

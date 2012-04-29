@@ -51,7 +51,7 @@ namespace JSC {
             return labeledValue;
         }
 
-        const JSValue value() const { return m_value; }
+        JSValue value() const { return m_value; }
 
         JSValue toPrimitive(ExecState*, PreferredPrimitiveType) const;
         JS_EXPORT_PRIVATE bool toBoolean(ExecState*) const;

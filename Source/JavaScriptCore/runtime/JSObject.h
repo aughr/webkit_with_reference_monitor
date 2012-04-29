@@ -339,6 +339,7 @@ COMPILE_ASSERT((JSFinalObject_inlineStorageCapacity >= JSNonFinalObject_inlineSt
             ASSERT(!(OBJECT_OFFSETOF(JSNonFinalObject, m_inlineStorage) % sizeof(double)));
             ASSERT(this->structure()->propertyStorageCapacity() == JSNonFinalObject_inlineStorageCapacity);
             ASSERT(classInfo());
+            return;
         }
 
     private:
@@ -845,6 +846,8 @@ inline JSValue JSValue::get(ExecState* exec, unsigned propertyName, PropertySlot
         return slot.getValue(exec, propertyName);
     }
     JSCell* cell = const_cast<JSCell*>(asCell());
+    if (cell->isLabeledValue())
+        return static_cast<const JSLabeledValue*>(cell)->value().get(exec, propertyName, slot);
     while (true) {
         if (cell->methodTable()->getOwnPropertySlotByIndex(cell, exec, propertyName, slot))
             return slot.getValue(exec, propertyName);
@@ -861,6 +864,8 @@ inline void JSValue::put(ExecState* exec, const Identifier& propertyName, JSValu
         putToPrimitive(exec, propertyName, value, slot);
         return;
     }
+    if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(asCell())->value().put(exec, propertyName, value, slot);
     asCell()->methodTable()->put(asCell(), exec, propertyName, value, slot);
 }
 
@@ -871,6 +876,8 @@ inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue 
         putToPrimitive(exec, Identifier::from(exec, propertyName), value, slot);
         return;
     }
+    if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(asCell())->value().putByIndex(exec, propertyName, value, shouldThrow);
     asCell()->methodTable()->putByIndex(asCell(), exec, propertyName, value, shouldThrow);
 }
     
