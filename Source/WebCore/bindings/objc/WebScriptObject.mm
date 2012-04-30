@@ -513,6 +513,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 
 + (id)_convertValueToObjcValue:(JSValue)value originRootObject:(RootObject*)originRootObject rootObject:(RootObject*)rootObject
 {
+    value = value.unwrappedValue();
     if (value.isObject()) {
         JSObject* object = asObject(value);
         JSLock lock(SilenceAssertionsOnly);

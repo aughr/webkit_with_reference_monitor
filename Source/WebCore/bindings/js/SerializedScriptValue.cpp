@@ -545,6 +545,7 @@ private:
 
     bool dumpIfTerminal(JSValue value, SerializationReturnCode& code)
     {
+        value = value.unwrappedValue();
         if (!value.isCell()) {
             dumpImmediate(value);
             return true;

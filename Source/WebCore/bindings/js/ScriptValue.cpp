@@ -122,6 +122,7 @@ static PassRefPtr<InspectorValue> jsToInspectorValue(ScriptState* scriptState, J
         return 0;
     maxDepth--;
 
+    value = value.unwrappedValue();
     if (value.isNull() || value.isUndefined())
         return InspectorValue::null();
     if (value.isBoolean())
