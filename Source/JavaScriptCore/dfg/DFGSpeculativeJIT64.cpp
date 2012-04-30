@@ -381,8 +381,6 @@ void SpeculativeJIT::nonSpeculativeValueToNumber(Node& node)
     JITCompiler::Jump isInteger = m_jit.branchPtr(MacroAssembler::AboveOrEqual, jsValueGpr, GPRInfo::tagTypeNumberRegister);
     JITCompiler::Jump nonNumeric = m_jit.branchTestPtr(MacroAssembler::Zero, jsValueGpr, GPRInfo::tagTypeNumberRegister);
 
-    dataLog("spec jitting\n");
-
     // First, if we get here we have a double encoded as a JSValue
     m_jit.move(jsValueGpr, gpr);
     JITCompiler::Jump hasUnboxedDouble = m_jit.jump();
@@ -450,8 +448,9 @@ void SpeculativeJIT::nonSpeculativeValueToInt32(Node& node)
     // Then handle integers.
     isInteger.link(&m_jit);
     m_jit.zeroExtend32ToPtr(jsValueGpr, resultGPR);
+    m_jit.orPtr(GPRInfo::tagTypeNumberRegister, resultGPR);
     hasCalledToInt32.link(&m_jit);
-    integerResult(resultGPR, m_compileIndex, UseChildrenCalledExplicitly);
+    jsValueResult(resultGPR, m_compileIndex, UseChildrenCalledExplicitly);
 }
 
 void SpeculativeJIT::nonSpeculativeUInt32ToNumber(Node& node)
@@ -811,9 +810,10 @@ void SpeculativeJIT::nonSpeculativePeepholeStrictEq(Node& node, NodeIndex branch
         
         branchTest32(invert ? JITCompiler::Zero : JITCompiler::NonZero, resultGPR, taken);
     } else {
-        m_jit.orPtr(arg1GPR, arg2GPR, resultGPR);
+        m_jit.move(arg1GPR, resultGPR);
+        m_jit.andPtr(arg2GPR, resultGPR);
         
-        JITCompiler::Jump twoCellsCase = m_jit.branchTestPtr(JITCompiler::Zero, resultGPR, GPRInfo::tagMaskRegister);
+        JITCompiler::Jump oneCellCase = m_jit.branchTestPtr(JITCompiler::Zero, resultGPR, GPRInfo::tagMaskRegister);
         
         JITCompiler::Jump leftOK = m_jit.branchPtr(JITCompiler::AboveOrEqual, arg1GPR, GPRInfo::tagTypeNumberRegister);
         JITCompiler::Jump leftDouble = m_jit.branchTestPtr(JITCompiler::NonZero, arg1GPR, GPRInfo::tagTypeNumberRegister);
@@ -825,9 +825,7 @@ void SpeculativeJIT::nonSpeculativePeepholeStrictEq(Node& node, NodeIndex branch
         branchPtr(invert ? JITCompiler::NotEqual : JITCompiler::Equal, arg1GPR, arg2GPR, taken);
         jump(notTaken, ForceJump);
         
-        twoCellsCase.link(&m_jit);
-        branchPtr(JITCompiler::Equal, arg1GPR, arg2GPR, invert ? notTaken : taken);
-        
+        oneCellCase.link(&m_jit);
         leftDouble.link(&m_jit);
         rightDouble.link(&m_jit);
         
@@ -874,9 +872,10 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
         
         done.link(&m_jit);
     } else {
-        m_jit.orPtr(arg1GPR, arg2GPR, resultGPR);
+        m_jit.move(arg1GPR, resultGPR);
+        m_jit.andPtr(arg2GPR, resultGPR);
         
-        JITCompiler::Jump twoCellsCase = m_jit.branchTestPtr(JITCompiler::Zero, resultGPR, GPRInfo::tagMaskRegister);
+        JITCompiler::Jump oneCellCase = m_jit.branchTestPtr(JITCompiler::Zero, resultGPR, GPRInfo::tagMaskRegister);
         
         JITCompiler::Jump leftOK = m_jit.branchPtr(JITCompiler::AboveOrEqual, arg1GPR, GPRInfo::tagTypeNumberRegister);
         JITCompiler::Jump leftDouble = m_jit.branchTestPtr(JITCompiler::NonZero, arg1GPR, GPRInfo::tagTypeNumberRegister);
@@ -889,7 +888,7 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
         
         JITCompiler::Jump done1 = m_jit.jump();
         
-        twoCellsCase.link(&m_jit);
+        oneCellCase.link(&m_jit);
         JITCompiler::Jump notEqualCase = m_jit.branchPtr(JITCompiler::NotEqual, arg1GPR, arg2GPR);
         
         m_jit.move(JITCompiler::TrustedImmPtr(JSValue::encode(jsBoolean(!invert))), resultGPR);
@@ -1777,8 +1776,9 @@ void SpeculativeJIT::compileLogicalNot(Node& node)
     fastCase.link(&m_jit);
     
     m_jit.xorPtr(TrustedImm32(static_cast<int32_t>(ValueTrue)), resultGPR);
+    m_jit.orPtr(TrustedImm32(static_cast<int32_t>(ValueFalse)), resultGPR);
     hasCalledToNotBoolean.link(&m_jit);
-    jsValueResult(resultGPR, m_compileIndex, DataFormatJSBoolean, UseChildrenCalledExplicitly);
+    jsValueResult(resultGPR, m_compileIndex, DataFormatJS, UseChildrenCalledExplicitly);
 }
 
 void SpeculativeJIT::emitObjectOrOtherBranch(Edge nodeUse, BlockIndex taken, BlockIndex notTaken, const ClassInfo* classInfo, bool needSpeculationCheck)
@@ -1877,7 +1877,7 @@ void SpeculativeJIT::emitBranch(Node& node)
             value.use();
     
             silentSpillAllRegisters(resultGPR);
-            callOperation(dfgConvertJSValueToBoolean, resultGPR, valueGPR);
+            callOperation(dfgConvertJSValueToBooleanNonLabel, resultGPR, valueGPR);
             silentFillAllRegisters(resultGPR);
     
             branchTest32(MacroAssembler::NonZero, resultGPR, taken);

@@ -128,6 +128,8 @@ namespace JSC {
 
     ALWAYS_INLINE bool JSValue::equalSlowCaseInline(ExecState* exec, JSValue v1, JSValue v2)
     {
+        v1 = v1.unwrappedValue();
+        v2 = v2.unwrappedValue();
         do {
             if (v1.isNumber() && v2.isNumber())
                 return v1.asNumber() == v2.asNumber();

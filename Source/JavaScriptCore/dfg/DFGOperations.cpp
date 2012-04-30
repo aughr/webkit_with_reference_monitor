@@ -1136,6 +1136,14 @@ EncodedJSValue DFG_OPERATION dfgConvertJSValueToNotBoolean(ExecState* exec, Enco
     return JSValue::encode(jsBoolean(!decoded.toBoolean(exec)), exec, decoded.securityLabel());
 }
 
+size_t DFG_OPERATION dfgConvertJSValueToBooleanNonLabel(ExecState* exec, EncodedJSValue encodedOp)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    return JSValue::decode(encodedOp).toBoolean(exec);
+}
+
 #if DFG_ENABLE(VERBOSE_SPECULATION_FAILURE)
 void DFG_OPERATION debugOperationPrintSpeculationFailure(ExecState* exec, void* debugInfoRaw)
 {

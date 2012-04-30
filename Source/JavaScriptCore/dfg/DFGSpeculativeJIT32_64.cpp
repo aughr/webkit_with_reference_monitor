@@ -1670,16 +1670,16 @@ void SpeculativeJIT::compileLogicalNot(Node& node)
     JITCompiler::Jump fastCase = m_jit.branch32(JITCompiler::Equal, arg1TagGPR, TrustedImm32(JSValue::BooleanTag));
         
     silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
-    callOperation(dfgConvertJSValueToBoolean, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR);
+    callOperation(dfgConvertJSValueToNotBoolean, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR);
     silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
-    JITCompiler::Jump doNot = m_jit.jump();
+    JITCompiler::Jump returnResult = m_jit.jump();
         
     fastCase.link(&m_jit);
     m_jit.move(arg1TagGPR, resultTagGPR);
     m_jit.move(arg1PayloadGPR, resultPayloadGPR);
-
-    doNot.link(&m_jit);
     m_jit.xor32(TrustedImm32(1), resultPayloadGPR);
+
+    returnResult.link(&m_jit);
     jsValueResult(resultTagGPR, resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
 }
 
@@ -1778,7 +1778,7 @@ void SpeculativeJIT::emitBranch(Node& node)
 
         slowPath.link(&m_jit);
         silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
-        callOperation(dfgConvertJSValueToBoolean, resultTagGPR, resultPayloadGPR, valueTagGPR, valuePayloadGPR);
+        callOperation(dfgConvertJSValueToBooleanNonLabel, resultTagGPR, resultPayloadGPR, valueTagGPR, valuePayloadGPR);
         silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
     
         branchTest32(JITCompiler::NonZero, resultPayloadGPR, taken);

@@ -208,6 +208,7 @@ EncodedJSValue DFG_OPERATION dfgConvertJSValueToNumber(ExecState*, EncodedJSValu
 EncodedJSValue DFG_OPERATION dfgConvertJSValueToInt32(ExecState*, EncodedJSValue);
 EncodedJSValue DFG_OPERATION dfgConvertJSValueToBoolean(ExecState*, EncodedJSValue);
 EncodedJSValue DFG_OPERATION dfgConvertJSValueToNotBoolean(ExecState*, EncodedJSValue);
+size_t DFG_OPERATION dfgConvertJSValueToBooleanNonLabel(ExecState*, EncodedJSValue);
 
 #if DFG_ENABLE(VERBOSE_SPECULATION_FAILURE)
 void DFG_OPERATION debugOperationPrintSpeculationFailure(ExecState*, void*);

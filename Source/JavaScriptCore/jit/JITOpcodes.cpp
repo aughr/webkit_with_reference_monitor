@@ -1014,9 +1014,9 @@ void JIT::compileOpStrictEq(Instruction* currentInstruction, CompileOpStrictEqTy
 
     emitGetVirtualRegisters(src1, regT0, src2, regT1);
     
-    // Jump slow if both are cells (to cover strings).
+    // Jump slow if one is a cell (to cover strings).
     move(regT0, regT2);
-    orPtr(regT1, regT2);
+    andPtr(regT1, regT2);
     addSlowCase(emitJumpIfJSCell(regT2));
     
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
