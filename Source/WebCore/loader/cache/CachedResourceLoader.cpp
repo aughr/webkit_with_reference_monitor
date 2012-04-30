@@ -305,7 +305,7 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const KURL& url
     }
 
     // fire checkbeforeload event to allow reference monitor to validate request
-    if (document()->hasListenerType(Document::BEFORELOAD_LISTENER)) {
+    if (document()->topDocument()->hasListenerType(Document::BEFORELOAD_LISTENER)) {
         RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
         if (!document()->dispatchSecurityEvent(securityEvent)) {
             if (!forPreload)

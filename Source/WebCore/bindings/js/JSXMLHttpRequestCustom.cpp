@@ -121,13 +121,11 @@ JSValue JSXMLHttpRequest::send(ExecState* exec)
     JSValue val = exec->argument(0);
     if (impl()->scriptExecutionContext()->isDocument()) {
         DOMWindow* window = activeDOMWindow(exec);
-        if (window) {
-            RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().xmlhttpsendEvent, val.toString(exec)->securityLabel(), "", impl()->url(), window);
-            window->dispatchEvent(event);
-            if (event->defaultPrevented()) {
-                reportException(exec, jsString(exec, requestDenied));
-                return jsUndefined();
-            }
+        RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().xmlhttpsendEvent, val.toString(exec)->securityLabel(), "", impl()->url(), window);
+        static_cast<Document*>(impl()->scriptExecutionContext())->dispatchSecurityEvent(event);
+        if (event->defaultPrevented()) {
+            reportException(exec, jsString(exec, requestDenied));
+            return jsUndefined();
         }
     }
 

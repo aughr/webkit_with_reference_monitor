@@ -50,7 +50,7 @@ public:
     {
         return adoptRef(new SecurityEvent());
     }
-    static PassRefPtr<SecurityEvent> create(const AtomicString& type, SecurityLabel label, const String& origin = "", const String& destination = "", PassRefPtr<DOMWindow> source = 0)
+    static PassRefPtr<SecurityEvent> create(const AtomicString& type, SecurityLabel label, const String& origin = String(), const String& destination = String(), PassRefPtr<DOMWindow> source = 0)
     {
         return adoptRef(new SecurityEvent(type, label, origin, destination, source));
     }
