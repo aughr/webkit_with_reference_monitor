@@ -226,6 +226,7 @@ namespace WebCore {
     macro(webkitnetworkinfochange) \
     \
     macro(xmlhttpsend) \
+    macro(xmlhttpopen) \
     macro(checkbeforeload) \
     \
 

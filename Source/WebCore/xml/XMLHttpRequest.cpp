@@ -483,6 +483,15 @@ void XMLHttpRequest::open(const String& method, const KURL& url, bool async, Exc
         ec = SECURITY_ERR;
         return;
     }
+    
+    // fire xmlhttpopen event to allow reference monitor to validate request
+    if (scriptExecutionContext()->isDocument()) {
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().xmlhttpopenEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
+        if (!document()->dispatchSecurityEvent(securityEvent)) {
+            ec = SECURITY_ERR;
+            return;
+        }
+    }
 
     // Newer functionality is not available to synchronous requests in window contexts, as a spec-mandated 
     // attempt to discourage synchronous XHR use. responseType is one such piece of functionality.
