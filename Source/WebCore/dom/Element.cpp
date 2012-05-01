@@ -233,8 +233,10 @@ const AtomicString& Element::getAttribute(const QualifiedName& name) const
 #endif
 
     if (m_attributeData) {
-        if (Attribute* attribute = getAttributeItem(name))
+        if (Attribute* attribute = getAttributeItem(name)) {
+            attribute->mergeSecurityLabel(securityLabel());
             return attribute->value();
+        }
     }
     return nullAtom;
 }
@@ -611,8 +613,10 @@ const AtomicString& Element::getAttribute(const String& name) const
 #endif
 
     if (m_attributeData) {
-        if (Attribute* attribute = m_attributeData->getAttributeItem(name, ignoreCase))
+        if (Attribute* attribute = m_attributeData->getAttributeItem(name, ignoreCase)) {
+            attribute->mergeSecurityLabel(securityLabel());
             return attribute->value();
+        }
     }
 
     return nullAtom;

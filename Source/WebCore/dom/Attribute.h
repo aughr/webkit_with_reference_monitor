@@ -64,6 +64,8 @@ public:
 
     void setValue(const AtomicString& value) { m_value = value; }
     void setPrefix(const AtomicString& prefix) { m_name.setPrefix(prefix); }
+    
+    void mergeSecurityLabel(const SecurityLabel& label) { m_value.mergeSecurityLabel(label); }
 
     // Note: This API is only for HTMLTreeBuilder.  It is not safe to change the
     // name of an attribute once parseAttribute has been called as DOM

@@ -609,8 +609,10 @@ inline const AtomicString& Element::fastGetAttribute(const QualifiedName& name) 
 {
     ASSERT(fastAttributeLookupAllowed(name));
     if (m_attributeData) {
-        if (Attribute* attribute = getAttributeItem(name))
+        if (Attribute* attribute = getAttributeItem(name)) {
+            attribute->mergeSecurityLabel(securityLabel());
             return attribute->value();
+        }
     }
     return nullAtom;
 }
