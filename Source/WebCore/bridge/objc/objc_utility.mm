@@ -131,6 +131,7 @@ ObjcValue convertValueToObjcValue(ExecState* exec, JSValue value, ObjcValueType 
     ObjcValue result;
     double d = 0;
 
+    value = value.unwrappedValue();
     if (value.isNumber() || value.isString() || value.isBoolean())
         d = value.toNumber(exec);
 
