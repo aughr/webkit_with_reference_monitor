@@ -3929,7 +3929,9 @@ void Document::addListenerTypeIfNeeded(const AtomicString& eventType)
         addListenerType(ANIMATIONITERATION_LISTENER);
     else if (eventType == eventNames().webkitTransitionEndEvent)
         addListenerType(TRANSITIONEND_LISTENER);
-    else if (eventType == eventNames().beforeloadEvent || eventType == eventNames().checkbeforeloadEvent)
+    else if (eventType == eventNames().beforeloadEvent)
+        addListenerType(BEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkbeforeloadEvent)
         topDocument()->addListenerType(BEFORELOAD_LISTENER);
 #if ENABLE(TOUCH_EVENTS)
     else if (eventType == eventNames().touchstartEvent
