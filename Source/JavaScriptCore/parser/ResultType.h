@@ -39,8 +39,9 @@ namespace JSC {
         static const Type TypeMaybeNull   = 0x10;
         static const Type TypeMaybeBool   = 0x20;
         static const Type TypeMaybeOther  = 0x40;
+        static const Type TypeMaybeLabel  = 0x80;
 
-        static const Type TypeBits = TypeMaybeNumber | TypeMaybeString | TypeMaybeNull | TypeMaybeBool | TypeMaybeOther;
+        static const Type TypeBits = TypeMaybeNumber | TypeMaybeString | TypeMaybeNull | TypeMaybeBool | TypeMaybeOther | TypeMaybeLabel;
 
         explicit ResultType(Type type)
             : m_type(type)
@@ -86,10 +87,20 @@ namespace JSC {
         {
             return ResultType(TypeMaybeNumber);
         }
+
+        static ResultType numberTypeMaybeLabel()
+        {
+            return ResultType(TypeMaybeNumber | TypeMaybeLabel);
+        }
         
         static ResultType numberTypeIsInt32()
         {
             return ResultType(TypeInt32 | TypeMaybeNumber);
+        }
+
+        static ResultType numberTypeIsInt32MaybeLabel()
+        {
+            return ResultType(TypeInt32 | TypeMaybeNumber | TypeMaybeLabel);
         }
         
         static ResultType stringOrNumberType()
@@ -118,7 +129,7 @@ namespace JSC {
         
         static ResultType forBitOp()
         {
-            return numberTypeIsInt32();
+            return numberTypeIsInt32MaybeLabel();
         }
 
     private:

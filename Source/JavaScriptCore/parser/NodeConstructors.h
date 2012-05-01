@@ -412,12 +412,12 @@ namespace JSC {
     }
 
     inline UnaryPlusNode::UnaryPlusNode(int lineNumber, ExpressionNode* expr)
-        : UnaryOpNode(lineNumber, ResultType::numberType(), expr, op_to_jsnumber)
+        : UnaryOpNode(lineNumber, ResultType::numberTypeMaybeLabel(), expr, op_to_jsnumber)
     {
     }
 
     inline NegateNode::NegateNode(int lineNumber, ExpressionNode* expr)
-        : UnaryOpNode(lineNumber, ResultType::numberType(), expr, op_negate)
+        : UnaryOpNode(lineNumber, ResultType::numberTypeMaybeLabel(), expr, op_negate)
     {
     }
 
@@ -451,18 +451,18 @@ namespace JSC {
     }
 
     inline MultNode::MultNode(int lineNumber, ExpressionNode* expr1, ExpressionNode* expr2, bool rightHasAssignments)
-        : BinaryOpNode(lineNumber, ResultType::numberType(), expr1, expr2, op_mul, rightHasAssignments)
+        : BinaryOpNode(lineNumber, ResultType::numberTypeMaybeLabel(), expr1, expr2, op_mul, rightHasAssignments)
     {
     }
 
     inline DivNode::DivNode(int lineNumber, ExpressionNode* expr1, ExpressionNode* expr2, bool rightHasAssignments)
-        : BinaryOpNode(lineNumber, ResultType::numberType(), expr1, expr2, op_div, rightHasAssignments)
+        : BinaryOpNode(lineNumber, ResultType::numberTypeMaybeLabel(), expr1, expr2, op_div, rightHasAssignments)
     {
     }
 
 
     inline ModNode::ModNode(int lineNumber, ExpressionNode* expr1, ExpressionNode* expr2, bool rightHasAssignments)
-        : BinaryOpNode(lineNumber, ResultType::numberType(), expr1, expr2, op_mod, rightHasAssignments)
+        : BinaryOpNode(lineNumber, ResultType::numberTypeMaybeLabel(), expr1, expr2, op_mod, rightHasAssignments)
     {
     }
 
@@ -472,7 +472,7 @@ namespace JSC {
     }
 
     inline SubNode::SubNode(int lineNumber, ExpressionNode* expr1, ExpressionNode* expr2, bool rightHasAssignments)
-        : BinaryOpNode(lineNumber, ResultType::numberType(), expr1, expr2, op_sub, rightHasAssignments)
+        : BinaryOpNode(lineNumber, ResultType::numberTypeMaybeLabel(), expr1, expr2, op_sub, rightHasAssignments)
     {
     }
 
@@ -487,7 +487,7 @@ namespace JSC {
     }
 
     inline UnsignedRightShiftNode::UnsignedRightShiftNode(int lineNumber, ExpressionNode* expr1, ExpressionNode* expr2, bool rightHasAssignments)
-        : BinaryOpNode(lineNumber, ResultType::numberType(), expr1, expr2, op_urshift, rightHasAssignments)
+        : BinaryOpNode(lineNumber, ResultType::unknownType(), expr1, expr2, op_urshift, rightHasAssignments)
     {
     }
 
