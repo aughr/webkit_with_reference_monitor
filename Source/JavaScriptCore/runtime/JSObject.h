@@ -889,6 +889,7 @@ inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label)
     if (isString()) {
         const JSString *string = static_cast<const JSString*>(asCell());
         cell = JSString::create(exec->globalData(), string->value(exec).impl());
+        cell->mergeSecurityLabel(exec, string->securityLabel());
     } else if (isCell()) {
         cell = asCell();
     } else {
