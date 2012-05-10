@@ -769,7 +769,6 @@ public:
     void dispatchWindowLoadEvent();
 
     bool dispatchSecurityEvent(PassRefPtr<SecurityEvent>);
-    bool dispatchSecurityEvent(Document* owner, RefPtr<SecurityEvent>);
 
     PassRefPtr<Event> createEvent(const String& eventType, ExceptionCode&);
 

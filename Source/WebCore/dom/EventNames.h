@@ -228,6 +228,11 @@ namespace WebCore {
     macro(xmlhttpsend) \
     macro(xmlhttpopen) \
     macro(checkbeforeload) \
+    macro(checkstorage) \
+    macro(cookiewrite) \
+    macro(checkcopy) \
+    macro(checkcut) \
+    macro(checkpaste) \
     \
 
 // end of DOM_EVENT_NAMES_FOR_EACH
@@ -253,6 +258,12 @@ namespace WebCore {
         {
             return eventType == touchstartEvent || eventType == touchmoveEvent || eventType == touchendEvent || eventType == touchcancelEvent;
         }
+
+        inline bool isSecurityEventType(const AtomicString& eventType) const
+        {
+            return eventType == xmlhttpsendEvent || eventType == xmlhttpopenEvent || eventType == checkbeforeloadEvent || eventType == checkstorageEvent || eventType == cookiewriteEvent || eventType == checkcopyEvent || eventType == checkcutEvent || eventType == checkpasteEvent;
+        }
+
     };
 
     inline EventNames& eventNames()

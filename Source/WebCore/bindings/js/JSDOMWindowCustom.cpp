@@ -54,6 +54,7 @@
 #include "Location.h"
 #include "MediaPlayer.h"
 #include "ScheduledAction.h"
+#include "SecurityEventTarget.h"
 #include "Settings.h"
 #include "SharedWorkerRepository.h"
 #include <runtime/JSFunction.h>
@@ -87,6 +88,10 @@ void JSDOMWindow::visitChildren(JSCell* cell, SlotVisitor& visitor)
     Base::visitChildren(thisObject, visitor);
 
     thisObject->impl()->visitJSEventListeners(visitor);
+
+    SecurityEventTarget* securityEventTarget = thisObject->impl()->securityEventTargetPtr();
+    if (securityEventTarget)
+        securityEventTarget->visitJSEventListeners(visitor);
     if (Frame* frame = thisObject->impl()->frame())
         visitor.addOpaqueRoot(frame);
 }

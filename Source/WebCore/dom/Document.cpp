@@ -3856,29 +3856,11 @@ void Document::dispatchWindowLoadEvent()
 
 bool Document::dispatchSecurityEvent(PassRefPtr<SecurityEvent> event)
 {
-    // fire starting from the top, but only include details for documents that can see them
-    return topDocument()->dispatchSecurityEvent(this, event);
-}
-    
-bool Document::dispatchSecurityEvent(Document* owner, RefPtr<SecurityEvent> event)
-{
-    RefPtr<SecurityEvent> concealedEvent = SecurityEvent::create(event->type(), event->securityLabel());
-    bool defaultPrevented = false;
-
-    for (Frame* currentFrame = frame(); currentFrame; currentFrame = currentFrame->tree()->traverseNext()) {
-        Document* currentDocument = currentFrame->document();
-        SecurityEvent* eventToFire;
-        if (currentDocument->securityOrigin()->canAccess(owner->securityOrigin()))
-            eventToFire = event.get();
-        else
-            eventToFire = concealedEvent.get();
-
-        currentDocument->dispatchEvent(eventToFire);
-        defaultPrevented = defaultPrevented || eventToFire->defaultPrevented();
-    }
-    if (defaultPrevented)
-        event->preventDefault();
-    return !defaultPrevented;
+    ASSERT(!eventDispatchForbidden());
+    DOMWindow* domWindow = this->domWindow();
+    if (!domWindow)
+        return true;
+    return domWindow->dispatchSecurityEvent(event);
 }
 
 void Document::enqueueWindowEvent(PassRefPtr<Event> event)
@@ -3931,8 +3913,6 @@ void Document::addListenerTypeIfNeeded(const AtomicString& eventType)
         addListenerType(TRANSITIONEND_LISTENER);
     else if (eventType == eventNames().beforeloadEvent)
         addListenerType(BEFORELOAD_LISTENER);
-    else if (eventType == eventNames().checkbeforeloadEvent)
-        topDocument()->addListenerType(BEFORELOAD_LISTENER);
 #if ENABLE(TOUCH_EVENTS)
     else if (eventType == eventNames().touchstartEvent
              || eventType == eventNames().touchmoveEvent
@@ -4000,7 +3980,7 @@ void Document::setCookie(const String& value, ExceptionCode& ec)
     if (cookieURL.isEmpty())
         return;
     
-    RefPtr<SecurityEvent> event = SecurityEvent::create("cookieWrite", value.securityLabel(), "", cookieURL.string(), domWindow());
+    RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().cookiewriteEvent, value.securityLabel(), "", cookieURL.string(), domWindow());
     dispatchSecurityEvent(event);
     if (event->defaultPrevented()) {
         ec = SECURITY_ERR;

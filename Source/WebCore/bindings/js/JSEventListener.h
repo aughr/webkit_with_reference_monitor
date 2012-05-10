@@ -55,6 +55,8 @@ namespace WebCore {
         JSC::JSObject* wrapper() const { return m_wrapper.get(); }
         void setWrapper(JSC::JSGlobalData& globalData, JSC::JSObject* wrapper) const { m_wrapper = JSC::PassWeak<JSC::JSObject>(globalData, wrapper, 0); }
 
+        virtual void protectJSWrapper() { if (m_wrapper) m_protectedWrapper.set(*m_isolatedWorld->globalData(), m_wrapper.get(), m_wrapper.get()); }
+
     private:
         virtual JSC::JSObject* initializeJSFunction(ScriptExecutionContext*) const;
         virtual void visitJSFunction(JSC::SlotVisitor&);
@@ -67,6 +69,7 @@ namespace WebCore {
     private:
         mutable JSC::WriteBarrier<JSC::JSObject> m_jsFunction;
         mutable JSC::Weak<JSC::JSObject> m_wrapper;
+        mutable JSC::WriteBarrier<JSC::JSObject> m_protectedWrapper;
 
         bool m_isAttribute;
         RefPtr<DOMWrapperWorld> m_isolatedWorld;

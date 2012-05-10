@@ -53,6 +53,7 @@ namespace WebCore {
 
 #if USE(JSC)
         virtual void visitJSFunction(JSC::SlotVisitor&) { }
+        virtual void protectJSWrapper() { }
 #endif
 
         bool isAttribute() const { return virtualisAttribute(); }

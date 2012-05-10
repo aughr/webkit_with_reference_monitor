@@ -52,6 +52,7 @@
 #include "DeviceOrientationController.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "DocumentType.h"
 #include "Element.h"
 #include "EventException.h"
 #include "EventListener.h"
@@ -82,6 +83,8 @@
 #include "Screen.h"
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
+#include "SecurityEvent.h"
+#include "SecurityEventTarget.h"
 #include "SecurityOrigin.h"
 #include "SerializedScriptValue.h"
 #include "Settings.h"
@@ -558,6 +561,7 @@ void DOMWindow::clearDOMWindowProperties()
 #if ENABLE(QUOTA)
     m_storageInfo = 0;
 #endif
+    m_securityEventTarget = 0;
 }
 
 bool DOMWindow::isCurrentlyDisplayedInFrame() const
@@ -1498,9 +1502,24 @@ void DOMWindow::webkitCancelAnimationFrame(int id)
         d->webkitCancelAnimationFrame(id);
 }
 #endif
+    
+PassRefPtr<SecurityEventTarget> DOMWindow::securityEventTarget()
+{
+    if (top() && top() != this)
+        return top()->securityEventTarget();
+
+    if (!m_securityEventTarget)
+        m_securityEventTarget = SecurityEventTarget::create();
+    return m_securityEventTarget;
+}
 
 bool DOMWindow::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> listener, bool useCapture)
 {
+    if (eventNames().isSecurityEventType(eventType)) {
+        listener->protectJSWrapper();
+        return securityEventTarget()->addEventListener(eventType, listener, false);
+    }
+
     if (!EventTarget::addEventListener(eventType, listener, useCapture))
         return false;
 
@@ -1600,6 +1619,26 @@ bool DOMWindow::dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget
     return result;
 }
 
+bool DOMWindow::dispatchSecurityEvent(PassRefPtr<SecurityEvent> prpEvent)
+{
+    RefPtr<SecurityEvent> event = prpEvent;
+    RefPtr<SecurityEvent> concealedEvent = SecurityEvent::create(event->type(), event->securityLabel());
+    RefPtr<SecurityEventTarget> target = securityEventTarget();
+    bool defaultPrevented = false;
+
+    // FIXME: this needs to use concealed event
+    event->setTarget(this);
+    event->setCurrentTarget(this);
+    event->setEventPhase(Event::AT_TARGET);
+    target->setWindow(this);
+    target->fireEventListeners(event.get());
+    target->setWindow(0);
+    defaultPrevented = defaultPrevented || event->defaultPrevented();
+    if (defaultPrevented)
+        event->preventDefault();
+    return !defaultPrevented;
+}
+    
 void DOMWindow::removeAllEventListeners()
 {
     EventTarget::removeAllEventListeners();
@@ -1836,7 +1875,12 @@ PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicStrin
     windowFeatures.width = windowRect.width();
 
     Frame* result = createWindow(urlString, frameName, windowFeatures, activeWindow, firstFrame, m_frame);
-    return result ? result->domWindow() : 0;
+    if (result) {
+        result->domWindow()->m_securityEventTarget = securityEventTarget();
+        return result->domWindow();
+    } else {
+        return 0;
+    }
 }
 
 void DOMWindow::showModalDialog(const String& urlString, const String& dialogFeaturesString,

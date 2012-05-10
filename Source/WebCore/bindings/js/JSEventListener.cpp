@@ -67,6 +67,8 @@ void JSEventListener::visitJSFunction(SlotVisitor& visitor)
 {
     if (m_jsFunction)
         visitor.append(&m_jsFunction);
+    if (m_protectedWrapper)
+        visitor.append(&m_protectedWrapper);
 }
 
 void JSEventListener::handleEvent(ScriptExecutionContext* scriptExecutionContext, Event* event)

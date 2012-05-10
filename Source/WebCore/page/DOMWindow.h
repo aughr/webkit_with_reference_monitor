@@ -61,7 +61,9 @@ namespace WebCore {
     class PostMessageTimer;
     class ScheduledAction;
     class Screen;
+    class SecurityEvent;
     class SecurityOrigin;
+    class SecurityEventTarget;
     class SerializedScriptValue;
     class Storage;
     class StorageInfo;
@@ -267,6 +269,10 @@ namespace WebCore {
         bool dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget);
         void dispatchLoadEvent();
 
+        PassRefPtr<SecurityEventTarget> securityEventTarget();
+        SecurityEventTarget* securityEventTargetPtr() { return m_securityEventTarget.get(); }
+        bool dispatchSecurityEvent(PassRefPtr<SecurityEvent> prpEvent);
+
         DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
         DEFINE_ATTRIBUTE_EVENT_LISTENER(beforeunload);
         DEFINE_ATTRIBUTE_EVENT_LISTENER(blur);
@@ -434,6 +440,7 @@ namespace WebCore {
         mutable RefPtr<StyleMedia> m_media;
 
         EventTargetData m_eventTargetData;
+        RefPtr<SecurityEventTarget> m_securityEventTarget;
 
         String m_status;
         String m_defaultStatus;

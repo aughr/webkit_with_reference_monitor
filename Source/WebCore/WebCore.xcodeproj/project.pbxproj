@@ -1565,6 +1565,8 @@
 		51E1ECC30C91C90400DC255B /* PageURLRecord.h in Headers */ = {isa = PBXBuildFile; fileRef = 51E1ECBD0C91C90400DC255B /* PageURLRecord.h */; };
 		51E3F9C70DA059DC00250911 /* Storage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51E3F9C50DA059DC00250911 /* Storage.cpp */; };
 		51E3F9D60DA05E1D00250911 /* JSStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51E3F9D40DA05E1D00250911 /* JSStorage.cpp */; };
+		51EB0BE8155B2EA100C53A48 /* SecurityEventTarget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51EB0BE7155B2D0C00C53A48 /* SecurityEventTarget.cpp */; };
+		51EB0BE9155B2EA300C53A48 /* SecurityEventTarget.h in Headers */ = {isa = PBXBuildFile; fileRef = 51EB0BE5155B2BA500C53A48 /* SecurityEventTarget.h */; settings = {ATTRIBUTES = (); }; };
 		51EC92650CE90DD400F90308 /* JSCustomSQLStatementErrorCallback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51EC925D0CE90DD400F90308 /* JSCustomSQLStatementErrorCallback.cpp */; };
 		51FB5504113E3E9100821176 /* JSCloseEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 51FB5502113E3E9100821176 /* JSCloseEvent.h */; };
 		51FB5505113E3E9100821176 /* JSCloseEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51FB5503113E3E9100821176 /* JSCloseEvent.cpp */; };
@@ -8562,6 +8564,8 @@
 		51E3F9D10DA05D7100250911 /* Storage.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Storage.idl; sourceTree = "<group>"; };
 		51E3F9D40DA05E1D00250911 /* JSStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSStorage.cpp; sourceTree = "<group>"; };
 		51E3F9D50DA05E1D00250911 /* JSStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSStorage.h; sourceTree = "<group>"; };
+		51EB0BE5155B2BA500C53A48 /* SecurityEventTarget.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SecurityEventTarget.h; sourceTree = "<group>"; };
+		51EB0BE7155B2D0C00C53A48 /* SecurityEventTarget.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityEventTarget.cpp; sourceTree = "<group>"; };
 		51EC925D0CE90DD400F90308 /* JSCustomSQLStatementErrorCallback.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSCustomSQLStatementErrorCallback.cpp; sourceTree = "<group>"; };
 		51F6A3D50663BF04004D2919 /* HTMLCanvasElement.cpp */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HTMLCanvasElement.cpp; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		51F6A3D60663BF04004D2919 /* HTMLCanvasElement.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = HTMLCanvasElement.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
@@ -15433,6 +15437,8 @@
 				BCEC01BA0C274DAC009F4EC9 /* Screen.cpp */,
 				BCEC01BB0C274DAC009F4EC9 /* Screen.h */,
 				BCEC01BC0C274DAC009F4EC9 /* Screen.idl */,
+				51EB0BE7155B2D0C00C53A48 /* SecurityEventTarget.cpp */,
+				51EB0BE5155B2BA500C53A48 /* SecurityEventTarget.h */,
 				BCD0E0F70E972C3500265DEA /* SecurityOrigin.cpp */,
 				BCD0E0F80E972C3500265DEA /* SecurityOrigin.h */,
 				BCD0E0F90E972C3500265DEA /* SecurityOriginHash.h */,
@@ -24805,6 +24811,7 @@
 				CECADFCE1537791D00E37068 /* TextInsertionBaseCommand.h in Headers */,
 				51FCAFB31545D4EF00005AC5 /* SecurityEvent.h in Headers */,
 				516878831545EE1D0092CF36 /* JSSecurityEvent.h in Headers */,
+				51EB0BE9155B2EA300C53A48 /* SecurityEventTarget.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -27817,6 +27824,7 @@
 				51FCAFB21545D4DF00005AC5 /* JSSecurityEventCustom.cpp in Sources */,
 				51FCAFB41545D4F200005AC5 /* SecurityEvent.cpp in Sources */,
 				516878861545EE400092CF36 /* JSSecurityEvent.cpp in Sources */,
+				51EB0BE8155B2EA100C53A48 /* SecurityEventTarget.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
