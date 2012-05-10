@@ -1630,8 +1630,11 @@ bool DOMWindow::dispatchSecurityEvent(PassRefPtr<SecurityEvent> prpEvent)
     event->setTarget(this);
     event->setCurrentTarget(this);
     event->setEventPhase(Event::AT_TARGET);
+    concealedEvent->setTarget(this);
+    concealedEvent->setCurrentTarget(this);
+    concealedEvent->setEventPhase(Event::AT_TARGET);
     target->setWindow(this);
-    target->fireEventListeners(event.get());
+    target->fireEventListeners(event.get(), concealedEvent.get());
     target->setWindow(0);
     defaultPrevented = defaultPrevented || event->defaultPrevented();
     if (defaultPrevented)

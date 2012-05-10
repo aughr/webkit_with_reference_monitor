@@ -31,28 +31,92 @@
 #include "EventException.h"
 #include "EventListener.h"
 #include "EventNames.h"
+#include "InspectorInstrumentation.h"
+#include "JSDOMWindow.h"
+#include "JSEventListener.h"
+#include "SecurityOrigin.h"
+
+using namespace JSC;
 
 namespace WebCore {
-    
-    const AtomicString& SecurityEventTarget::interfaceName() const
-    {
-        return eventNames().interfaceForDOMApplicationCache;
+
+const AtomicString& SecurityEventTarget::interfaceName() const
+{
+    return eventNames().interfaceForDOMApplicationCache;
+}
+
+ScriptExecutionContext* SecurityEventTarget::scriptExecutionContext() const
+{
+    ASSERT(m_window);
+    return m_window->scriptExecutionContext();
+}
+
+EventTargetData* SecurityEventTarget::eventTargetData()
+{
+    return &m_eventTargetData;
+}
+
+EventTargetData* SecurityEventTarget::ensureEventTargetData()
+{
+    return &m_eventTargetData;
+}
+
+bool SecurityEventTarget::fireEventListeners(Event* event, Event* concealedEvent)
+{
+    ASSERT(!eventDispatchForbidden());
+    ASSERT(event && !event->type().isEmpty());
+    ASSERT(concealedEvent && !concealedEvent->type().isEmpty());
+    ASSERT(event->type() == concealedEvent->type());
+
+    EventTargetData* d = eventTargetData();
+    if (!d)
+        return true;
+
+    EventListenerVector* listenerVector = d->eventListenerMap.find(event->type());
+
+    if (listenerVector)
+        fireEventListeners(event, concealedEvent, d, *listenerVector);
+
+    return !(event->defaultPrevented() || concealedEvent->defaultPrevented());
+}
+
+void SecurityEventTarget::fireEventListeners(Event* event, Event* concealedEvent, EventTargetData* d, EventListenerVector& entry)
+{
+    RefPtr<EventTarget> protect = this;
+
+    // Fire all listeners registered for this event. Don't fire listeners removed
+    // during event dispatch. Also, don't fire event listeners added during event
+    // dispatch. Conveniently, all new event listeners will be added after 'end',
+    // so iterating to 'end' naturally excludes new event listeners.
+
+    size_t i = 0;
+    size_t end = entry.size();
+    d->firingEventIterators.append(FiringEventIterator(event->type(), i, end));
+    for ( ; i < end; ++i) {
+        RegisteredEventListener& registeredListener = entry[i];
+
+        // If stopImmediatePropagation has been called, we just break out immediately, without
+        // handling any more events on this target.
+        if (event->immediatePropagationStopped() || concealedEvent->immediatePropagationStopped())
+            break;
+
+        ScriptExecutionContext* context = scriptExecutionContext();
+        const JSEventListener* jsListener = JSEventListener::cast(registeredListener.listener.get());
+        Event* eventToFire = event;
+        if (jsListener) {
+            JSDOMWindowBase* jsWindow = jsCast<JSDOMWindowBase*>(jsListener->wrapper());
+            if (!context->securityOrigin()->canAccess(jsWindow->impl()->securityOrigin()))
+                eventToFire = concealedEvent;
+        }
+
+
+        InspectorInstrumentationCookie cookie = InspectorInstrumentation::willHandleEvent(context, eventToFire);
+        // To match Mozilla, the AT_TARGET phase fires both capturing and bubbling
+        // event listeners, even though that violates some versions of the DOM spec.
+        registeredListener.listener->handleEvent(context, eventToFire);
+        InspectorInstrumentation::didHandleEvent(cookie);
     }
-    
-    ScriptExecutionContext* SecurityEventTarget::scriptExecutionContext() const
-    {
-        ASSERT(m_window);
-        return m_window->scriptExecutionContext();
-    }
-    
-    EventTargetData* SecurityEventTarget::eventTargetData()
-    {
-        return &m_eventTargetData;
-    }
-    
-    EventTargetData* SecurityEventTarget::ensureEventTargetData()
-    {
-        return &m_eventTargetData;
-    }
-    
+    d->firingEventIterators.removeLast();
+}
+
 } // namespace WebCore

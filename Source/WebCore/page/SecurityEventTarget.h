@@ -52,13 +52,17 @@ namespace WebCore {
 
         virtual const AtomicString& interfaceName() const;
         virtual ScriptExecutionContext* scriptExecutionContext() const;
-        
+
+        bool fireEventListeners(Event* event, Event* concealedEvent);
+
     private:
         virtual void refEventTarget() { ref(); }
         virtual void derefEventTarget() { deref(); }
         virtual EventTargetData* eventTargetData();
         virtual EventTargetData* ensureEventTargetData();
         
+        void fireEventListeners(Event* event, Event* concealedEvent, EventTargetData* d, EventListenerVector& entry);
+
         EventTargetData m_eventTargetData;
         DOMWindow* m_window;
     };

@@ -83,7 +83,14 @@ void JSEventListener::handleEvent(ScriptExecutionContext* scriptExecutionContext
     if (!jsFunction)
         return;
 
-    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(scriptExecutionContext, m_isolatedWorld.get());
+    JSDOMGlobalObject* globalObject;
+    bool useGlobalAsThis = false;
+
+    if (m_protectedWrapper && m_protectedWrapper->inherits(&JSDOMGlobalObject::s_info)) {
+        globalObject = jsCast<JSDOMGlobalObject*>(m_protectedWrapper.get());
+        useGlobalAsThis = true;
+    } else
+        globalObject = toJSDOMGlobalObject(scriptExecutionContext, m_isolatedWorld.get());
     if (!globalObject)
         return;
 
@@ -129,7 +136,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext* scriptExecutionContext
         globalData.timeoutChecker.start();
         InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(scriptExecutionContext, callType, callData);
 
-        JSValue thisValue = handleEventFunction == jsFunction ? toJS(exec, globalObject, event->currentTarget()) : jsFunction;
+        JSValue thisValue = handleEventFunction == useGlobalAsThis ? globalObject : (jsFunction ? toJS(exec, globalObject, event->currentTarget()) : jsFunction);
         JSValue retval = scriptExecutionContext->isDocument()
             ? JSMainThreadExecState::call(exec, handleEventFunction, callType, callData, thisValue, args)
             : JSC::call(exec, handleEventFunction, callType, callData, thisValue, args);
