@@ -48,6 +48,7 @@ namespace WTF {
         void add(const SecurityTag& tag);
 
         bool hasTag(const SecurityTag& tag) const;
+        bool hasLabel(const RefPtr<SecurityLabelImpl>& other) const;
 
         PassRefPtr<SecurityLabelImpl> combine(const RefPtr<SecurityLabelImpl>& other);
         PassRefPtr<SecurityLabelImpl> duplicate();
@@ -76,19 +77,31 @@ namespace WTF {
 
         WTF_EXPORT_PRIVATE void add(const SecurityTag& tag);        
         WTF_EXPORT_PRIVATE bool hasTag(const SecurityTag& tag) const;
+        WTF_EXPORT_PRIVATE bool hasLabel(const SecurityLabel& other) const;
         WTF_EXPORT_PRIVATE void merge(const SecurityLabel& other);
     private:
         void duplicateOrInit();
 
         RefPtr<SecurityLabelImpl> m_impl;
     };
-    
+
     inline void SecurityLabelImpl::add(const SecurityTag& tag) {
         m_tagSet.add(tag); 
     }
-    
+
     inline bool SecurityLabelImpl::hasTag(const SecurityTag& tag) const {
         return m_tagSet.contains(tag);
+    }
+
+    inline bool SecurityLabelImpl::hasLabel(const RefPtr<SecurityLabelImpl>& other) const {
+        SecurityTagSet& otherSet = other->m_tagSet;
+
+        SecurityTagSet::iterator end = otherSet.end();
+        for (SecurityTagSet::iterator it = otherSet.begin(); it != end; ++it) {
+            if (!m_tagSet.contains(*it))
+                return false;
+        }
+        return true;
     }
 }
 

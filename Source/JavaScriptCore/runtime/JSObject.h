@@ -541,6 +541,22 @@ inline void JSCell::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {
     methodTable()->mergeSecurityLabelCell(this, exec, label);
 }
 
+inline JSCell* JSCell::duplicateNotObject(ExecState* exec) {
+    ASSERT(!isObject());
+    SecurityLabel current = securityLabel();
+    if (isString()) {
+        const JSString *string = static_cast<const JSString*>(this);
+        JSCell* cell = JSString::create(exec->globalData(), string->value(exec).impl());
+        cell->mergeSecurityLabel(exec, current);
+        return cell;
+    } else if (isLabeledValue()) {
+        return JSLabeledValue::create(exec, current, static_cast<const JSLabeledValue*>(this)->value());
+    }
+
+    ASSERT_NOT_REACHED();
+    return this;
+}
+
 // this method is here to be after the inline declaration of JSCell::inherits
 inline bool JSValue::inherits(const ClassInfo* classInfo) const
 {
@@ -880,23 +896,22 @@ inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue 
         return static_cast<const JSLabeledValue*>(asCell())->value().putByIndex(exec, propertyName, value, shouldThrow);
     asCell()->methodTable()->putByIndex(asCell(), exec, propertyName, value, shouldThrow);
 }
-    
+
 inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {
     if (label.isNull())
         return *this;
 
-    JSCell *cell;
-    if (isString()) {
-        const JSString *string = static_cast<const JSString*>(asCell());
-        cell = JSString::create(exec->globalData(), string->value(exec).impl());
-        cell->mergeSecurityLabel(exec, string->securityLabel());
-    } else if (isCell()) {
-        cell = asCell();
-    } else {
-        cell = JSLabeledValue::create(exec, label, *this);
+    if (!isCell())
+        return JSLabeledValue::create(exec, label, *this);
+
+    JSCell* cell = asCell();
+    if (!cell->securityLabel().hasLabel(label)) {
+        if (!isObject())
+            cell = cell->duplicateNotObject(exec);
+        cell->mergeSecurityLabel(exec, label);
     }
-    cell->mergeSecurityLabel(exec, label);
-    return JSValue(cell);
+
+    return cell;
 }
 
 inline SecurityLabel JSValue::securityLabel() const {

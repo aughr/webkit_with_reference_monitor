@@ -82,6 +82,9 @@ namespace JSC {
         bool isGetterSetter() const;
         bool inherits(const ClassInfo*) const;
         bool isAPIValueWrapper() const;
+
+        // SecurityLabel related.
+        JSCell* duplicateNotObject(ExecState* exec);
         void mergeSecurityLabel(ExecState*, SecurityLabel);
         SecurityLabel securityLabel() const;
         JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);

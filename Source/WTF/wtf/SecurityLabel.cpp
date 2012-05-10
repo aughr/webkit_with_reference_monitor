@@ -23,51 +23,59 @@
 #include <wtf/SecurityLabel.h>
 
 namespace WTF {
-    PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::combine(const RefPtr<SecurityLabelImpl>& other) {
-        SecurityTagSet& otherSet = other->m_tagSet;
-        RefPtr<SecurityLabelImpl> result = duplicate();
 
-        for (SecurityTagSet::iterator it = otherSet.begin(); it != otherSet.end(); ++it) {
-            result->m_tagSet.add(*it);
-        }
-        return result.release();
-    }
+PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::combine(const RefPtr<SecurityLabelImpl>& other) {
+    SecurityTagSet& otherSet = other->m_tagSet;
+    RefPtr<SecurityLabelImpl> result = duplicate();
 
-    PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::duplicate() {
-        if (refCount() == 1)
-            return this;
+    for (SecurityTagSet::iterator it = otherSet.begin(); it != otherSet.end(); ++it) {
+        result->m_tagSet.add(*it);
+    }
+    return result.release();
+}
 
-        return SecurityLabelImpl::create(m_tagSet);
-    }
-    
-    void SecurityLabel::add(const SecurityTag& tag) {
-        if (hasTag(tag))
-            return;
-        
-        duplicateOrInit();
-        m_impl->add(tag);
-    }
-    
-    bool SecurityLabel::hasTag(const SecurityTag& tag) const {
-        return !isNull() && m_impl->hasTag(tag);
-    }
-    
-    void SecurityLabel::merge(const SecurityLabel& other) {
-        if (other.isNull() || m_impl == other.m_impl)
-            return;
-        
-        if (isNull())
-            m_impl = other.m_impl;
-        else
-            m_impl = m_impl->combine(other.m_impl);
-    }
-    
-    void SecurityLabel::duplicateOrInit() {
-        if (isNull())
-            m_impl = SecurityLabelImpl::create();
-        else {
-            m_impl = m_impl->duplicate();
-            
-        }                
+PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::duplicate() {
+    if (refCount() == 1)
+        return this;
+
+    return SecurityLabelImpl::create(m_tagSet);
+}
+
+void SecurityLabel::add(const SecurityTag& tag) {
+    if (hasTag(tag))
+        return;
+
+    duplicateOrInit();
+    m_impl->add(tag);
+}
+
+bool SecurityLabel::hasTag(const SecurityTag& tag) const {
+    return !isNull() && m_impl->hasTag(tag);
+}
+
+bool SecurityLabel::hasLabel(const SecurityLabel& other) const {
+    if (isNull() || other.isNull())
+        return other.isNull();
+    return m_impl->hasLabel(other.m_impl);
+}
+
+void SecurityLabel::merge(const SecurityLabel& other) {
+    if (other.isNull() || m_impl == other.m_impl)
+        return;
+
+    if (isNull())
+        m_impl = other.m_impl;
+    else
+        m_impl = m_impl->combine(other.m_impl);
+}
+
+void SecurityLabel::duplicateOrInit() {
+    if (isNull())
+        m_impl = SecurityLabelImpl::create();
+    else {
+        m_impl = m_impl->duplicate();
+
     }
 }
+
+} // namespace WTF
