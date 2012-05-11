@@ -45,10 +45,9 @@
 
         safe.setSelectionRange(1, 5);
         document.execCommand('paste');
-      } catch (e) {
-        debug("Error thrown: " + e);
+      } finally {
+        finishJSTest();
       }
-      finishJSTest();
     }
     window.addEventListener('load', runtest);
   </script>

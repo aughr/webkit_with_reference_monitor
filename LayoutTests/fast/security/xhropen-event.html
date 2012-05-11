@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test checkxhropen event</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checkxhropen event behaves properly.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    var first = true;
+    window.addEventListener('checkxhropen', function (event) {
+      debug("checkxhropen reached");
+      if (first) {
+        shouldBeTrue('tag.isOn(event.securityLabel)');
+        event.preventDefault();
+      } else {
+        shouldBeFalse('tag.isOn(event.securityLabel)');
+      }
+      first = false;
+    });
+    function runtest() {
+      
+      try {
+        shouldThrow('var req = new XMLHttpRequest(); var url = "http://localhost";req.open("GET", tag.addTo(url));', "'Error: SECURITY_ERR: DOM Exception 18'");
+        var req = new XMLHttpRequest();
+        req.open("GET", "http://localhost");
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

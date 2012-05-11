@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test checkxhrsend event</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checkxhrsend event behaves properly.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    var first = true;
+    window.addEventListener('checkxhrsend', function (event) {
+      debug("checkxhrsend reached");
+      if (first) {
+        shouldBeTrue('tag.isOn(event.securityLabel)');
+        event.preventDefault();
+      } else {
+        shouldBeFalse('tag.isOn(event.securityLabel)');
+      }
+      first = false;
+    });
+    var req = new XMLHttpRequest();
+    req.open("POST", "http://localhost");
+    function runtest() {
+      try {
+        shouldThrow('req.send(tag.addTo("foo"));', "'Error: XMLHttpRequest denied by checkxmlsend'");
+        req.send("foo");
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

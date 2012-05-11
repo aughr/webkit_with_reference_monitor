@@ -114,7 +114,7 @@ JSValue JSXMLHttpRequest::open(ExecState* exec)
 
 JSValue JSXMLHttpRequest::send(ExecState* exec)
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, requestDenied, ("XMLHttpRequest denied by event handler."));
+    DEFINE_STATIC_LOCAL(const AtomicString, requestDenied, ("XMLHttpRequest denied by checkxmlsend"));
 
     InspectorInstrumentation::willSendXMLHttpRequest(impl()->scriptExecutionContext(), impl()->url());
 
@@ -124,7 +124,7 @@ JSValue JSXMLHttpRequest::send(ExecState* exec)
         RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().checkxhrsendEvent, val.toString(exec)->securityLabel(), "", impl()->url(), window);
         static_cast<Document*>(impl()->scriptExecutionContext())->dispatchSecurityEvent(event);
         if (event->defaultPrevented()) {
-            reportException(exec, jsString(exec, requestDenied));
+            throwError(exec, createError(exec, stringToUString(requestDenied)));
             return jsUndefined();
         }
     }

@@ -1,0 +1,45 @@
+<head>
+  <title>Test checkbeforeload on image</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checkbeforeload event behaves properly when loading images.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    var shouldBeLabeled = false;
+    window.addEventListener('checkbeforeload', function (event) {
+      debug("checkbeforeload reached");
+      if (shouldBeLabeled)
+        shouldBeTrue('tag.isOn(event.securityLabel)');
+      else
+        shouldBeFalse('tag.isOn(event.securityLabel)');
+    });
+    function runtest() {
+      try {
+        shouldBeLabeled = true;
+        var img = '../images/resources/32bit.ico';
+        var container = document.getElementById('container');
+        container.innerHTML = tag.addTo("<img id='image' src='" + img + "'>");
+
+        var image = document.getElementById('image');
+        image.src = tag.addTo(img);
+
+        shouldBeLabeled = false;
+        image.parentNode.removeChild(image);
+        container.innerHTML = "<img id='image' src='" + img + "'>";
+        image = document.getElementById('image');
+
+        image.src = img;
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+  <p id="container"></p>
+</body>
+</html>

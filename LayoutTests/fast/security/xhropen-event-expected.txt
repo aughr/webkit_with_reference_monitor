@@ -1,0 +1,14 @@
+This tests that the checkxhropen event behaves properly.
+
+On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
+
+
+checkxhropen reached
+PASS tag.isOn(event.securityLabel) is true
+PASS var req = new XMLHttpRequest(); var url = "http://localhost";req.open("GET", tag.addTo(url)); threw exception Error: SECURITY_ERR: DOM Exception 18.
+checkxhropen reached
+PASS tag.isOn(event.securityLabel) is false
+PASS successfullyParsed is true
+
+TEST COMPLETE
+

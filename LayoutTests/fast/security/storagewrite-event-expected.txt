@@ -1,0 +1,17 @@
+This tests that the checkstoragewrite event behaves properly.
+
+On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
+
+
+checkstoragewrite reached
+PASS tag.isOn(event.securityLabel) is true
+PASS window.localStorage.setItem("foo", tag.addTo("foo")) threw exception Error: SECURITY_ERR: DOM Exception 18.
+checkstoragewrite reached
+PASS tag.isOn(event.securityLabel) is true
+PASS window.localStorage.setItem(tag.addTo("foo"), "foo") threw exception Error: SECURITY_ERR: DOM Exception 18.
+checkstoragewrite reached
+PASS tag.isOn(event.securityLabel) is false
+PASS successfullyParsed is true
+
+TEST COMPLETE
+

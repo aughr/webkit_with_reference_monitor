@@ -1,0 +1,19 @@
+This tests that the checkbeforeload event behaves properly when loading images.
+
+On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
+
+
+checkbeforeload reached
+PASS tag.isOn(event.securityLabel) is false
+checkbeforeload reached
+PASS tag.isOn(event.securityLabel) is true
+checkbeforeload reached
+PASS tag.isOn(event.securityLabel) is true
+checkbeforeload reached
+PASS tag.isOn(event.securityLabel) is false
+checkbeforeload reached
+PASS tag.isOn(event.securityLabel) is false
+PASS successfullyParsed is true
+
+TEST COMPLETE
+

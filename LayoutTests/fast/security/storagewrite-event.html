@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test checkstoragewrite event</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checkstoragewrite event behaves properly.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    var shouldHaveLabel = true;
+    window.addEventListener('checkstoragewrite', function (event) {
+      debug("checkstoragewrite reached");
+      if (shouldHaveLabel) {
+        shouldBeTrue('tag.isOn(event.securityLabel)');
+        event.preventDefault();
+      } else {
+        shouldBeFalse('tag.isOn(event.securityLabel)');
+      }
+    });
+    function runtest() {
+      try {
+        shouldThrow('window.localStorage.setItem("foo", tag.addTo("foo"))', "'Error: SECURITY_ERR: DOM Exception 18'");
+        shouldThrow('window.localStorage.setItem(tag.addTo("foo"), "foo")', "'Error: SECURITY_ERR: DOM Exception 18'");
+        shouldHaveLabel = false;
+        window.localStorage.setItem("foo", "foo");
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

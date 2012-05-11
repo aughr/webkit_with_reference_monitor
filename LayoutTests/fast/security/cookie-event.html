@@ -1,0 +1,36 @@
+<html>
+<head>
+  <title>Test checkcookiewrite event</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checkcookiewrite event behaves properly.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    var first = true;
+    window.addEventListener('checkcookiewrite', function (event) {
+      debug("checkcookiewrite reached");
+      if (first)
+        shouldBeTrue('tag.isOn(event.securityLabel)');
+      else
+        shouldBeFalse('tag.isOn(event.securityLabel)');
+      first = false;
+    });
+    function runtest() {
+      try {
+        var text = tag.addTo("foo");
+        document.cookie = text;
+        text = "foo";
+        document.cookie = text;
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+CONSOLE MESSAGE: XMLHttpRequest denied by event handler.
+This tests that the checkxhrsend event behaves properly.
+
+On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
+
+
+checkxhrsend reached
+PASS tag.isOn(event.securityLabel) is true
+FAIL req.send(tag.addTo("foo")); should throw Error: SECURITY_ERR: DOM Exception 18. Was undefined.
+checkxhrsend reached
+PASS tag.isOn(event.securityLabel) is false
+FAIL successfullyParsed should be true (of type boolean). Was undefined (of type undefined).
+
+TEST COMPLETE
+
