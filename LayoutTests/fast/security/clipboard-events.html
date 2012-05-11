@@ -1,5 +1,7 @@
+<!DOCTYPE html>
 <html>
 <head>
+  <title>Test label-related clipboard events</title>
   <script src="../js/resources/js-test-pre.js"></script>
   <script>
     description('This tests that the checkcopy, checkcut, and checkpaste events behave properly.');
@@ -57,8 +59,10 @@
     <span>safe text</span>
     <span id="to_tag">tagged</span>
   </p>
-  <input id="field" value="copy from me">
-  <input id="safe" value="safe info">
+  <form action="">
+    <input id="field" value="copy from me">
+    <input id="safe" value="safe info">
+  </form>
   <div id="description"></div>
   <div id="console"></div>
 </body>
