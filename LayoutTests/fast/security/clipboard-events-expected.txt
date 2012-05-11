@@ -1,0 +1,17 @@
+This tests that the checkcopy, checkcut, and checkpaste events behave properly.
+
+On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
+
+
+checkcopy reached
+PASS tag.isOn(event.securityLabel) is true
+checkcut reached
+PASS tag.isOn(event.securityLabel) is true
+PASS field.value is "copy from me"
+checkpaste reached
+PASS tag.isOn(event.securityLabel) is false
+PASS successfullyParsed is true
+
+TEST COMPLETE
+  
+

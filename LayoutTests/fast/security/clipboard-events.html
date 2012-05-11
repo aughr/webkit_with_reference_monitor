@@ -1,0 +1,65 @@
+<html>
+<head>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checkcopy, checkcut, and checkpaste events behave properly.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    window.addEventListener('checkcopy', function (event) {
+      debug("checkcopy reached");
+      shouldBeTrue('tag.isOn(event.securityLabel)');
+    });
+    window.addEventListener('checkcut', function (event) {
+      debug("checkcut reached");
+      shouldBeTrue('tag.isOn(event.securityLabel)');
+      if (tag.isOn(event.securityLabel))
+        event.preventDefault();
+    });
+    window.addEventListener('checkpaste', function (event) {
+      debug("checkpaste reached");
+      shouldBeFalse('tag.isOn(event.securityLabel)');
+    });
+    function runtest() {
+      try {
+        var to_tag = document.getElementById('to_tag');
+        to_tag.innerText = tag.addTo(to_tag.innerText);
+        tag.addTo(document.getElementById('field'));
+
+        var copyable = document.getElementById('copyable');
+        var field = document.getElementById('field');
+        var safe = document.getElementById('safe');
+
+        var selection = window.getSelection();
+        var range = document.createRange();
+        range.selectNode(copyable);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('copy');
+        copyable.parentNode.removeChild(copyable);
+
+        field.setSelectionRange(1, 5);
+        document.execCommand('cut');
+        shouldBeEqualToString("field.value", "copy from me");
+
+        safe.setSelectionRange(1, 5);
+        document.execCommand('paste');
+      } catch (e) {
+        debug("Error thrown: " + e);
+      }
+      finishJSTest();
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <p id="copyable">
+    <span>safe text</span>
+    <span id="to_tag">tagged</span>
+  </p>
+  <input id="field" value="copy from me">
+  <input id="safe" value="safe info">
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>
