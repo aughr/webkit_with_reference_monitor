@@ -225,14 +225,14 @@ namespace WebCore {
     \
     macro(webkitnetworkinfochange) \
     \
-    macro(xmlhttpsend) \
-    macro(xmlhttpopen) \
     macro(checkbeforeload) \
-    macro(checkstorage) \
-    macro(cookiewrite) \
+    macro(checkcookiewrite) \
     macro(checkcopy) \
     macro(checkcut) \
     macro(checkpaste) \
+    macro(checkstoragewrite) \
+    macro(checkxhropen) \
+    macro(checkxhrsend) \
     \
 
 // end of DOM_EVENT_NAMES_FOR_EACH
@@ -261,7 +261,7 @@ namespace WebCore {
 
         inline bool isSecurityEventType(const AtomicString& eventType) const
         {
-            return eventType == xmlhttpsendEvent || eventType == xmlhttpopenEvent || eventType == checkbeforeloadEvent || eventType == checkstorageEvent || eventType == cookiewriteEvent || eventType == checkcopyEvent || eventType == checkcutEvent || eventType == checkpasteEvent;
+            return eventType == checkbeforeloadEvent || eventType == checkcookiewriteEvent || eventType == checkcopyEvent || eventType == checkcutEvent || eventType == checkpasteEvent || eventType == checkstoragewriteEvent || eventType == checkxhropenEvent || eventType == checkxhrsendEvent;
         }
 
     };

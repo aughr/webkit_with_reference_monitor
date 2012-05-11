@@ -1517,7 +1517,12 @@ bool DOMWindow::addEventListener(const AtomicString& eventType, PassRefPtr<Event
 {
     if (eventNames().isSecurityEventType(eventType)) {
         listener->protectJSWrapper();
-        return securityEventTarget()->addEventListener(eventType, listener, false);
+        if (securityEventTarget()->addEventListener(eventType, listener, false)) {
+            securityEventTarget()->addListenerTypeIfNeeded(eventType);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     if (!EventTarget::addEventListener(eventType, listener, useCapture))

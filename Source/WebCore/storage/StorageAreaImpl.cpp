@@ -157,7 +157,7 @@ String StorageAreaImpl::setItem(const String& key, const String& value, Exceptio
     
     SecurityLabel label = key.securityLabel();
     label.merge(value.securityLabel());
-    RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().checkstorageEvent, label, "", "", frame->existingDOMWindow());
+    RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().checkstoragewriteEvent, label, "", "", frame->existingDOMWindow());
     frame->document()->dispatchSecurityEvent(event);
     if (event->defaultPrevented()) {
         ec = SECURITY_ERR;

@@ -42,7 +42,7 @@ namespace WebCore {
 
 const AtomicString& SecurityEventTarget::interfaceName() const
 {
-    return eventNames().interfaceForDOMApplicationCache;
+    return nullAtom;
 }
 
 ScriptExecutionContext* SecurityEventTarget::scriptExecutionContext() const
@@ -117,6 +117,26 @@ void SecurityEventTarget::fireEventListeners(Event* event, Event* concealedEvent
         InspectorInstrumentation::didHandleEvent(cookie);
     }
     d->firingEventIterators.removeLast();
+}
+
+void SecurityEventTarget::addListenerTypeIfNeeded(const AtomicString& eventType)
+{
+    if (eventType == eventNames().checkbeforeloadEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkcookiewriteEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkcopyEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkcutEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkpasteEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkstoragewriteEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkxhropenEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
+    else if (eventType == eventNames().checkxhrsendEvent)
+        addListenerType(CHECKBEFORELOAD_LISTENER);
 }
 
 } // namespace WebCore

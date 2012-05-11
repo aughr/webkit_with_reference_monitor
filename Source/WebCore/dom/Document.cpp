@@ -3980,7 +3980,7 @@ void Document::setCookie(const String& value, ExceptionCode& ec)
     if (cookieURL.isEmpty())
         return;
     
-    RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().cookiewriteEvent, value.securityLabel(), "", cookieURL.string(), domWindow());
+    RefPtr<SecurityEvent> event = SecurityEvent::create(eventNames().checkcookiewriteEvent, value.securityLabel(), "", cookieURL.string(), domWindow());
     dispatchSecurityEvent(event);
     if (event->defaultPrevented()) {
         ec = SECURITY_ERR;

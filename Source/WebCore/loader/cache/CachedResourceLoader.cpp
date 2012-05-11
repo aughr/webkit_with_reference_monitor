@@ -46,6 +46,7 @@
 #include "MemoryCache.h"
 #include "PingLoader.h"
 #include "ResourceLoadScheduler.h"
+#include "SecurityEventTarget.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include <wtf/UnusedParam.h>
@@ -305,7 +306,7 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const KURL& url
     }
 
     // fire checkbeforeload event to allow reference monitor to validate request
-    if (document()->topDocument()->hasListenerType(Document::BEFORELOAD_LISTENER)) {
+    if (document()->domWindow()->securityEventTarget()->hasListenerType(SecurityEventTarget::CHECKBEFORELOAD_LISTENER)) {
         RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
         if (!document()->dispatchSecurityEvent(securityEvent)) {
             if (!forPreload)

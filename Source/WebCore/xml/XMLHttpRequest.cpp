@@ -486,7 +486,7 @@ void XMLHttpRequest::open(const String& method, const KURL& url, bool async, Exc
     
     // fire xmlhttpopen event to allow reference monitor to validate request
     if (scriptExecutionContext()->isDocument()) {
-        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().xmlhttpopenEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkxhropenEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
         if (!document()->dispatchSecurityEvent(securityEvent)) {
             ec = SECURITY_ERR;
             return;
