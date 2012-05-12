@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test cross-frame security-event-dispatching iframe</title>
+  <script>
+    window.addEventListener("checkxhropen", function (e) {
+      if (/cross-origin-iframe-iframe\.html$/.test(this.location.href) === true)
+        window.parent.postMessage("PASS: child location test", "*");
+      else
+        window.parent.postMessage("FAIL: child location test", "*");
+
+      if (e.destination === "http://localhost:8000/foo")
+        window.parent.postMessage("PASS: child destination test", "*");
+      else
+        window.parent.postMessage("FAIL: child destination test", "*");
+      window.parent.postMessage("END", "*");
+    });
+    function test() {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "http://localhost:8000/foo");
+    }
+    window.addEventListener('load', test);
+  </script>
+</head>
+<body>
+  Helper iframe for testing cross-frame security events.
+</body>
+</html>

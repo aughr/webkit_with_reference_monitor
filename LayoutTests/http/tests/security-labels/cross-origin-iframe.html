@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test cross-origin iframe security event dispatching</title>
+  <script src="../../js-test-resources/js-test-pre.js"></script>
+  <script>
+    description('This tests to see if cross-origin frame interactions are still prohibited with security events.');
+    window.jsTestIsAsync = true;
+    if (window.layoutTestController) {
+      //layoutTestController.setCanOpenWindows();
+      layoutTestController.dumpChildFramesAsText();
+    }
+
+    var iframe;
+    var firstEnded = false;
+    var crossFrameEvalFailed = false;
+    var thisObj;
+    window.addEventListener("checkxhropen", function (event) {
+      thisObj = this;
+      shouldBeTrue('/cross-origin-iframe\\.html$/.test(thisObj.location.href)')
+      shouldBeTrue('event.destination.length == 0');
+      iframe = document.getElementById('iframe');
+      try {
+        iframe.contentWindow.eval("alert(\'hey\');");
+      } catch (e) {
+        crossFrameEvalFailed = true;
+      }
+      shouldBeTrue('crossFrameEvalFailed');
+
+      if (firstEnded)
+        finishJSTest();
+      else
+        firstEnded = true;
+    });
+
+    var count = 0;
+    window.addEventListener("message", function(e) {
+      if (e.data === "END") {
+        if (firstEnded)
+          finishJSTest();
+        else
+          firstEnded = true;
+        return;
+      }
+
+      var splitData = e.data.split(': ');
+      var result = splitData[0], msg = splitData[1];
+      if (result === "PASS")
+        testPassed(msg);
+      else
+        testFailed(msg);
+    }, false);
+  </script>
+  <script src="../../js-test-resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+  <iframe id="iframe" src="http://localhost:8000/security-labels/resources/cross-origin-iframe-iframe.html"></iframe>
+</body>
+</html>
