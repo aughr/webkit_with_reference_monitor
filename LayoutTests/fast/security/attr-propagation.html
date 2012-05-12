@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test label propagation on attributes</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that label propagation works on DOM attributes.');
+    var tag1 = new SecurityTag(), tag2 = new SecurityTag();
+    var body, yesTag, noTag, attr, name;
+    window.jsTestIsAsync = true;
+    function verifyTag() {
+      shouldBeTrue('yesTag.isOn(body.getAttribute(name))');
+      attr = body.getAttributeNode(name);
+      shouldBeTrue('yesTag.isOn(attr.value)');
+      shouldBeFalse('noTag.isOn(attr.value)');
+    }
+    function runtest() {
+      try {
+        body = document.body;
+
+        // set attributes
+        body.setAttribute(tag1.addTo("foo"), tag1.addTo("bar"));
+        body.setAttribute(tag2.addTo("bar"), tag2.addTo("baz"));
+
+        // check before modification
+        yesTag = tag1, noTag = tag2;
+        name = "foo";
+        verifyTag();
+        yesTag = tag2, noTag = tag1, name = "bar";
+        verifyTag();
+
+        attr = body.getAttributeNode("foo");
+        attr.value += "foo";
+        shouldBeEqualToString('attr.value', 'barfoo');
+        yesTag = tag1, noTag = tag2, name = "foo";
+        verifyTag();
+
+        shouldBeTrue('tag1.isOn(document.documentElement.innerHTML)');
+        shouldBeTrue('tag2.isOn(document.documentElement.innerHTML)');
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

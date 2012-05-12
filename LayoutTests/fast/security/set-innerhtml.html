@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test innerHTML with labels</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that setting innerHTML propagates labels properly.');
+    var tag = new SecurityTag();
+    var target;
+    window.jsTestIsAsync = true;
+    function runtest() {
+      try {
+        target = document.getElementById('target');
+        shouldBeFalse('tag.isOn(target.innerHTML)');
+        shouldBeFalse('tag.isOn(target.firstElementChild)');
+
+        target.innerHTML = tag.addTo("<p>This is a test</p>");
+        shouldBeTrue('tag.isOn(target.innerHTML)');
+        shouldBeTrue('tag.isOn(target.firstElementChild)');
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+  <div id="target"></div>
+</body>
+</html>

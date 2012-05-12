@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test textContent and innerText with labels</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that setting textContent and innerText propagates labels properly.');
+    var tag = new SecurityTag();
+    var target;
+    window.jsTestIsAsync = true;
+    function runtest() {
+      try {
+        target = document.getElementById('target');
+
+        target.textContent = "foo";
+        shouldBeFalse('tag.isOn(target.textContent)');
+
+        target.innerText = "foo";
+        shouldBeFalse('tag.isOn(target.innerText)');
+
+        target.textContent = tag.addTo("foo");
+        shouldBeTrue('tag.isOn(target.textContent)');
+        shouldBeTrue('tag.isOn(target.innerText)');
+
+        target.innerText = tag.addTo("foo");
+        shouldBeTrue('tag.isOn(target.innerText)');
+        shouldBeTrue('tag.isOn(target.innerHTML)');
+      } finally {
+        finishJSTest();
+      }
+    }
+    window.addEventListener('load', runtest);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+  <div id="target"></div>
+</body>
+</html>
