@@ -95,7 +95,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext* scriptExecutionContext
         return;
 
     Frame* frame = 0;
-    if (scriptExecutionContext->isDocument()) {
+    if (scriptExecutionContext->isDocument() && !useGlobalAsThis) {
         JSDOMWindow* window = jsCast<JSDOMWindow*>(globalObject);
         frame = window->impl()->frame();
         if (!frame)
