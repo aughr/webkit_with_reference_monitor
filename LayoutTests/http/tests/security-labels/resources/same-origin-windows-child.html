@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test cross-window security-event-dispatching iframe</title>
+  <script>
+    var consoleWindow = window.opener.parent;
+    window.addEventListener("checkxhropen", function (e) {
+      if (/same-origin-windows-child\.html$/.test(this.location.href) === true)
+        consoleWindow.postMessage("PASS: child location test", "*");
+      else
+        consoleWindow.postMessage("FAIL: child location test", "*");
+
+      if (e.destination === "http://localhost:8000/foo")
+        consoleWindow.postMessage("PASS: child destination test", "*");
+      else
+        consoleWindow.postMessage("FAIL: child destination test", "*");
+      if (consoleWindow.shouldEnd)
+        consoleWindow.postMessage("END", "*");
+    });
+
+    function test() {
+      var xhr = new XMLHttpRequest();
+      try {
+        window.consoleWindow.postMessage("about to start first xhr open", '*');
+        xhr.open("GET", "http://localhost:8000/foo", '*');
+        consoleWindow.postMessage("closing window", '*');
+        consoleWindow.shouldEnd = true;
+        consoleWindow.closeIFrame();
+        if (consoleWindow.GCController)
+          consoleWindow.GCController.collect();
+        consoleWindow.postMessage("about to start second xhr open", '*');
+        xhr.open("GET", "http://localhost:8000/foo"); 
+      } catch (e) {
+        consoleWindow.console.log(e);
+        consoleWindow.postMessage(e, '*');
+      }
+    }
+
+    window.addEventListener('load', test);
+  </script>
+</head>
+<body>
+  Helper iframe for testing cross-frame security events.
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test same-origin windows security event dispatching</title>
+  <script src="../../js-test-resources/js-test-pre.js"></script>
+  <script>
+    description('This tests to see if same-origin cross-window interactions work properly with security events.');
+    window.jsTestIsAsync = true;
+    if (window.layoutTestController) {
+      layoutTestController.setCanOpenWindows();
+      layoutTestController.dumpChildFramesAsText();
+    }
+
+    function closeIFrame() {
+      var iframe = document.getElementById('iframe');
+      iframe.parentNode.removeChild(iframe);
+    }
+
+    var count = 0;
+    function handleMessage(data) {
+      if (data === "END") {
+        count++;
+        if (count == 2)
+          finishJSTest();
+        return;
+      }
+
+      var splitData = data.split(': ');
+      var result = splitData[0], msg = splitData[1];
+      if (result === "PASS")
+        testPassed(msg);
+      else if (result === "FAIL")
+        testFailed(msg);
+      else
+        debug(data);
+    }
+    window.addEventListener("message", function(e) {
+      handleMessage(e.data);
+    }, false);
+  </script>
+  <script src="../../js-test-resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+  <iframe id="iframe" src="resources/same-origin-windows-parent.html"></iframe>
+</body>
+</html>

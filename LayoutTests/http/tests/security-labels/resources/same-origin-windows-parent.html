@@ -1,0 +1,53 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test same-origin windows security event dispatching</title>
+  <script>
+
+    (function () {
+    var consoleWindow = window.parent;
+    var foo = "blah";
+    window.addEventListener("checkxhropen", function (e) {
+      try {
+        var shouldBeDetached = consoleWindow.shouldEnd;
+        if (shouldBeDetached) {
+          if (this.location === undefined)
+            consoleWindow.handleMessage("PASS: parent detached location test", "*");
+          else
+            consoleWindow.handleMessage("FAIL: parent detached location test", "*");
+
+          if (e.destination === "http://localhost:8000/foo")
+            consoleWindow.handleMessage("PASS: parent destination test", "*");
+          else
+            consoleWindow.handleMessage("FAIL: parent destination test", "*");
+        } else {
+          if (/same-origin-windows-parent\.html$/.test(this.location.href) === true)
+            consoleWindow.postMessage("PASS: parent location test", "*");
+          else
+            consoleWindow.postMessage("FAIL: parent location test", "*");
+
+          if (e.destination === "http://localhost:8000/foo")
+            consoleWindow.postMessage("PASS: parent destination test", "*");
+          else
+            consoleWindow.postMessage("FAIL: parent destination test", "*");
+        }
+      } finally {
+        if (consoleWindow.shouldEnd)
+          consoleWindow.handleMessage("END");
+      }
+    });
+    })();
+
+    window.addEventListener('load', function () {
+      //var other = window.open('same-origin-windows-child.html');
+      var other = window.open('');
+      other.location = 'same-origin-windows-child.html';
+      window.parent.other = other;
+    });
+  </script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

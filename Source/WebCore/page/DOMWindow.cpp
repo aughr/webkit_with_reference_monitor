@@ -460,6 +460,8 @@ PassRefPtr<MediaQueryList> DOMWindow::matchMedia(const String& media)
 void DOMWindow::setSecurityOrigin(SecurityOrigin* securityOrigin)
 {
     m_securityOrigin = securityOrigin;
+    if (opener() && opener()->securityOrigin()->canAccess(securityOrigin))
+        m_securityEventTarget = opener()->m_securityEventTarget;
 }
 
 Page* DOMWindow::page()
@@ -1505,10 +1507,12 @@ void DOMWindow::webkitCancelAnimationFrame(int id)
     
 PassRefPtr<SecurityEventTarget> DOMWindow::securityEventTarget()
 {
-    if (top() && top() != this)
-        return top()->securityEventTarget();
+    if (m_securityEventTarget)
+        return m_securityEventTarget;
 
-    if (!m_securityEventTarget)
+    if (top() && top() != this)
+        m_securityEventTarget = top()->securityEventTarget();
+    else
         m_securityEventTarget = SecurityEventTarget::create();
     return m_securityEventTarget;
 }
