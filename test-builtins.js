@@ -1,5 +1,5 @@
 function assertTaint(obj, bool, label, desc) {
-  if (isTainted(obj) == bool) {
+  if (isTainted(obj) === bool) {
     print("PASS " + label + ": " + desc);
   } else {
     print("FAIL " + label + ": " + desc);
@@ -38,6 +38,8 @@ function runTest() {
   assertTaint(bool.toString(), false, "Boolean.toString", "should be untainted");
   assertTaint(tainted_bool.valueOf(), true, "Boolean.valueOf", "should be tainted");
   assertTaint(bool.valueOf(), false, "Boolean.valueOf", "should be untainted");
+  assertTaint(new Boolean(tainted_bool), true, "new Boolean()", "tainted boolean");
+  assertTaint(new Boolean(bool), false, "new Boolean()", "untainted boolean");
 
   var tainted_year = taint("2000");
   var year = "2000";
@@ -50,6 +52,8 @@ function runTest() {
   assertTaint(Date.UTC(year, month), false, "Date.UTC", "no parts tainted");
   assertTaint(Date.parse(tainted_year), true, "Date.parse", "tainted string");
   assertTaint(Date.parse(year), false, "Date.parse", "untainted string");
+  assertTaint(new Date(tainted_year), true, "new Date()", "tainted string");
+  assertTaint(new Date(year), false, "new Date()", "untainted string");
 
   var tainted_message = taint("foo");
   var message = "foo";

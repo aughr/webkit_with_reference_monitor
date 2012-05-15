@@ -50,6 +50,7 @@ JSObject* constructBoolean(ExecState* exec, const ArgList& args)
 {
     BooleanObject* obj = BooleanObject::create(exec->globalData(), asInternalFunction(exec->callee())->globalObject()->booleanObjectStructure());
     obj->setInternalValue(exec->globalData(), jsBoolean(args.at(0).toBoolean(exec)));
+    obj->mergeSecurityLabel(exec, args.at(0).securityLabel());
     return obj;
 }
 
