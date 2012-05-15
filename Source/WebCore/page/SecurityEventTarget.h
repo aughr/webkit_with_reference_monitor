@@ -62,10 +62,13 @@ namespace WebCore {
             CHECKCOOKIEWRITE_LISTENER            = 0x02,
             CHECKCOPY_LISTENER                   = 0x04,
             CHECKCUT_LISTENER                    = 0x08,
-            CHECKPASTE_LISTENER                  = 0x10,
-            CHECKSTORAGEWRITE_LISTENER           = 0x20,
-            CHECKXHROPEN_LISTENER                = 0x40,
-            CHECKXHRPASTE_LISTENER               = 0x80
+            CHECKNAVIGATE_LISTENER               = 0x10,
+            CHECKPASTE_LISTENER                  = 0x20,
+            CHECKPOSTMESSAGE_LISTENER            = 0x40,
+            CHECKSTORAGEWRITE_LISTENER           = 0x80,
+            CHECKSUBMIT_LISTENER                 = 0x100,
+            CHECKXHROPEN_LISTENER                = 0x200,
+            CHECKXHRSEND_LISTENER                = 0x400
         };
 
         bool hasListenerType(ListenerType listenerType) const { return (m_listenerTypes & listenerType); }

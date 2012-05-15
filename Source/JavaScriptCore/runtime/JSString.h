@@ -205,12 +205,14 @@ namespace JSC {
         {
             if (isRope())
                 resolveRope(exec);
+            m_value.setSecurityLabel(securityLabel());
             return m_value;
         }
         const UString& tryGetValue() const
         {
             if (isRope())
                 resolveRope(0);
+            m_value.setSecurityLabel(securityLabel());
             return m_value;
         }
         unsigned length() { return m_length; }

@@ -124,19 +124,25 @@ void SecurityEventTarget::addListenerTypeIfNeeded(const AtomicString& eventType)
     if (eventType == eventNames().checkbeforeloadEvent)
         addListenerType(CHECKBEFORELOAD_LISTENER);
     else if (eventType == eventNames().checkcookiewriteEvent)
-        addListenerType(CHECKBEFORELOAD_LISTENER);
+        addListenerType(CHECKCOOKIEWRITE_LISTENER);
     else if (eventType == eventNames().checkcopyEvent)
-        addListenerType(CHECKBEFORELOAD_LISTENER);
+        addListenerType(CHECKCOPY_LISTENER);
     else if (eventType == eventNames().checkcutEvent)
-        addListenerType(CHECKBEFORELOAD_LISTENER);
+        addListenerType(CHECKCUT_LISTENER);
+    else if (eventType == eventNames().checknavigateEvent)
+        addListenerType(CHECKNAVIGATE_LISTENER);
     else if (eventType == eventNames().checkpasteEvent)
-        addListenerType(CHECKBEFORELOAD_LISTENER);
+        addListenerType(CHECKPASTE_LISTENER);
+    else if (eventType == eventNames().checkpostmessageEvent)
+        addListenerType(CHECKPOSTMESSAGE_LISTENER);
     else if (eventType == eventNames().checkstoragewriteEvent)
-        addListenerType(CHECKBEFORELOAD_LISTENER);
+        addListenerType(CHECKSTORAGEWRITE_LISTENER);
+    else if (eventType == eventNames().checksubmitEvent)
+        addListenerType(CHECKSUBMIT_LISTENER);
     else if (eventType == eventNames().checkxhropenEvent)
-        addListenerType(CHECKBEFORELOAD_LISTENER);
+        addListenerType(CHECKXHROPEN_LISTENER);
     else if (eventType == eventNames().checkxhrsendEvent)
-        addListenerType(CHECKBEFORELOAD_LISTENER);
+        addListenerType(CHECKXHRSEND_LISTENER);
 }
 
 } // namespace WebCore

@@ -24,6 +24,7 @@
 #define UString_h
 
 #include <wtf/text/StringImpl.h>
+#include <wtf/SecurityLabel.h>
 
 namespace JSC {
 
@@ -134,8 +135,12 @@ public:
 
     JS_EXPORT_PRIVATE UString substringSharingImpl(unsigned pos, unsigned len = UINT_MAX) const;
 
+    SecurityLabel securityLabel() const { return m_label; }
+    void setSecurityLabel(SecurityLabel other) { m_label = other; }
+
 private:
     RefPtr<StringImpl> m_impl;
+    SecurityLabel m_label;
 };
 
 template<>

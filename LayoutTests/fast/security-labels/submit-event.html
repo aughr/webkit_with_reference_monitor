@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test checksubmit event</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checksubmit event behaves properly.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    var shouldHaveTag = false;
+    window.addEventListener('checksubmit', function (event) {
+      debug("checksubmit reached with " + event.destination);
+      if (shouldHaveTag) {
+        shouldBeTrue('tag.isOn(event.securityLabel)');
+      } else {
+        shouldBeFalse('tag.isOn(event.securityLabel)');
+      }
+      event.preventDefault();
+      window.postMessage('runnexttest', '*');
+    });
+
+    function runtest() {
+      window.postMessage('runnexttest', '*');
+    }
+    window.addEventListener('load', runtest);
+
+    var state = 0;
+    window.addEventListener('message', function (e) {
+      var form = document.getElementById('form');
+      switch (state) {
+        case 0:
+          shouldHaveTag = false;
+          form.submit();
+          break;
+
+        case 1:
+          shouldHaveTag = true;
+          tag.addTo(document.getElementById('input'));
+          form.submit();
+          break;
+
+        case 2:
+          finishJSTest();
+          break;
+      }
+      state++;
+    }, false);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+  <form id="form" action="http://localhost/foo">
+    <input id="input" value="foo" />
+  </form>
+</body>
+</html>

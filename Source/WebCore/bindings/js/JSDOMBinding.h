@@ -374,7 +374,7 @@ enum ParameterDefaultPolicy {
 
     inline String ustringToString(const JSC::UString& u)
     {
-        return u.impl();
+        return String(u.impl(), u.securityLabel());
     }
 
     inline JSC::UString stringToUString(const String& s)

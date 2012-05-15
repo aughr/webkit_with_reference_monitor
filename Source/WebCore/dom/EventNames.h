@@ -229,8 +229,11 @@ namespace WebCore {
     macro(checkcookiewrite) \
     macro(checkcopy) \
     macro(checkcut) \
+    macro(checknavigate) \
     macro(checkpaste) \
+    macro(checkpostmessage) \
     macro(checkstoragewrite) \
+    macro(checksubmit) \
     macro(checkxhropen) \
     macro(checkxhrsend) \
     \
@@ -261,7 +264,7 @@ namespace WebCore {
 
         inline bool isSecurityEventType(const AtomicString& eventType) const
         {
-            return eventType == checkbeforeloadEvent || eventType == checkcookiewriteEvent || eventType == checkcopyEvent || eventType == checkcutEvent || eventType == checkpasteEvent || eventType == checkstoragewriteEvent || eventType == checkxhropenEvent || eventType == checkxhrsendEvent;
+            return eventType == checkbeforeloadEvent || eventType == checkcookiewriteEvent || eventType == checkcopyEvent || eventType == checkcutEvent || eventType == checknavigateEvent || eventType == checkpasteEvent || eventType == checkpostmessageEvent || eventType == checksubmitEvent || eventType == checkstoragewriteEvent || eventType == checkxhropenEvent || eventType == checkxhrsendEvent;
         }
 
     };

@@ -93,6 +93,7 @@
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "ScrollAnimator.h"
+#include "SecurityEventTarget.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "SegmentedString.h"
@@ -267,6 +268,16 @@ void FrameLoader::urlSelected(const FrameLoadRequest& passedRequest, PassRefPtr<
 
     RefPtr<Frame> protect(m_frame);
     FrameLoadRequest frameRequest(passedRequest);
+    
+    RefPtr<SecurityEventTarget> target = m_frame->domWindow()->securityEventTarget();
+    if (target->hasListenerType(SecurityEventTarget::CHECKNAVIGATE_LISTENER)) {
+        const KURL& url = frameRequest.resourceRequest().url();
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checknavigateEvent, url.string().securityLabel(), "", url.string(), m_frame->domWindow());
+        if (!m_frame->domWindow()->dispatchSecurityEvent(securityEvent)) {
+            m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checknavigate: " + url.string());
+            return;
+        }
+    }
 
     if (m_frame->script()->executeIfJavaScriptURL(frameRequest.resourceRequest().url(), shouldReplaceDocumentIfJavaScriptURL))
         return;
@@ -302,6 +313,18 @@ void FrameLoader::submitForm(PassRefPtr<FormSubmission> submission)
 
     if (isDocumentSandboxed(m_frame, SandboxForms))
         return;
+
+    RefPtr<SecurityEventTarget> target = m_frame->domWindow()->securityEventTarget();
+    if (target->hasListenerType(SecurityEventTarget::CHECKSUBMIT_LISTENER)) {
+        const KURL& url = submission->action();
+        SecurityLabel label = url.string().securityLabel();
+        label.merge(submission->state()->securityLabel());
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checksubmitEvent, label, "", url.string(), m_frame->domWindow());
+        if (!m_frame->domWindow()->dispatchSecurityEvent(securityEvent)) {
+            m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to submit form by checksubmit: " + url.string());
+            return;
+        }
+    }
 
     if (protocolIsJavaScript(submission->action())) {
         m_isExecutingJavaScriptFormAction = true;

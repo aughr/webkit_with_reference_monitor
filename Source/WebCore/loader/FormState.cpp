@@ -38,6 +38,7 @@ inline FormState::FormState(PassRefPtr<HTMLFormElement> form, StringPairVector& 
     : m_form(form)
     , m_sourceDocument(sourceDocument)
     , m_formSubmissionTrigger(formSubmissionTrigger)
+    , m_securityLabelGenerated(false)
 {
     m_textFieldValues.swap(textFieldValuesToAdopt);
 }
@@ -45,6 +46,21 @@ inline FormState::FormState(PassRefPtr<HTMLFormElement> form, StringPairVector& 
 PassRefPtr<FormState> FormState::create(PassRefPtr<HTMLFormElement> form, StringPairVector& textFieldValuesToAdopt, PassRefPtr<Document> sourceDocument, FormSubmissionTrigger formSubmissionTrigger)
 {
     return adoptRef(new FormState(form, textFieldValuesToAdopt, sourceDocument, formSubmissionTrigger));
+}
+
+SecurityLabel FormState::securityLabel() {
+    if (m_securityLabelGenerated)
+        return m_securityLabel;
+    
+    SecurityLabel label;
+    StringPairVector::iterator end = m_textFieldValues.end();
+    for (StringPairVector::iterator it = m_textFieldValues.begin(); it != end; it++) {
+        label.merge(it->first.securityLabel());
+        label.merge(it->second.securityLabel());
+    }
+    m_securityLabel = label;
+    m_securityLabelGenerated = true;
+    return m_securityLabel;
 }
 
 }

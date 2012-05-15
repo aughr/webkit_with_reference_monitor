@@ -51,7 +51,7 @@ using namespace std;
 
 namespace JSC {
 
-COMPILE_ASSERT(sizeof(UString) == sizeof(void*), UString_should_stay_small);
+COMPILE_ASSERT(sizeof(UString) == 2*sizeof(void*), UString_should_stay_small);
 
 // Construct a string with UTF-16 data.
 UString::UString(const UChar* characters, unsigned length)

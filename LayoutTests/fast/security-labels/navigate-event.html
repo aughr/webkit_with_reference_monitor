@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test checknavigate event</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that the checknavigate event behaves properly.');
+    var tag = new SecurityTag();
+    window.jsTestIsAsync = true;
+    var shouldHaveTag = false;
+    window.addEventListener('checknavigate', function (event) {
+      debug("checknavigate reached with " + event.destination);
+      if (shouldHaveTag) {
+        shouldBeTrue('tag.isOn(event.securityLabel)');
+      } else {
+        shouldBeFalse('tag.isOn(event.securityLabel)');
+      }
+      event.preventDefault();
+      window.postMessage('runnexttest', '*');
+    });
+
+    function runtest() {
+      window.postMessage('runnexttest', '*');
+    }
+    window.addEventListener('load', runtest);
+
+    var state = 0;
+    window.addEventListener('message', function (e) {
+      var link = document.getElementById('link');
+      switch (state) {
+        case 0:
+          shouldHaveTag = false;
+          link.click();
+          break;
+
+        case 1:
+          shouldHaveTag = false;
+          window.location = "http://localhost/foo";
+          break;
+
+        case 2:
+          shouldHaveTag = true;
+          link.href = tag.addTo(link.href);
+          link.click();
+          break;
+
+        case 3:
+          shouldHaveTag = true;
+          window.location = tag.addTo("http://localhost/foo");
+          break;
+
+        case 4:
+          finishJSTest();
+          break;
+      }
+      state++;
+    }, false);
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+  <a id="link" href="http://localhost/bar" />
+</body>
+</html>

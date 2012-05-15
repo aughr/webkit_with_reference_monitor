@@ -31,6 +31,7 @@
 
 #include "PlatformString.h"
 #include <wtf/RefCounted.h>
+#include <wtf/SecurityLabel.h>
 
 namespace WebCore {
 
@@ -52,6 +53,7 @@ namespace WebCore {
         const StringPairVector& textFieldValues() const { return m_textFieldValues; }
         Document* sourceDocument() const { return m_sourceDocument.get(); }
         FormSubmissionTrigger formSubmissionTrigger() const { return m_formSubmissionTrigger; }
+        SecurityLabel securityLabel();
 
     private:
         FormState(PassRefPtr<HTMLFormElement>, StringPairVector& textFieldValuesToAdopt, PassRefPtr<Document>, FormSubmissionTrigger);
@@ -60,6 +62,8 @@ namespace WebCore {
         StringPairVector m_textFieldValues;
         RefPtr<Document> m_sourceDocument;
         FormSubmissionTrigger m_formSubmissionTrigger;
+        SecurityLabel m_securityLabel;
+        bool m_securityLabelGenerated;
     };
 
 }
