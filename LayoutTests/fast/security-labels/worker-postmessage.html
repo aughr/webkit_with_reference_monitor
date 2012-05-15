@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test label propagation on postmessage to worker</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that label propagation when sending message to workers.');
+    window.jsTestIsAsync = true;
+
+    var tag = new SecurityTag();
+    var worker = new SharedWorker('resources/shared-worker-common.js', 'name');
+
+    window.addEventListener('checkpostmessage', function (event) {
+      debug('checkpostmessage');
+      if (tag.isOn(event.securityLabel)) {
+        event.preventDefault();
+        worker.port.postMessage('blocked');
+      }
+    });
+
+    var message;
+    function runtest() {
+      try {
+        message = tag.addTo("ping");
+        shouldThrow('worker.port.postMessage(message)', "'Error: SECURITY_ERR: DOM Exception 18'");
+        message = {foo: tag.addTo("bar")};
+        shouldThrow('window.postMessage(message, "*")', "'Error: SECURITY_ERR: DOM Exception 18'");
+        message = "ping";
+        worker.port.postMessage(message);
+      } finally {
+        worker.port.postMessage("done");
+      }
+    }
+    window.addEventListener('load', runtest);
+
+    worker.port.onmessage = function(event) {
+      if (event.data == "DONE")
+        finishJSTest();
+      else
+        debug(event.data);
+    };
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

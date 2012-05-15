@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test label propagation on postmessage to window</title>
+  <script src="../js/resources/js-test-pre.js"></script>
+  <script>
+    description('This tests that label propagation when sending message to windows.');
+    window.jsTestIsAsync = true;
+
+    var tag = new SecurityTag();
+
+    window.addEventListener('checkpostmessage', function (event) {
+      debug('checkpostmessage');
+      if (tag.isOn(event.securityLabel)) {
+        event.preventDefault();
+        window.postMessage('blocked', "*");
+      }
+    });
+
+    var message;
+    function runtest() {
+      try {
+        message = tag.addTo("ping");
+        shouldThrow('window.postMessage(message, "*")', "'Error: SECURITY_ERR: DOM Exception 18'");
+        message = {foo: tag.addTo("bar")};
+        shouldThrow('window.postMessage(message, "*")', "'Error: SECURITY_ERR: DOM Exception 18'");
+        message = "ping";
+        window.postMessage(message, "*");
+      } finally {
+        window.postMessage("done", "*");
+      }
+    }
+    window.addEventListener('load', runtest);
+
+    window.onmessage = function(event) {
+      if (event.data == "blocked")
+          debug("PASS: blocked labeled data");
+      else if (event.data == "ping")
+          debug("PASS: received ping");
+      else if (event.data == "done")
+          finishJSTest();
+      else
+          debug("FAILURE: Received unknown message: " + event.data);
+    };
+  </script>
+  <script src="../js/resources/js-test-post.js"></script>
+</head>
+<body>
+  <div id="description"></div>
+  <div id="console"></div>
+</body>
+</html>

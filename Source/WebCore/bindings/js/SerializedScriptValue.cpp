@@ -323,7 +323,16 @@ public:
                                              MessagePortArray* messagePorts, ArrayBufferArray* arrayBuffers,
                                              Vector<String>& blobURLs, Vector<uint8_t>& out)
     {
-        CloneSerializer serializer(exec, messagePorts, arrayBuffers, blobURLs, out);
+        SecurityLabel label;
+        CloneSerializer serializer(exec, messagePorts, arrayBuffers, blobURLs, out, label);
+        return serializer.serialize(value);
+    }
+    
+    static SerializationReturnCode serialize(ExecState* exec, JSValue value,
+                                             MessagePortArray* messagePorts, ArrayBufferArray* arrayBuffers,
+                                             Vector<String>& blobURLs, Vector<uint8_t>& out, SecurityLabel& label)
+    {
+        CloneSerializer serializer(exec, messagePorts, arrayBuffers, blobURLs, out, label);
         return serializer.serialize(value);
     }
 
@@ -354,11 +363,12 @@ public:
 private:
     typedef HashMap<JSObject*, uint32_t> ObjectPool;
 
-    CloneSerializer(ExecState* exec, MessagePortArray* messagePorts, ArrayBufferArray* arrayBuffers, Vector<String>& blobURLs, Vector<uint8_t>& out)
+    CloneSerializer(ExecState* exec, MessagePortArray* messagePorts, ArrayBufferArray* arrayBuffers, Vector<String>& blobURLs, Vector<uint8_t>& out, SecurityLabel& label)
         : CloneBase(exec)
         , m_buffer(out)
         , m_blobURLs(blobURLs)
         , m_emptyIdentifier(exec, UString("", 0))
+        , m_label(label)
     {
         write(CurrentVersion);
         fillTransferMap(messagePorts, m_transferredMessagePorts);
@@ -545,6 +555,8 @@ private:
 
     bool dumpIfTerminal(JSValue value, SerializationReturnCode& code)
     {
+        m_label.merge(value.securityLabel());
+
         value = value.unwrappedValue();
         if (!value.isCell()) {
             dumpImmediate(value);
@@ -804,6 +816,7 @@ private:
     typedef HashMap<RefPtr<StringImpl>, uint32_t, IdentifierRepHash> StringConstantPool;
     StringConstantPool m_constantPool;
     Identifier m_emptyIdentifier;
+    SecurityLabel& m_label;
 };
 
 SerializationReturnCode CloneSerializer::serialize(JSValue in)
@@ -829,6 +842,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 unsigned length = inArray->length();
                 if (!startArray(inArray))
                     break;
+                m_label.merge(inArray->securityLabel());
                 inputArrayStack.append(inArray);
                 indexStack.append(0);
                 lengthStack.append(length);
@@ -885,6 +899,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 JSObject* inObject = asObject(inValue);
                 if (!startObject(inObject))
                     break;
+                m_label.merge(inObject->securityLabel());
                 inputObjectStack.append(inObject);
                 indexStack.append(0);
                 propertyStack.append(PropertyNameArray(m_exec));
@@ -1682,6 +1697,12 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer)
     m_data.swap(buffer);
 }
 
+SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, SecurityLabel label)
+    : m_label(label)
+{
+    m_data.swap(buffer);
+}
+
 SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs)
 {
     m_data.swap(buffer);
@@ -1690,6 +1711,14 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<Str
 
 SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray> arrayBufferContentsArray)
     : m_arrayBufferContentsArray(arrayBufferContentsArray)
+{
+    m_data.swap(buffer);
+    m_blobURLs.swap(blobURLs);
+}
+
+SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray> arrayBufferContentsArray, SecurityLabel label)
+    : m_arrayBufferContentsArray(arrayBufferContentsArray)
+    , m_label(label)
 {
     m_data.swap(buffer);
     m_blobURLs.swap(blobURLs);
@@ -1731,7 +1760,8 @@ PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState* exec,
 {
     Vector<uint8_t> buffer;
     Vector<String> blobURLs;
-    SerializationReturnCode code = CloneSerializer::serialize(exec, value, messagePorts, arrayBuffers, blobURLs, buffer);
+    SecurityLabel label;
+    SerializationReturnCode code = CloneSerializer::serialize(exec, value, messagePorts, arrayBuffers, blobURLs, buffer, label);
 
     OwnPtr<ArrayBufferContentsArray> arrayBufferContentsArray;
 
@@ -1744,7 +1774,7 @@ PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState* exec,
     if (!serializationDidCompleteSuccessfully(code))
         return 0;
 
-    return adoptRef(new SerializedScriptValue(buffer, blobURLs, arrayBufferContentsArray.release()));
+    return adoptRef(new SerializedScriptValue(buffer, blobURLs, arrayBufferContentsArray.release(), label));
 }
 
 PassRefPtr<SerializedScriptValue> SerializedScriptValue::create()
@@ -1758,7 +1788,7 @@ PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(const String& st
     Vector<uint8_t> buffer;
     if (!CloneSerializer::serialize(string, buffer))
         return 0;
-    return adoptRef(new SerializedScriptValue(buffer));
+    return adoptRef(new SerializedScriptValue(buffer, string.securityLabel()));
 }
 
 #if ENABLE(INDEXED_DATABASE)

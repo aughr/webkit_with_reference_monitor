@@ -35,6 +35,7 @@
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/SecurityLabel.h>
 
 typedef const struct OpaqueJSContext* JSContextRef;
 typedef const struct OpaqueJSValue* JSValueRef;
@@ -103,6 +104,8 @@ public:
     JSC::JSValue deserialize(JSC::ExecState*, JSC::JSGlobalObject*);
 #endif
 
+    SecurityLabel securityLabel() const { return m_label; }
+
     ~SerializedScriptValue();
 
 private:
@@ -112,11 +115,14 @@ private:
     static PassOwnPtr<ArrayBufferContentsArray> transferArrayBuffers(ArrayBufferArray&, SerializationReturnCode&);
 
     SerializedScriptValue(Vector<unsigned char>&);
+    SerializedScriptValue(Vector<unsigned char>&, SecurityLabel label);
     SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs);
     SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray>);
+    SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray>, SecurityLabel label);
     Vector<unsigned char> m_data;
     OwnPtr<ArrayBufferContentsArray> m_arrayBufferContentsArray;
     Vector<String> m_blobURLs;
+    SecurityLabel m_label;
 };
 
 }

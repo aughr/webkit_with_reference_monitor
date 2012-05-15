@@ -31,7 +31,9 @@
 #ifndef JSMessagePortCustom_h
 #define JSMessagePortCustom_h
 
+#include "JSDOMWrapper.h"
 #include "MessagePort.h"
+#include "SecurityEventTarget.h"
 #include <runtime/JSValue.h>
 #include <wtf/Forward.h>
 
@@ -54,6 +56,21 @@ namespace WebCore {
         RefPtr<SerializedScriptValue> message = SerializedScriptValue::create(exec, exec->argument(0), &portArray, &arrayBufferArray);
         if (exec->hadException())
             return JSC::jsUndefined();
+        
+        // Check to see if this data shouldn't leave
+        ScriptExecutionContext* context = impl->scriptExecutionContext();
+        if (context->isDocument()) {
+            DOMWindow* window = activeDOMWindow(exec);
+            RefPtr<SecurityEventTarget> target = window->securityEventTarget();
+            if (target->hasListenerType(SecurityEventTarget::CHECKPOSTMESSAGE_LISTENER)) {
+                SecurityLabel label = message->securityLabel();
+                RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkpostmessageEvent, label, "", "", window);
+                if (!window->dispatchSecurityEvent(securityEvent)) {
+                    setDOMException(exec, SECURITY_ERR);
+                    return JSC::jsUndefined();
+                }
+            }
+        }
 
         ExceptionCode ec = 0;
         impl->postMessage(message.release(), &portArray, ec);
