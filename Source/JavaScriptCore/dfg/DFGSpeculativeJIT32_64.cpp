@@ -745,7 +745,7 @@ void SpeculativeJIT::nonSpeculativePeepholeBranch(Node& node, NodeIndex branchNo
     m_compileIndex = branchNodeIndex;
 }
 
-void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler::RelationalCondition cond, S_DFGOperation_EJJ helperFunction)
+void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler::RelationalCondition cond, J_DFGOperation_EJJ helperFunction)
 {
     JSValueOperand arg1(this, node.child1());
     JSValueOperand arg2(this, node.child2());
@@ -757,18 +757,22 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler
     JITCompiler::JumpList slowPath;
     
     if (isKnownNotInteger(node.child1().index()) || isKnownNotInteger(node.child2().index())) {
-        GPRResult result(this);
-        GPRReg resultPayloadGPR = result.gpr();
+        GPRResult resultPayload(this);
+        GPRResult2 resultTag(this);
+        GPRReg resultTagGPR = resultTag.gpr();
+        GPRReg resultPayloadGPR = resultPayload.gpr();
     
         arg1.use();
         arg2.use();
 
         flushRegisters();
-        callOperation(helperFunction, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
+        callOperation(helperFunction, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
         
-        booleanResult(resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
+        jsValueResult(resultTagGPR, resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
     } else {
+        GPRTemporary resultTag(this, arg1);
         GPRTemporary resultPayload(this, arg1, false);
+        GPRReg resultTagGPR = resultTag.gpr();
         GPRReg resultPayloadGPR = resultPayload.gpr();
 
         arg1.use();
@@ -780,22 +784,21 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler
             slowPath.append(m_jit.branch32(MacroAssembler::NotEqual, arg2TagGPR, JITCompiler::TrustedImm32(JSValue::Int32Tag)));
 
         m_jit.compare32(cond, arg1PayloadGPR, arg2PayloadGPR, resultPayloadGPR);
+        m_jit.move(TrustedImm32(JSValue::BooleanTag), resultTagGPR);
     
         if (!isKnownInteger(node.child1().index()) || !isKnownInteger(node.child2().index())) {
             JITCompiler::Jump haveResult = m_jit.jump();
     
             slowPath.link(&m_jit);
         
-            silentSpillAllRegisters(resultPayloadGPR);
-            callOperation(helperFunction, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
-            silentFillAllRegisters(resultPayloadGPR);
-        
-            m_jit.andPtr(TrustedImm32(1), resultPayloadGPR);
+            silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
+            callOperation(helperFunction, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
+            silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
         
             haveResult.link(&m_jit);
         }
         
-        booleanResult(resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
+        jsValueResult(resultTagGPR, resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
     }
 }
 
@@ -833,7 +836,7 @@ void SpeculativeJIT::nonSpeculativePeepholeStrictEq(Node& node, NodeIndex branch
         branchPtr(JITCompiler::Equal, arg1PayloadGPR, arg2PayloadGPR, invert ? notTaken : taken);
         
         silentSpillAllRegisters(resultPayloadGPR);
-        callOperation(operationCompareStrictEqCell, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
+        callOperation(operationCompareStrictEqCellForBranch, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
         silentFillAllRegisters(resultPayloadGPR);
         
         branchTest32(invert ? JITCompiler::Zero : JITCompiler::NonZero, resultPayloadGPR, taken);
@@ -841,7 +844,7 @@ void SpeculativeJIT::nonSpeculativePeepholeStrictEq(Node& node, NodeIndex branch
         // FIXME: Add fast paths for twoCells, number etc.
 
         silentSpillAllRegisters(resultPayloadGPR);
-        callOperation(operationCompareStrictEq, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
+        callOperation(operationCompareStrictEqForBranch, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
         silentFillAllRegisters(resultPayloadGPR);
         
         branchTest32(invert ? JITCompiler::Zero : JITCompiler::NonZero, resultPayloadGPR, taken);
@@ -859,7 +862,9 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
     GPRReg arg2TagGPR = arg2.tagGPR();
     GPRReg arg2PayloadGPR = arg2.payloadGPR();
     
+    GPRTemporary resultTag(this, arg1);
     GPRTemporary resultPayload(this, arg1, false);
+    GPRReg resultTagGPR = resultTag.gpr();
     GPRReg resultPayloadGPR = resultPayload.gpr();
     
     arg1.use();
@@ -875,24 +880,20 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
 
         notEqualCase.link(&m_jit);
         
-        silentSpillAllRegisters(resultPayloadGPR);
-        callOperation(operationCompareStrictEqCell, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
+        silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
+        callOperation(operationCompareStrictEqCell, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
         silentFillAllRegisters(resultPayloadGPR);
-        
-        m_jit.andPtr(JITCompiler::TrustedImm32(1), resultPayloadGPR);
         
         done.link(&m_jit);
     } else {
         // FIXME: Add fast paths.
 
-        silentSpillAllRegisters(resultPayloadGPR);
-        callOperation(operationCompareStrictEq, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
-        silentFillAllRegisters(resultPayloadGPR);
-        
-        m_jit.andPtr(JITCompiler::TrustedImm32(1), resultPayloadGPR);
+        silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
+        callOperation(operationCompareStrictEq, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
+        silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
     }
 
-    booleanResult(resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
+    jsValueResult(resultTagGPR, resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
 }
 
 void SpeculativeJIT::emitCall(Node& node)
@@ -1762,10 +1763,8 @@ void SpeculativeJIT::emitBranch(Node& node)
         GPRReg valueTagGPR = value.tagGPR();
         GPRReg valuePayloadGPR = value.payloadGPR();
 
-        GPRTemporary resultTag(this);
-        GPRTemporary resultPayload(this);
-        GPRReg resultTagGPR = resultTag.gpr();
-        GPRReg resultPayloadGPR = resultPayload.gpr();
+        GPRTemporary result(this);
+        GPRReg resultGPR = result.gpr();
     
         use(node.child1());
     
@@ -1777,11 +1776,11 @@ void SpeculativeJIT::emitBranch(Node& node)
         jump(taken, ForceJump);
 
         slowPath.link(&m_jit);
-        silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
-        callOperation(dfgConvertJSValueToBooleanNonLabel, resultTagGPR, resultPayloadGPR, valueTagGPR, valuePayloadGPR);
-        silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
+        silentSpillAllRegisters(resultGPR);
+        callOperation(dfgConvertJSValueToBooleanNonLabel, resultGPR, valueTagGPR, valuePayloadGPR);
+        silentFillAllRegisters(resultGPR);
     
-        branchTest32(JITCompiler::NonZero, resultPayloadGPR, taken);
+        branchTest32(JITCompiler::NonZero, resultGPR, taken);
         jump(notTaken);
     
         noResult(m_compileIndex, UseChildrenCalledExplicitly);
@@ -2209,22 +2208,22 @@ void SpeculativeJIT::compile(Node& node)
         break;
 
     case CompareLess:
-        if (compare(node, JITCompiler::LessThan, JITCompiler::DoubleLessThan, operationCompareLess))
+        if (compare(node, JITCompiler::LessThan, JITCompiler::DoubleLessThan, operationCompareLessForBranch, operationCompareLess))
             return;
         break;
 
     case CompareLessEq:
-        if (compare(node, JITCompiler::LessThanOrEqual, JITCompiler::DoubleLessThanOrEqual, operationCompareLessEq))
+        if (compare(node, JITCompiler::LessThanOrEqual, JITCompiler::DoubleLessThanOrEqual, operationCompareLessEqForBranch, operationCompareLessEq))
             return;
         break;
 
     case CompareGreater:
-        if (compare(node, JITCompiler::GreaterThan, JITCompiler::DoubleGreaterThan, operationCompareGreater))
+        if (compare(node, JITCompiler::GreaterThan, JITCompiler::DoubleGreaterThan, operationCompareGreaterForBranch, operationCompareGreater))
             return;
         break;
 
     case CompareGreaterEq:
-        if (compare(node, JITCompiler::GreaterThanOrEqual, JITCompiler::DoubleGreaterThanOrEqual, operationCompareGreaterEq))
+        if (compare(node, JITCompiler::GreaterThanOrEqual, JITCompiler::DoubleGreaterThanOrEqual, operationCompareGreaterEqForBranch, operationCompareGreaterEq))
             return;
         break;
 
@@ -2239,7 +2238,7 @@ void SpeculativeJIT::compile(Node& node)
                 return;
             break;
         }
-        if (compare(node, JITCompiler::Equal, JITCompiler::DoubleEqual, operationCompareEq))
+        if (compare(node, JITCompiler::Equal, JITCompiler::DoubleEqual, operationCompareEqForBranch, operationCompareEq))
             return;
         break;
 
@@ -2666,12 +2665,13 @@ void SpeculativeJIT::compile(Node& node)
             GPRReg argumentGPR = argument.gpr();
             
             flushRegisters();
-            GPRResult result(this);
-            callOperation(operationRegExpTest, result.gpr(), baseGPR, argumentGPR);
+            GPRResult resultPayload(this);
+            GPRResult2 resultTag(this);
+            callOperation(operationRegExpTest, resultTag.gpr(), resultPayload.gpr(), baseGPR, argumentGPR);
             
             // Must use jsValueResult because otherwise we screw up register
             // allocation, which thinks that this node has a result.
-            booleanResult(result.gpr(), m_compileIndex);
+            jsValueResult(resultTag.gpr(), resultPayload.gpr(), m_compileIndex);
             break;
         }
 
@@ -2696,11 +2696,12 @@ void SpeculativeJIT::compile(Node& node)
         GPRReg argumentGPR = argument.gpr();
         
         flushRegisters();
-        GPRResult result(this);
-        callOperation(operationRegExpTest, result.gpr(), baseGPR, argumentGPR);
+        GPRResult resultPayload(this);
+        GPRResult2 resultTag(this);
+        callOperation(operationRegExpTest, resultTag.gpr(), resultPayload.gpr(), baseGPR, argumentGPR);
         
         // If we add a DataFormatBool, we should use it here.
-        booleanResult(result.gpr(), m_compileIndex);
+        jsValueResult(resultTag.gpr(), resultPayload.gpr(), m_compileIndex);
         break;
     }
         

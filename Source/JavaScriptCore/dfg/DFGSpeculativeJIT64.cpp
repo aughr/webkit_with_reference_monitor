@@ -718,7 +718,7 @@ void SpeculativeJIT::nonSpeculativePeepholeBranch(Node& node, NodeIndex branchNo
     m_compileIndex = branchNodeIndex;
 }
 
-void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler::RelationalCondition cond, S_DFGOperation_EJJ helperFunction)
+void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler::RelationalCondition cond, J_DFGOperation_EJJ helperFunction)
 {
     JSValueOperand arg1(this, node.child1());
     JSValueOperand arg2(this, node.child2());
@@ -737,8 +737,7 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler
         flushRegisters();
         callOperation(helperFunction, resultGPR, arg1GPR, arg2GPR);
         
-        m_jit.or32(TrustedImm32(ValueFalse), resultGPR);
-        jsValueResult(resultGPR, m_compileIndex, DataFormatJSBoolean, UseChildrenCalledExplicitly);
+        jsValueResult(resultGPR, m_compileIndex, DataFormatJS, UseChildrenCalledExplicitly);
     } else {
         GPRTemporary result(this, arg2);
         GPRReg resultGPR = result.gpr();
@@ -752,6 +751,7 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler
             slowPath.append(m_jit.branchPtr(MacroAssembler::Below, arg2GPR, GPRInfo::tagTypeNumberRegister));
     
         m_jit.compare32(cond, arg1GPR, arg2GPR, resultGPR);
+        m_jit.or32(TrustedImm32(ValueFalse), resultGPR);
     
         if (!isKnownInteger(node.child1().index()) || !isKnownInteger(node.child2().index())) {
             JITCompiler::Jump haveResult = m_jit.jump();
@@ -762,14 +762,10 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler
             callOperation(helperFunction, resultGPR, arg1GPR, arg2GPR);
             silentFillAllRegisters(resultGPR);
         
-            m_jit.andPtr(TrustedImm32(1), resultGPR);
-        
             haveResult.link(&m_jit);
         }
         
-        m_jit.or32(TrustedImm32(ValueFalse), resultGPR);
-        
-        jsValueResult(resultGPR, m_compileIndex, DataFormatJSBoolean, UseChildrenCalledExplicitly);
+        jsValueResult(resultGPR, m_compileIndex, DataFormatJS, UseChildrenCalledExplicitly);
     }
 }
 
@@ -805,7 +801,7 @@ void SpeculativeJIT::nonSpeculativePeepholeStrictEq(Node& node, NodeIndex branch
         branchPtr(JITCompiler::Equal, arg1GPR, arg2GPR, invert ? notTaken : taken);
         
         silentSpillAllRegisters(resultGPR);
-        callOperation(operationCompareStrictEqCell, resultGPR, arg1GPR, arg2GPR);
+        callOperation(operationCompareStrictEqCellForBranch, resultGPR, arg1GPR, arg2GPR);
         silentFillAllRegisters(resultGPR);
         
         branchTest32(invert ? JITCompiler::Zero : JITCompiler::NonZero, resultGPR, taken);
@@ -830,7 +826,7 @@ void SpeculativeJIT::nonSpeculativePeepholeStrictEq(Node& node, NodeIndex branch
         rightDouble.link(&m_jit);
         
         silentSpillAllRegisters(resultGPR);
-        callOperation(operationCompareStrictEq, resultGPR, arg1GPR, arg2GPR);
+        callOperation(operationCompareStrictEqForBranch, resultGPR, arg1GPR, arg2GPR);
         silentFillAllRegisters(resultGPR);
         
         branchTest32(invert ? JITCompiler::Zero : JITCompiler::NonZero, resultGPR, taken);
@@ -867,9 +863,6 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
         callOperation(operationCompareStrictEqCell, resultGPR, arg1GPR, arg2GPR);
         silentFillAllRegisters(resultGPR);
         
-        m_jit.andPtr(JITCompiler::TrustedImm32(1), resultGPR);
-        m_jit.or32(JITCompiler::TrustedImm32(ValueFalse), resultGPR);
-        
         done.link(&m_jit);
     } else {
         m_jit.move(arg1GPR, resultGPR);
@@ -885,6 +878,7 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
         rightOK.link(&m_jit);
         
         m_jit.comparePtr(invert ? JITCompiler::NotEqual : JITCompiler::Equal, arg1GPR, arg2GPR, resultGPR);
+        m_jit.or32(JITCompiler::TrustedImm32(ValueFalse), resultGPR);
         
         JITCompiler::Jump done1 = m_jit.jump();
         
@@ -902,17 +896,12 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
         silentSpillAllRegisters(resultGPR);
         callOperation(operationCompareStrictEq, resultGPR, arg1GPR, arg2GPR);
         silentFillAllRegisters(resultGPR);
-        
-        m_jit.andPtr(JITCompiler::TrustedImm32(1), resultGPR);
 
         done1.link(&m_jit);
-
-        m_jit.or32(JITCompiler::TrustedImm32(ValueFalse), resultGPR);
-        
         done2.link(&m_jit);
     }
     
-    jsValueResult(resultGPR, m_compileIndex, DataFormatJSBoolean, UseChildrenCalledExplicitly);
+    jsValueResult(resultGPR, m_compileIndex, DataFormatJS, UseChildrenCalledExplicitly);
 }
 
 void SpeculativeJIT::emitCall(Node& node)
@@ -2259,22 +2248,22 @@ void SpeculativeJIT::compile(Node& node)
         break;
 
     case CompareLess:
-        if (compare(node, JITCompiler::LessThan, JITCompiler::DoubleLessThan, operationCompareLess))
+        if (compare(node, JITCompiler::LessThan, JITCompiler::DoubleLessThan, operationCompareLessForBranch, operationCompareLess))
             return;
         break;
 
     case CompareLessEq:
-        if (compare(node, JITCompiler::LessThanOrEqual, JITCompiler::DoubleLessThanOrEqual, operationCompareLessEq))
+        if (compare(node, JITCompiler::LessThanOrEqual, JITCompiler::DoubleLessThanOrEqual, operationCompareLessEqForBranch, operationCompareLessEq))
             return;
         break;
 
     case CompareGreater:
-        if (compare(node, JITCompiler::GreaterThan, JITCompiler::DoubleGreaterThan, operationCompareGreater))
+        if (compare(node, JITCompiler::GreaterThan, JITCompiler::DoubleGreaterThan, operationCompareGreaterForBranch, operationCompareGreater))
             return;
         break;
 
     case CompareGreaterEq:
-        if (compare(node, JITCompiler::GreaterThanOrEqual, JITCompiler::DoubleGreaterThanOrEqual, operationCompareGreaterEq))
+        if (compare(node, JITCompiler::GreaterThanOrEqual, JITCompiler::DoubleGreaterThanOrEqual, operationCompareGreaterEqForBranch, operationCompareGreaterEq))
             return;
         break;
 
@@ -2289,7 +2278,7 @@ void SpeculativeJIT::compile(Node& node)
                 return;
             break;
         }
-        if (compare(node, JITCompiler::Equal, JITCompiler::DoubleEqual, operationCompareEq))
+        if (compare(node, JITCompiler::Equal, JITCompiler::DoubleEqual, operationCompareEqForBranch, operationCompareEq))
             return;
         break;
 
@@ -2729,8 +2718,7 @@ void SpeculativeJIT::compile(Node& node)
         callOperation(operationRegExpTest, result.gpr(), baseGPR, argumentGPR);
         
         // If we add a DataFormatBool, we should use it here.
-        m_jit.or32(TrustedImm32(ValueFalse), result.gpr());
-        jsValueResult(result.gpr(), m_compileIndex, DataFormatJSBoolean);
+        jsValueResult(result.gpr(), m_compileIndex, DataFormatJS);
         break;
     }
         

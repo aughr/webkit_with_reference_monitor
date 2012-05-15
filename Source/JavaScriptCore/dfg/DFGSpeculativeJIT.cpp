@@ -340,7 +340,7 @@ void SpeculativeJIT::writeBarrier(JSCell* owner, GPRReg valueGPR, Edge valueUse,
 #endif
 }
 
-bool SpeculativeJIT::nonSpeculativeCompare(Node& node, MacroAssembler::RelationalCondition cond, S_DFGOperation_EJJ helperFunction)
+bool SpeculativeJIT::nonSpeculativeCompare(Node& node, MacroAssembler::RelationalCondition cond, S_DFGOperation_EJJ helperFunctionForPeephole, J_DFGOperation_EJJ helperFunction)
 {
     unsigned branchIndexInBlock = detectPeepHoleBranch();
     if (branchIndexInBlock != UINT_MAX) {
@@ -348,7 +348,7 @@ bool SpeculativeJIT::nonSpeculativeCompare(Node& node, MacroAssembler::Relationa
 
         ASSERT(node.adjustedRefCount() == 1);
         
-        nonSpeculativePeepholeBranch(node, branchNodeIndex, cond, helperFunction);
+        nonSpeculativePeepholeBranch(node, branchNodeIndex, cond, helperFunctionForPeephole);
     
         m_indexInBlock = branchIndexInBlock;
         m_compileIndex = branchNodeIndex;
@@ -2751,9 +2751,9 @@ void SpeculativeJIT::compileArithMod(Node& node)
 }
 
 // Returns true if the compare is fused with a subsequent branch.
-bool SpeculativeJIT::compare(Node& node, MacroAssembler::RelationalCondition condition, MacroAssembler::DoubleCondition doubleCondition, S_DFGOperation_EJJ operation)
+bool SpeculativeJIT::compare(Node& node, MacroAssembler::RelationalCondition condition, MacroAssembler::DoubleCondition doubleCondition, S_DFGOperation_EJJ peepholeOperation, J_DFGOperation_EJJ nonPeepholeOperation)
 {
-    if (compilePeepHoleBranch(node, condition, doubleCondition, operation))
+    if (compilePeepHoleBranch(node, condition, doubleCondition, peepholeOperation))
         return true;
 
     if (Node::shouldSpeculateInteger(at(node.child1()), at(node.child2()))) {
@@ -2810,7 +2810,7 @@ bool SpeculativeJIT::compare(Node& node, MacroAssembler::RelationalCondition con
         }
     }
     
-    nonSpeculativeNonPeepholeCompare(node, condition, operation);
+    nonSpeculativeNonPeepholeCompare(node, condition, nonPeepholeOperation);
     return false;
 }
 
@@ -3112,7 +3112,7 @@ bool SpeculativeJIT::compileRegExpExec(Node& node)
     
     flushRegisters();
     GPRResult result(this);
-    callOperation(operationRegExpTest, result.gpr(), baseGPR, argumentGPR);
+    callOperation(operationRegExpTestForBranch, result.gpr(), baseGPR, argumentGPR);
 
     branchTest32(invert ? JITCompiler::Zero : JITCompiler::NonZero, result.gpr(), taken);
     jump(notTaken);

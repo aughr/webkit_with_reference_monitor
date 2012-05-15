@@ -512,8 +512,22 @@ EncodedJSValue DFG_OPERATION operationRegExpExec(ExecState* exec, JSCell* base, 
     JSString* input = argument->isString() ? asString(argument) : asObject(argument)->toString(exec);
     return JSValue::encode(asRegExpObject(base)->exec(exec, input));
 }
-        
-size_t DFG_OPERATION operationRegExpTest(ExecState* exec, JSCell* base, JSCell* argument)
+
+EncodedJSValue DFG_OPERATION operationRegExpTest(ExecState* exec, JSCell* base, JSCell* argument)
+{
+    if (!base->inherits(&RegExpObject::s_info)) {
+        throwTypeError(exec);
+        return false;
+    }
+    
+    ASSERT(argument->isString() || argument->isObject());
+    JSString* input = argument->isString() ? asString(argument) : asObject(argument)->toString(exec);
+    SecurityLabel label = input->securityLabel();
+    label.merge(base->securityLabel());
+    return JSValue::encode(jsBoolean(asRegExpObject(base)->test(exec, input)), exec, label);
+}
+
+size_t DFG_OPERATION operationRegExpTestForBranch(ExecState* exec, JSCell* base, JSCell* argument)
 {
     if (!base->inherits(&RegExpObject::s_info)) {
         throwTypeError(exec);
@@ -711,7 +725,96 @@ void DFG_OPERATION operationPutByIdDirectNonStrictBuildListWithReturnAddress(Exe
     dfgBuildPutByIdList(exec, base, *propertyName, slot, stubInfo, Direct);
 }
 
-size_t DFG_OPERATION operationCompareLess(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+EncodedJSValue DFG_OPERATION operationCompareLess(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    JSValue op1 = JSValue::decode(encodedOp1);
+    JSValue op2 = JSValue::decode(encodedOp2);
+    SecurityLabel label = op1.securityLabel();
+    label.merge(op2.securityLabel());
+    return JSValue::encode(jsBoolean(jsLess<true>(exec, op1, op2)), exec, label);
+}
+
+EncodedJSValue DFG_OPERATION operationCompareLessEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    JSValue op1 = JSValue::decode(encodedOp1);
+    JSValue op2 = JSValue::decode(encodedOp2);
+    SecurityLabel label = op1.securityLabel();
+    label.merge(op2.securityLabel());
+    return JSValue::encode(jsBoolean(jsLessEq<true>(exec, op1, op2)), exec, label);
+}
+
+EncodedJSValue DFG_OPERATION operationCompareGreater(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    JSValue op1 = JSValue::decode(encodedOp1);
+    JSValue op2 = JSValue::decode(encodedOp2);
+    SecurityLabel label = op1.securityLabel();
+    label.merge(op2.securityLabel());
+    return JSValue::encode(jsBoolean(jsLess<false>(exec, op1, op2)), exec, label);
+}
+
+EncodedJSValue DFG_OPERATION operationCompareGreaterEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    JSValue op1 = JSValue::decode(encodedOp1);
+    JSValue op2 = JSValue::decode(encodedOp2);
+    SecurityLabel label = op1.securityLabel();
+    label.merge(op2.securityLabel());
+    return JSValue::encode(jsBoolean(jsLessEq<false>(exec, op1, op2)), exec, label);
+}
+
+EncodedJSValue DFG_OPERATION operationCompareEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    JSValue op1 = JSValue::decode(encodedOp1);
+    JSValue op2 = JSValue::decode(encodedOp2);
+    SecurityLabel label = op1.securityLabel();
+    label.merge(op2.securityLabel());
+    return JSValue::encode(jsBoolean(JSValue::equalSlowCaseInline(exec, op1, op2)), exec, label);
+}
+
+EncodedJSValue DFG_OPERATION operationCompareStrictEqCell(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    JSValue op1 = JSValue::decode(encodedOp1);
+    JSValue op2 = JSValue::decode(encodedOp2);
+
+    ASSERT(op1.isCell());
+    ASSERT(op2.isCell());
+
+    SecurityLabel label = op1.securityLabel();
+    label.merge(op2.securityLabel());
+    return JSValue::encode(jsBoolean(JSValue::strictEqual(exec, op1, op2)), exec, label);
+}
+
+EncodedJSValue DFG_OPERATION operationCompareStrictEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+
+    JSValue src1 = JSValue::decode(encodedOp1);
+    JSValue src2 = JSValue::decode(encodedOp2);
+
+    SecurityLabel label = src1.securityLabel();
+    label.merge(src2.securityLabel());
+    return JSValue::encode(jsBoolean(JSValue::strictEqual(exec, src1, src2)), exec, label);
+}
+
+size_t DFG_OPERATION operationCompareLessForBranch(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
@@ -719,7 +822,7 @@ size_t DFG_OPERATION operationCompareLess(ExecState* exec, EncodedJSValue encode
     return jsLess<true>(exec, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2));
 }
 
-size_t DFG_OPERATION operationCompareLessEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+size_t DFG_OPERATION operationCompareLessEqForBranch(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
@@ -727,7 +830,7 @@ size_t DFG_OPERATION operationCompareLessEq(ExecState* exec, EncodedJSValue enco
     return jsLessEq<true>(exec, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2));
 }
 
-size_t DFG_OPERATION operationCompareGreater(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+size_t DFG_OPERATION operationCompareGreaterForBranch(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
@@ -735,7 +838,7 @@ size_t DFG_OPERATION operationCompareGreater(ExecState* exec, EncodedJSValue enc
     return jsLess<false>(exec, JSValue::decode(encodedOp2), JSValue::decode(encodedOp1));
 }
 
-size_t DFG_OPERATION operationCompareGreaterEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+size_t DFG_OPERATION operationCompareGreaterEqForBranch(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
@@ -743,7 +846,7 @@ size_t DFG_OPERATION operationCompareGreaterEq(ExecState* exec, EncodedJSValue e
     return jsLessEq<false>(exec, JSValue::decode(encodedOp2), JSValue::decode(encodedOp1));
 }
 
-size_t DFG_OPERATION operationCompareEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+size_t DFG_OPERATION operationCompareEqForBranch(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
@@ -751,7 +854,7 @@ size_t DFG_OPERATION operationCompareEq(ExecState* exec, EncodedJSValue encodedO
     return JSValue::equalSlowCaseInline(exec, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2));
 }
 
-size_t DFG_OPERATION operationCompareStrictEqCell(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+size_t DFG_OPERATION operationCompareStrictEqCellForBranch(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
@@ -765,7 +868,7 @@ size_t DFG_OPERATION operationCompareStrictEqCell(ExecState* exec, EncodedJSValu
     return JSValue::strictEqualSlowCaseInline(exec, op1, op2);
 }
 
-size_t DFG_OPERATION operationCompareStrictEq(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
+size_t DFG_OPERATION operationCompareStrictEqForBranch(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
