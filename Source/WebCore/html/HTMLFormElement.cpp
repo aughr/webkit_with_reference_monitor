@@ -77,6 +77,9 @@ HTMLFormElement::HTMLFormElement(const QualifiedName& tagName, Document* documen
     , m_wasDemoted(false)
 {
     ASSERT(hasTagName(formTag));
+    SecurityLabel label;
+    label.add(m_securityTag);
+    mergeSecurityLabel(label);
 }
 
 PassRefPtr<HTMLFormElement> HTMLFormElement::create(Document* document)
@@ -474,6 +477,7 @@ unsigned HTMLFormElement::formElementIndex(FormAssociatedElement* associatedElem
 void HTMLFormElement::registerFormElement(FormAssociatedElement* e)
 {
     m_associatedElements.insert(formElementIndex(e), e);
+    toHTMLElement(e)->mergeSecurityLabel(securityLabel());
 }
 
 void HTMLFormElement::removeFormElement(FormAssociatedElement* e)

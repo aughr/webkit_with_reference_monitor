@@ -359,6 +359,8 @@ module core {
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
         // SecurityLabel stuff
         readonly attribute [CachedAttribute, CustomGetter] DOMObject securityTag;
+        readonly attribute [CachedAttribute, CustomGetter] DOMObject cookieTag;
+        readonly attribute [CachedAttribute, CustomGetter] DOMObject urlTag;
 #endif
     };
 

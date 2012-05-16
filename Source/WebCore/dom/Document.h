@@ -1148,6 +1148,8 @@ public:
     IntSize viewportSize() const;
 
     WTF::SecurityTag securityTag() const { return m_tag; }
+    WTF::SecurityTag cookieTag() const { return m_cookieTag; }
+    WTF::SecurityTag urlTag() const { return m_urlTag; }
 
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
@@ -1488,6 +1490,10 @@ private:
     Vector<OwnPtr<Task> > m_pendingTasks;    
 
     WTF::SecurityTag m_tag;
+    WTF::SecurityTag m_cookieTag;
+    WTF::SecurityTag m_urlTag;
+    SecurityLabel m_cookieLabel;
+    SecurityLabel m_urlLabel;
 };
 
 // Put these methods here, because they require the Document definition, but we really want to inline them.

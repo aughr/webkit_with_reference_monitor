@@ -33,6 +33,8 @@
 #include "JSNodeList.h"
 #include "StaticNodeList.h"
 
+#include <runtime/SecurityTagObject.h>
+
 using namespace JSC;
 
 namespace WebCore {
@@ -61,4 +63,16 @@ JSValue JSHTMLFormElement::nameGetter(ExecState* exec, JSValue slotBase, const I
     return toJS(exec, jsForm->globalObject(), StaticNodeList::adopt(namedItems).get());
 }
 
+JSValue JSHTMLFormElement::securityTag(ExecState* exec) const
+{
+    if (JSValue cachedValue = m_securityTag.get())
+        return cachedValue;
+
+    HTMLFormElement* form = static_cast<HTMLFormElement*>(impl());
+    JSValue result = constructSecurityTag(exec, globalObject(), form->securityTag());;
+
+    // Save the result so we don't have to deserialize the value again.
+    const_cast<JSHTMLFormElement*>(this)->m_securityTag.set(exec->globalData(), this, result);
+    return result;
+}
 }

@@ -127,7 +127,7 @@ JSValue JSInjectedScriptHost::type(ExecState* exec)
     if (exec->argumentCount() < 1)
         return jsUndefined();
 
-    JSValue value = exec->argument(0);
+    JSValue value = exec->argument(0).unwrappedValue();
     if (value.isString())
         return jsString(exec, String("string"));
     if (value.inherits(&JSArray::s_info))

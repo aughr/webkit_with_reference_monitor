@@ -110,6 +110,8 @@ public:
     CheckedRadioButtons& checkedRadioButtons() { return m_checkedRadioButtons; }
 
     const Vector<FormAssociatedElement*>& associatedElements() const { return m_associatedElements; }
+    
+    WTF::SecurityTag securityTag() const { return m_securityTag; }
 
 private:
     HTMLFormElement(const QualifiedName&, Document*);
@@ -167,6 +169,8 @@ private:
 
     bool m_wasMalformed;
     bool m_wasDemoted;
+
+    WTF::SecurityTag m_securityTag;
 };
 
 } // namespace WebCore

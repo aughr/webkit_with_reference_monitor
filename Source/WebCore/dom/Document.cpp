@@ -491,6 +491,12 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
 
     m_frame = frame;
 
+    m_label.add(m_tag);
+    m_cookieLabel = m_label;
+    m_cookieLabel.add(m_cookieTag);
+    m_urlLabel = m_label;
+    m_urlLabel.add(m_urlTag);
+
     // We depend on the url getting immediately set in subframes, but we
     // also depend on the url NOT getting immediately set in opened windows.
     // See fast/dom/early-frame-url.html
@@ -545,8 +551,6 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
 
     static int docID = 0;
     m_docID = docID++;
-
-    m_label.add(m_tag);
     
     InspectorCounters::incrementCounter(InspectorCounters::DocumentCounter);
 }
@@ -2548,7 +2552,13 @@ void Document::setURL(const KURL& url)
     if (newURL == m_url)
         return;
 
-    m_url = newURL;
+    if (!newURL.isEmpty()) {
+        String urlString = newURL.string();
+        urlString.mergeSecurityLabel(m_urlLabel);
+        m_url = KURL(ParsedURLString, urlString);
+    } else {
+        m_url = newURL;
+    }
     m_documentURI = m_url.string();
     updateBaseURL();
 }
@@ -3959,7 +3969,9 @@ String Document::cookie(ExceptionCode& ec) const
     if (cookieURL.isEmpty())
         return String();
 
-    return cookies(this, cookieURL);
+    String result = cookies(this, cookieURL);
+    result.mergeSecurityLabel(m_cookieLabel);
+    return result;
 }
 
 void Document::setCookie(const String& value, ExceptionCode& ec)

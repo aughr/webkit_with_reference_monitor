@@ -39,6 +39,9 @@ module html {
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
         [ImplementedAs=submitFromJavaScript] void submit();
+
+        // SecurityLabel stuff
+        readonly attribute [CachedAttribute, CustomGetter] DOMObject securityTag;
 #else
         void submit();
 #endif
