@@ -42,15 +42,22 @@ void JSCell::destroy(JSCell* cell)
 
 bool JSCell::getString(ExecState* exec, UString&stringValue) const
 {
-    if (!isString())
-        return false;
-    stringValue = static_cast<const JSString*>(this)->value(exec);
-    return true;
+    if (isString()) {
+        stringValue = static_cast<const JSString*>(this)->value(exec);
+        return true;
+    } else if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(this)->getString(exec, stringValue);
+    return false;
 }
 
 UString JSCell::getString(ExecState* exec) const
 {
-    return isString() ? static_cast<const JSString*>(this)->value(exec) : UString();
+    if (isString())
+        return static_cast<const JSString*>(this)->value(exec);
+    else if (isLabeledValue())
+        return static_cast<const JSLabeledValue*>(this)->getString(exec);
+    else
+        return UString();
 }
 
 JSObject* JSCell::getObject()
