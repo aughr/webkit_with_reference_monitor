@@ -93,8 +93,8 @@ namespace JSC {
                 return throwOutOfMemoryError(exec);
         }
 
-        JSValue result = ropeBuilder.release();
-        result = result.mergeSecurityLabel(exec, label);
+        JSString* result = ropeBuilder.release();
+        result->mergeSecurityLabel(exec, label);
         return result;
     }
 
