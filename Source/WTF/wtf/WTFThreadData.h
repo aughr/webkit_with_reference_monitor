@@ -72,8 +72,10 @@ private:
 namespace WTF {
 
 class AtomicStringTable;
+class SecurityLabelTable;
 
 typedef void (*AtomicStringTableDestructor)(AtomicStringTable*);
+typedef void (*SecurityLabelTableDestructor)(SecurityLabelTable*);
 
 class WTFThreadData {
     WTF_MAKE_NONCOPYABLE(WTFThreadData);
@@ -84,6 +86,11 @@ public:
     AtomicStringTable* atomicStringTable()
     {
         return m_atomicStringTable;
+    }
+
+    SecurityLabelTable* securityLabelTable()
+    {
+        return m_securityLabelTable;
     }
 
 #if USE(JSC)
@@ -119,10 +126,14 @@ private:
     JSC::IdentifierTable* m_currentIdentifierTable;
     StackBounds m_stackBounds;
 #endif
+    
+    SecurityLabelTable* m_securityLabelTable;
+    SecurityLabelTableDestructor m_securityLabelTableDestructor;
 
     static WTF_EXPORTDATA ThreadSpecific<WTFThreadData>* staticData;
     friend WTFThreadData& wtfThreadData();
     friend class AtomicStringTable;
+    friend class SecurityLabelTable;
 };
 
 inline WTFThreadData& wtfThreadData()

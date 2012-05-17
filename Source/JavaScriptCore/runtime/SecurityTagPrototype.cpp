@@ -43,7 +43,7 @@ namespace JSC {
     const ClassInfo SecurityTagPrototype::s_info = { "SecurityTag", &SecurityTagObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagPrototype) };
     
     ASSERT_CLASS_FITS_IN_CELL(SecurityTagPrototype);
-    ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagPrototype);
+    //ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagPrototype);
     
     SecurityTagPrototype::SecurityTagPrototype(ExecState* exec, Structure* structure)
     : SecurityTagObject(exec->globalData(), structure)
@@ -81,11 +81,11 @@ namespace JSC {
 
         SecurityTagObject* thisObject = asSecurityTagObject(thisValue);
         JSValue argument = exec->argument(0);
-        SecurityLabel label;
-        label.add(thisObject->tag());
-        return JSValue::encode(argument, exec, label);
+        ASSERT(!thisObject->labelForTag().isNull());
+        ASSERT(thisObject->labelForTag().hasTag(thisObject->tag()));
+        return JSValue::encode(argument, exec, thisObject->labelForTag());
     }
-    
+
     EncodedJSValue JSC_HOST_CALL securityTagProtoFuncIsOn(ExecState* exec)
     {
         JSValue thisValue = exec->hostThisValue();

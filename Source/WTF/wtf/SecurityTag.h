@@ -19,36 +19,20 @@
  *
  */
 
-#include "config.h"
-#include <wtf/SecurityLabel.h>
+#ifndef WTF_SecurityTag_h
+#define WTF_SecurityTag_h
+
+#include <wtf/CurrentTime.h>
 
 namespace WTF {
 
-void SecurityLabel::add(const SecurityTag& tag) {
-    if (hasTag(tag))
-        return;
-
-    m_impl = SecurityLabelImpl::add(m_impl, tag);
-}
-
-bool SecurityLabel::hasTag(const SecurityTag& tag) const {
-    return !isNull() && m_impl->hasTag(tag);
-}
-
-bool SecurityLabel::hasLabel(const SecurityLabel& other) const {
-    if (isNull() || other.isNull())
-        return other.isNull();
-    return m_impl->hasLabel(other.m_impl);
-}
-
-void SecurityLabel::merge(const SecurityLabel& other) {
-    if (other.isNull() || m_impl == other.m_impl)
-        return;
-
-    if (isNull())
-        m_impl = other.m_impl;
-    else
-        m_impl = SecurityLabelImpl::combine(m_impl, other.m_impl);
-}
+struct SecurityTag {
+public:
+    SecurityTag() : m_impl(monotonicallyIncreasingTime()) {}
+    operator double() const { return m_impl; }
+private:
+    double m_impl;
+};
 
 } // namespace WTF
+#endif

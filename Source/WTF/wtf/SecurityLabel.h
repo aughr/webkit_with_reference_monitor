@@ -19,61 +19,21 @@
  *
  */
 
-#ifndef WTF_SecurityLabelImpl_h
-#define WTF_SecurityLabelImpl_h
+#ifndef WTF_SecurityLabel_h
+#define WTF_SecurityLabel_h
 
-#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/CurrentTime.h>
+#include <wtf/SecurityLabelImpl.h>
+#include <wtf/SecurityTag.h>
 
 namespace WTF {
-    
-    struct SecurityTag {
-    public:
-        SecurityTag() : m_impl(monotonicallyIncreasingTime()) {}
-        inline operator double() const {
-            return m_impl;
-        }
-    private:
-        double m_impl;
-    };
-    
-    template<> struct DefaultHash<SecurityTag> { typedef FloatHash<double> Hash; };
-    template<> struct HashTraits<SecurityTag> : FloatHashTraits<double> { };
-
-    class SecurityLabelImpl : public RefCounted<SecurityLabelImpl> {
-    private:
-        typedef HashSet<SecurityTag> SecurityTagSet;
-    public:
-        void add(const SecurityTag& tag);
-
-        bool hasTag(const SecurityTag& tag) const;
-        bool hasLabel(const RefPtr<SecurityLabelImpl>& other) const;
-
-        PassRefPtr<SecurityLabelImpl> combine(const RefPtr<SecurityLabelImpl>& other);
-        PassRefPtr<SecurityLabelImpl> duplicate();
-
-        static inline PassRefPtr<SecurityLabelImpl> create()
-        {
-            return adoptRef(new SecurityLabelImpl());
-        }
-
-    private:
-        SecurityLabelImpl() {}
-        SecurityLabelImpl(SecurityTagSet set) : m_tagSet(set) {}
-        static inline PassRefPtr<SecurityLabelImpl> create(SecurityTagSet set)
-        {
-            return adoptRef(new SecurityLabelImpl(set));
-        }
-    private:
-        SecurityTagSet m_tagSet;
-    };
-
     class SecurityLabel {
     public:
         SecurityLabel() : m_impl(0) {}
 
         bool isNull() const { return m_impl == NULL; }
+        SecurityLabelImpl* get() const { return m_impl.get(); }
 
         WTF_EXPORT_PRIVATE void add(const SecurityTag& tag);        
         WTF_EXPORT_PRIVATE bool hasTag(const SecurityTag& tag) const;
@@ -84,25 +44,6 @@ namespace WTF {
 
         RefPtr<SecurityLabelImpl> m_impl;
     };
-
-    inline void SecurityLabelImpl::add(const SecurityTag& tag) {
-        m_tagSet.add(tag); 
-    }
-
-    inline bool SecurityLabelImpl::hasTag(const SecurityTag& tag) const {
-        return m_tagSet.contains(tag);
-    }
-
-    inline bool SecurityLabelImpl::hasLabel(const RefPtr<SecurityLabelImpl>& other) const {
-        SecurityTagSet& otherSet = other->m_tagSet;
-
-        SecurityTagSet::iterator end = otherSet.end();
-        for (SecurityTagSet::iterator it = otherSet.begin(); it != end; ++it) {
-            if (!m_tagSet.contains(*it))
-                return false;
-        }
-        return true;
-    }
 }
 
 using WTF::SecurityLabel;

@@ -26,7 +26,7 @@
 namespace JSC {
     
     ASSERT_CLASS_FITS_IN_CELL(SecurityTagObject);
-    ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagObject);
+    //ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagObject);
     
     const ClassInfo SecurityTagObject::s_info = { "SecurityTag", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagObject) };
     
@@ -34,6 +34,8 @@ namespace JSC {
     : JSNonFinalObject(globalData, structure)
     , m_tag(tag)
     {
+        m_labelForTag.add(tag);
+        ASSERT(!m_labelForTag.isNull());
     }
     
     void SecurityTagObject::finishCreation(JSGlobalData& globalData)

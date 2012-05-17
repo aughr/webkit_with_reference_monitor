@@ -47,8 +47,10 @@ namespace JSC {
         }
         
         WTF::SecurityTag tag() const { return m_tag; };
+        SecurityLabel labelForTag() const { return m_labelForTag; };
     private:
         WTF::SecurityTag m_tag;
+        SecurityLabel m_labelForTag;
     };
     
     JS_EXPORT_PRIVATE SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*);
