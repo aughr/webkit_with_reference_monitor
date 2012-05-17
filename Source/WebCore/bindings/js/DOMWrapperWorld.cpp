@@ -34,8 +34,9 @@ void JSStringOwner::finalize(JSC::Handle<JSC::Unknown> handle, void* context)
 {
     JSString* jsString = jsCast<JSString*>(handle.get().asCell());
     StringImpl* stringImpl = static_cast<StringImpl*>(context);
-    ASSERT_UNUSED(jsString, m_world->m_stringCache.find(stringImpl)->second.was(jsString));
-    m_world->m_stringCache.remove(stringImpl);
+    StringImpl* descriptor = jsString->securityLabel().descriptor();
+    ASSERT_UNUSED(jsString, m_world->m_stringCache.find(make_pair(stringImpl, descriptor))->second.was(jsString));
+    m_world->m_stringCache.remove(make_pair(stringImpl, descriptor));
 }
 
 DOMWrapperWorld::DOMWrapperWorld(JSC::JSGlobalData* globalData, bool isNormal)

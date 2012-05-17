@@ -42,6 +42,7 @@ namespace WTF {
     private:
         typedef HashSet<SecurityTag> SecurityTagSet;
     public:
+        StringImpl* descriptor() const { return m_descriptor.get(); }
         bool hasTag(const SecurityTag& tag);
         bool hasLabel(const RefPtr<SecurityLabelImpl>& other);
         

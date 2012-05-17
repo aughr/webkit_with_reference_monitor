@@ -46,10 +46,11 @@ const JSC::HashTable* getHashTableForGlobalData(JSGlobalData& globalData, const 
     return DOMObjectHashTableMap::mapFor(globalData).get(staticTable);
 }
 
-JSValue jsStringSlowCase(ExecState* exec, JSStringCache& stringCache, StringImpl* stringImpl)
+JSValue jsStringSlowCase(ExecState* exec, JSStringCache& stringCache, StringImpl* stringImpl, SecurityLabel label)
 {
     JSString* wrapper = jsString(exec, UString(stringImpl));
-    stringCache.add(stringImpl, PassWeak<JSString>(exec->globalData(), wrapper, currentWorld(exec)->stringWrapperOwner(), stringImpl));
+    wrapper->mergeSecurityLabel(exec, label);
+    stringCache.add(make_pair(stringImpl, label.descriptor()), PassWeak<JSString>(exec->globalData(), wrapper, currentWorld(exec)->stringWrapperOwner(), stringImpl));
     return wrapper;
 }
 

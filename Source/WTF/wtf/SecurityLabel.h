@@ -33,7 +33,7 @@ namespace WTF {
         SecurityLabel() : m_impl(0) {}
 
         bool isNull() const { return m_impl == NULL; }
-        SecurityLabelImpl* get() const { return m_impl.get(); }
+        StringImpl* descriptor() const;
 
         WTF_EXPORT_PRIVATE void add(const SecurityTag& tag);        
         WTF_EXPORT_PRIVATE bool hasTag(const SecurityTag& tag) const;
@@ -48,4 +48,5 @@ namespace WTF {
 
 using WTF::SecurityLabel;
 
+#include <wtf/text/WTFString.h>
 #endif

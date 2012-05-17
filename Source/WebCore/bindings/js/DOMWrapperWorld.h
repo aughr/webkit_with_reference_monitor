@@ -26,6 +26,7 @@
 #include <heap/Weak.h>
 #include <runtime/WeakGCMap.h>
 #include <wtf/Forward.h>
+#include <utility>
 
 namespace WebCore {
 
@@ -34,7 +35,7 @@ class JSDOMWrapper;
 class ScriptController;
 
 typedef HashMap<void*, JSC::Weak<JSDOMWrapper> > DOMObjectWrapperMap;
-typedef HashMap<StringImpl*, JSC::Weak<JSC::JSString> > JSStringCache;
+typedef HashMap<std::pair<StringImpl*, StringImpl*>, JSC::Weak<JSC::JSString> > JSStringCache;
 
 class JSStringOwner : public JSC::WeakHandleOwner {
 public:

@@ -230,8 +230,7 @@ enum ParameterDefaultPolicy {
     void setDOMException(JSC::ExecState*, ExceptionCode);
 
     JSC::JSValue jsString(JSC::ExecState*, const String&); // empty if the string is null
-    JSC::JSValue jsStringUnlabeled(JSC::ExecState*, const String&); // empty if the string is null
-    JSC::JSValue jsStringSlowCase(JSC::ExecState*, JSStringCache&, StringImpl*);
+    JSC::JSValue jsStringSlowCase(JSC::ExecState*, JSStringCache&, StringImpl*, SecurityLabel);
     JSC::JSValue jsString(JSC::ExecState*, const KURL&); // empty if the URL is null
     inline JSC::JSValue jsString(JSC::ExecState* exec, const AtomicString& s)
     { 
@@ -343,7 +342,7 @@ enum ParameterDefaultPolicy {
     void printErrorMessageForFrame(Frame*, const String& message);
     JSC::JSValue objectToStringFunctionGetter(JSC::ExecState*, JSC::JSValue, const JSC::Identifier& propertyName);
 
-    inline JSC::JSValue jsStringUnlabeled(JSC::ExecState* exec, const String& s)
+    inline JSC::JSValue jsString(JSC::ExecState* exec, const String& s)
     {
         StringImpl* stringImpl = s.impl();
         if (!stringImpl || !stringImpl->length())
@@ -353,18 +352,11 @@ enum ParameterDefaultPolicy {
             return jsString(exec, stringToUString(s));
 
         JSStringCache& stringCache = currentWorld(exec)->m_stringCache;
-        JSStringCache::iterator it = stringCache.find(stringImpl);
+        JSStringCache::iterator it = stringCache.find(make_pair(stringImpl, s.securityLabel().descriptor()));
         if (it != stringCache.end())
             return it->second.get();
 
-        return jsStringSlowCase(exec, stringCache, stringImpl);
-    }
-    
-    inline JSC::JSValue jsString(JSC::ExecState* exec, const String& s) {
-        JSC::JSValue result = jsStringUnlabeled(exec, s);
-        result = result.mergeSecurityLabel(exec, s.securityLabel());
-        return result;
-            
+        return jsStringSlowCase(exec, stringCache, stringImpl, s.securityLabel());
     }
 
     inline DOMObjectWrapperMap& domObjectWrapperMapFor(JSC::ExecState* exec)
