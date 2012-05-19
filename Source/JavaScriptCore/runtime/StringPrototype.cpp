@@ -1580,25 +1580,27 @@ static inline JSValue trimString(ExecState* exec, JSValue thisValue, int trimKin
     if (left == 0 && right == str.length() && thisValue.isString())
         return thisValue;
 
-    return jsString(exec, str.substringSharingImpl(left, right - left));
+    JSString* result = jsString(exec, str.substringSharingImpl(left, right - left));
+    result->mergeSecurityLabel(exec, str.securityLabel());
+    return result;
 }
 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncTrim(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
-    return JSValue::encode(trimString(exec, thisValue, TrimLeft | TrimRight), exec, thisValue.toString(exec)->securityLabel());
+    return JSValue::encode(trimString(exec, thisValue, TrimLeft | TrimRight));
 }
 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncTrimLeft(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
-    return JSValue::encode(trimString(exec, thisValue, TrimLeft), exec, thisValue.toString(exec)->securityLabel());
+    return JSValue::encode(trimString(exec, thisValue, TrimLeft));
 }
 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncTrimRight(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
-    return JSValue::encode(trimString(exec, thisValue, TrimRight), exec, thisValue.toString(exec)->securityLabel());
+    return JSValue::encode(trimString(exec, thisValue, TrimRight));
 }
     
     
