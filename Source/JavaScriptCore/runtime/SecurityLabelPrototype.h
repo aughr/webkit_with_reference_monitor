@@ -20,13 +20,13 @@
 #ifndef SecurityLabelPrototype_h
 #define SecurityLabelPrototype_h
 
-#include "SecurityLabelObject.h"
+#include "JSObject.h"
 
 namespace JSC {
     
-    class SecurityLabelPrototype : public SecurityLabelObject {
+    class SecurityLabelPrototype : public JSNonFinalObject {
     public:
-        typedef SecurityLabelObject Base;
+        typedef JSNonFinalObject Base;
         
         static SecurityLabelPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
         {
@@ -44,12 +44,9 @@ namespace JSC {
         
     protected:
         void finishCreation(ExecState*, JSGlobalObject*);
-        static const unsigned StructureFlags = OverridesGetOwnPropertySlot | SecurityLabelObject::StructureFlags;
         
     private:
         SecurityLabelPrototype(ExecState*, Structure*);
-        static bool getOwnPropertySlot(JSCell*, ExecState*, const Identifier&, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, const Identifier&, PropertyDescriptor&);
     };
     
 } // namespace JSC

@@ -78,6 +78,7 @@ namespace JSC {
         // Querying the type.
         bool isString() const;
         bool isLabeledValue() const;
+        bool isSecurityLabel() const;
         bool isObject() const;
         bool isGetterSetter() const;
         bool inherits(const ClassInfo*) const;
@@ -233,6 +234,11 @@ namespace JSC {
     inline bool JSValue::isLabeledValue() const
     {
         return isCell() && asCell()->isLabeledValue();
+    }
+    
+    inline bool JSValue::isSecurityLabel() const
+    {
+        return isCell() && asCell()->isSecurityLabel();
     }
 
     inline bool JSValue::isPrimitive() const

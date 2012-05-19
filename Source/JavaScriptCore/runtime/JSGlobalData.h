@@ -72,6 +72,7 @@ namespace JSC {
     class NativeExecutable;
     class ParserArena;
     class RegExpCache;
+    class SecurityLabelCache;
     class Stringifier;
     class Structure;
     class UString;
@@ -173,7 +174,6 @@ namespace JSC {
         const HashTable* regExpTable;
         const HashTable* regExpConstructorTable;
         const HashTable* regExpPrototypeTable;
-        const HashTable* securityLabelPrototypeTable;
         const HashTable* stringTable;
         const HashTable* stringConstructorTable;
         
@@ -185,6 +185,7 @@ namespace JSC {
         Strong<Structure> staticScopeStructure;
         Strong<Structure> strictEvalActivationStructure;
         Strong<Structure> stringStructure;
+        Strong<Structure> securityLabelStructure;
         Strong<Structure> labeledValueStructure;
         Strong<Structure> notAnObjectStructure;
         Strong<Structure> propertyNameIteratorStructure;
@@ -201,6 +202,7 @@ namespace JSC {
 
         IdentifierTable* identifierTable;
         CommonIdentifiers* propertyNames;
+        SecurityLabelCache* securityLabelCache;
         const MarkedArgumentBuffer* emptyList; // Lists are supposed to be allocated on the stack to have their elements properly marked, which is not the case here - but this list has nothing to mark.
         SmallStrings smallStrings;
         NumericStrings numericStrings;

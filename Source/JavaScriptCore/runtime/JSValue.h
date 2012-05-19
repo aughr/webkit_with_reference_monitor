@@ -184,6 +184,7 @@ namespace JSC {
         bool isString() const;
         bool isPrimitive() const;
         bool isLabeledValue() const;
+        bool isSecurityLabel() const;
         bool isGetterSetter() const;
         bool isObject() const;
         bool inherits(const ClassInfo*) const;

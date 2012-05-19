@@ -54,8 +54,11 @@
 #include "ParserArena.h"
 #include "RegExpCache.h"
 #include "RegExpObject.h"
+#include "SecurityLabelCache.h"
+#include "SecurityLabelObject.h"
 #include "StrictEvalActivation.h"
 #include "StrongInlines.h"
+#include "WeakGCMap.h"
 #include <wtf/Threading.h>
 #include <wtf/WTFThreadData.h>
 
@@ -87,7 +90,6 @@ extern const HashTable objectPrototypeTable;
 extern const HashTable regExpTable;
 extern const HashTable regExpConstructorTable;
 extern const HashTable regExpPrototypeTable;
-extern const HashTable securityLabelPrototypeTable;
 extern const HashTable stringTable;
 extern const HashTable stringConstructorTable;
 
@@ -111,11 +113,11 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, ThreadStackType thread
     , regExpTable(fastNew<HashTable>(JSC::regExpTable))
     , regExpConstructorTable(fastNew<HashTable>(JSC::regExpConstructorTable))
     , regExpPrototypeTable(fastNew<HashTable>(JSC::regExpPrototypeTable))
-    , securityLabelPrototypeTable(fastNew<HashTable>(JSC::securityLabelPrototypeTable))
     , stringTable(fastNew<HashTable>(JSC::stringTable))
     , stringConstructorTable(fastNew<HashTable>(JSC::stringConstructorTable))
     , identifierTable(globalDataType == Default ? wtfThreadData().currentIdentifierTable() : createIdentifierTable())
     , propertyNames(new CommonIdentifiers(this))
+    , securityLabelCache(new SecurityLabelCache())
     , emptyList(new MarkedArgumentBuffer)
 #if ENABLE(ASSEMBLER)
     , executableAllocator(*this)
@@ -160,6 +162,7 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, ThreadStackType thread
     staticScopeStructure.set(*this, JSStaticScopeObject::createStructure(*this, 0, jsNull()));
     strictEvalActivationStructure.set(*this, StrictEvalActivation::createStructure(*this, 0, jsNull()));
     stringStructure.set(*this, JSString::createStructure(*this, 0, jsNull()));
+    securityLabelStructure.set(*this, SecurityLabelObject::createStructure(*this, 0, jsNull()));
     labeledValueStructure.set(*this, JSLabeledValue::createStructure(*this, 0, jsNull()));
     notAnObjectStructure.set(*this, JSNotAnObject::createStructure(*this, 0, jsNull()));
     propertyNameIteratorStructure.set(*this, JSPropertyNameIterator::createStructure(*this, 0, jsNull()));
@@ -225,6 +228,7 @@ void JSGlobalData::clearBuiltinStructures()
     staticScopeStructure.clear();
     strictEvalActivationStructure.clear();
     stringStructure.clear();
+    securityLabelStructure.clear();
     labeledValueStructure.clear();
     notAnObjectStructure.clear();
     propertyNameIteratorStructure.clear();
@@ -266,7 +270,6 @@ JSGlobalData::~JSGlobalData()
     regExpTable->deleteTable();
     regExpConstructorTable->deleteTable();
     regExpPrototypeTable->deleteTable();
-    securityLabelPrototypeTable->deleteTable();
     stringTable->deleteTable();
     stringConstructorTable->deleteTable();
 
@@ -286,7 +289,6 @@ JSGlobalData::~JSGlobalData()
     fastDelete(const_cast<HashTable*>(regExpTable));
     fastDelete(const_cast<HashTable*>(regExpConstructorTable));
     fastDelete(const_cast<HashTable*>(regExpPrototypeTable));
-    fastDelete(const_cast<HashTable*>(securityLabelPrototypeTable));
     fastDelete(const_cast<HashTable*>(stringTable));
     fastDelete(const_cast<HashTable*>(stringConstructorTable));
 

@@ -25,44 +25,33 @@
 
 namespace JSC {
     
-    class SecurityLabelObject : public JSNonFinalObject {
+    class SecurityLabelObject : public JSCell {
     protected:
-        SecurityLabelObject(JSGlobalData&, Structure*);
-        void finishCreation(JSGlobalData&);
-        
-    public:
-        typedef JSNonFinalObject Base;
-        
-        static void destroy(JSCell*);
-        
-        static SecurityLabelObject* create(JSGlobalData& globalData, Structure* structure)
+        SecurityLabelObject(JSGlobalData& globalData)
+        : JSCell(globalData, globalData.securityLabelStructure.get())
         {
-            SecurityLabelObject* label = new (NotNull, allocateCell<SecurityLabelObject>(globalData.heap)) SecurityLabelObject(globalData, structure);
-            label->finishCreation(globalData);
-            ASSERT(label->m_label.isNull());
-            return label;
         }
 
-        static SecurityLabelObject* create(JSGlobalData& globalData, Structure* structure, SecurityLabel label)
+        void finishCreation(JSGlobalData& globalData)
         {
-            SecurityLabelObject* labelObj = new (NotNull, allocateCell<SecurityLabelObject>(globalData.heap)) SecurityLabelObject(globalData, structure);
-            labelObj->finishCreation(globalData);
-            labelObj->m_label = label;
-            return labelObj;
+            Base::finishCreation(globalData);
+            ASSERT(inherits(&s_info));
         }
+        
+    public:
+        typedef JSCell Base;
+        
+        static void destroy(JSCell*);
+
+        static SecurityLabelObject* create(JSGlobalData&, SecurityLabel);
         
         static JS_EXPORTDATA const ClassInfo s_info;
         
         static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(globalData, globalObject, prototype, TypeInfo(SecurityLabelType, OverridesGetOwnPropertySlot), &s_info);
         }
         
-        bool isNull() const;
-        void add(const WTF::SecurityTag&);
-        bool hasTag(const WTF::SecurityTag&) const;
-        void merge(const SecurityLabelObject&);
-        void merge(const SecurityLabel&);
         SecurityLabel securityLabel() const { return m_label; }
         
         JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
@@ -70,29 +59,9 @@ namespace JSC {
     private:
         WTF::SecurityLabel m_label;
     };
-    
-    JS_EXPORT_PRIVATE SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*);
-    JS_EXPORT_PRIVATE SecurityLabelObject* constructSecurityLabel(ExecState*, JSGlobalObject*, SecurityLabel);
-    
-    inline bool SecurityLabelObject::isNull() const {
-        return m_label.isNull();
-    }
-    
-    inline void SecurityLabelObject::add(const WTF::SecurityTag& tag) {
-        m_label.add(tag);
-    }
-    
-    inline bool SecurityLabelObject::hasTag(const WTF::SecurityTag& tag) const {
-        return m_label.hasTag(tag);
-    }
-    
-    inline void SecurityLabelObject::merge(const SecurityLabelObject& other) {
-        m_label.merge(other.m_label);
-    }
-    
-    inline void SecurityLabelObject::merge(const SecurityLabel& other) {
-        m_label.merge(other);
-    }
+
 } // namespace JSC
+
+#include "SecurityLabelCache.h"
 
 #endif // SecurityLabelObject_h

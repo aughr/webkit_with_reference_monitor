@@ -24,6 +24,7 @@
 #include "JSCell.h"
 
 #include "JSFunction.h"
+#include "JSGlobalObject.h"
 #include "JSLabeledValue.h"
 #include "JSString.h"
 #include "JSObject.h"
@@ -147,10 +148,12 @@ SecurityLabel JSCell::securityLabelCell(const JSCell* cell) {
 void JSCell::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::ExecState* exec, SecurityLabel label) {
     if (label.isNull())
         return;
-    if (cell->m_label)
-        cell->m_label->merge(label);
-    else
-        cell->m_label.set(exec->globalData(), cell, constructSecurityLabel(exec, exec->lexicalGlobalObject(), label));
+    if (cell->m_label) {
+        SecurityLabel current = cell->m_label->securityLabel();
+        current.merge(label);
+        cell->m_label.set(exec->globalData(), cell, lookupOrConstructSecurityLabel(exec, current));
+    } else
+        cell->m_label.set(exec->globalData(), cell, lookupOrConstructSecurityLabel(exec, label));
 }
 
 JSObject* JSCell::toThisObject(JSCell* cell, ExecState* exec)
@@ -164,6 +167,8 @@ JSValue JSCell::toPrimitive(ExecState* exec, PreferredPrimitiveType preferredTyp
         return static_cast<const JSString*>(this)->toPrimitive(exec, preferredType);
     if (isLabeledValue())
         return static_cast<const JSLabeledValue*>(this)->toPrimitive(exec, preferredType);
+    if (isSecurityLabel())
+        return exec->lexicalGlobalObject()->securityLabelPrototype()->toPrimitive(exec, preferredType);
     return static_cast<const JSObject*>(this)->toPrimitive(exec, preferredType);
 }
 
@@ -173,6 +178,8 @@ bool JSCell::getPrimitiveNumber(ExecState* exec, double& number, JSValue& value)
         return static_cast<const JSString*>(this)->getPrimitiveNumber(exec, number, value);
     if (isLabeledValue())
         return static_cast<const JSLabeledValue*>(this)->getPrimitiveNumber(exec, number, value);
+    if (isSecurityLabel())
+        return exec->lexicalGlobalObject()->securityLabelPrototype()->getPrimitiveNumber(exec, number, value);
     return static_cast<const JSObject*>(this)->getPrimitiveNumber(exec, number, value);
 }
 
@@ -182,6 +189,8 @@ double JSCell::toNumber(ExecState* exec) const
         return static_cast<const JSString*>(this)->toNumber(exec);
     if (isLabeledValue())
         return static_cast<const JSLabeledValue*>(this)->toNumber(exec);
+    if (isSecurityLabel())
+        return exec->lexicalGlobalObject()->securityLabelPrototype()->toNumber(exec);
     return static_cast<const JSObject*>(this)->toNumber(exec);
 }
 
@@ -189,8 +198,12 @@ JSObject* JSCell::toObject(ExecState* exec, JSGlobalObject* globalObject) const
 {
     if (isString())
         return static_cast<const JSString*>(this)->toObject(exec, globalObject);
-    if (isLabeledValue())
-        return static_cast<const JSLabeledValue*>(this)->toObject(exec, globalObject);
+    if (isLabeledValue()) {
+        JSObject* object = static_cast<const JSLabeledValue*>(this)->toObject(exec, globalObject);
+        object->mergeSecurityLabel(exec, securityLabel());
+        return object;
+    } if (isSecurityLabel())
+        return constructEmptyObject(exec, globalObject);
     ASSERT(isObject());
     return jsCast<JSObject*>(const_cast<JSCell*>(this));
 }

@@ -343,6 +343,11 @@ namespace JSC {
         return m_structure->typeInfo().type() == LabeledType;
     }
 
+    inline bool JSCell::isSecurityLabel() const
+    {
+        return m_structure->typeInfo().type() == SecurityLabelType;
+    }
+
     inline bool JSCell::isGetterSetter() const
     {
         return m_structure->typeInfo().type() == GetterSetterType;

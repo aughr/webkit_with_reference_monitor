@@ -63,7 +63,7 @@ end
 
 # Type constants.
 const StringType = 5
-const ObjectType = 14
+const ObjectType = 15
 
 # Type flags constants.
 const MasqueradesAsUndefined = 1

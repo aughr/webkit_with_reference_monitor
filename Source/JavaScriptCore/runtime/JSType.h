@@ -32,6 +32,7 @@ enum JSType {
     StringType,
     LeafType,
     LabeledType,
+    SecurityLabelType,
 
     // The CompoundType value must come before any JSType that may have children.
     CompoundType,

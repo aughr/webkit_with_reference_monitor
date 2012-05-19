@@ -94,8 +94,11 @@ JSObject* JSValue::toThisObjectSlowCase(ExecState* exec) const
 JSObject* JSValue::synthesizePrototype(ExecState* exec) const
 {
     if (isCell()) {
-        ASSERT(isString());
-        return exec->lexicalGlobalObject()->stringPrototype();
+        ASSERT(isString() || isSecurityLabel());
+        if (isString())
+            return exec->lexicalGlobalObject()->stringPrototype();
+        else
+            return exec->lexicalGlobalObject()->securityLabelPrototype();
     }
 
     if (isNumber())

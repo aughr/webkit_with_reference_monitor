@@ -828,7 +828,7 @@ inline JSValue JSValue::get(ExecState* exec, const Identifier& propertyName) con
 
 inline JSValue JSValue::get(ExecState* exec, const Identifier& propertyName, PropertySlot& slot) const
 {
-    if (UNLIKELY(!isCell())) {
+    if (UNLIKELY(!isCell() || isSecurityLabel())) {
         JSObject* prototype = synthesizePrototype(exec);
         if (!prototype->getPropertySlot(exec, propertyName, slot))
             return jsUndefined();
@@ -855,7 +855,7 @@ inline JSValue JSValue::get(ExecState* exec, unsigned propertyName) const
 
 inline JSValue JSValue::get(ExecState* exec, unsigned propertyName, PropertySlot& slot) const
 {
-    if (UNLIKELY(!isCell())) {
+    if (UNLIKELY(!isCell() || isSecurityLabel())) {
         JSObject* prototype = synthesizePrototype(exec);
         if (!prototype->getPropertySlot(exec, propertyName, slot))
             return jsUndefined();
@@ -876,7 +876,7 @@ inline JSValue JSValue::get(ExecState* exec, unsigned propertyName, PropertySlot
 
 inline void JSValue::put(ExecState* exec, const Identifier& propertyName, JSValue value, PutPropertySlot& slot)
 {
-    if (UNLIKELY(!isCell())) {
+    if (UNLIKELY(!isCell() || isSecurityLabel())) {
         putToPrimitive(exec, propertyName, value, slot);
         return;
     }
@@ -887,7 +887,7 @@ inline void JSValue::put(ExecState* exec, const Identifier& propertyName, JSValu
 
 inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue value, bool shouldThrow)
 {
-    if (UNLIKELY(!isCell())) {
+    if (UNLIKELY(!isCell() || isSecurityLabel())) {
         PutPropertySlot slot(shouldThrow);
         putToPrimitive(exec, Identifier::from(exec, propertyName), value, slot);
         return;

@@ -49,10 +49,8 @@ inline SecurityLabelObject* lookupOrConstructSecurityLabel(ExecState* exec, Secu
     SecurityLabelObject* object = exec->globalData().securityLabelCache->get(label.descriptor());
     if (object)
         return object;
-    else {
-        fprintf(stderr, "creating seclabelobject\n");
-        return SecurityLabelObject::create(exec->globalData(), label);;
-    }
+    else
+        return SecurityLabelObject::create(exec->globalData(), label);
 }
 
 } // namespace JSC

@@ -244,7 +244,7 @@ void JSGlobalObject::reset(JSValue prototype)
     m_regExpStructure.set(exec->globalData(), this, RegExpObject::createStructure(exec->globalData(), this, m_regExpPrototype.get()));
 
     m_securityLabelPrototype.set(exec->globalData(), this, SecurityLabelPrototype::create(exec, this, SecurityLabelPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get())));
-    m_securityLabelStructure.set(exec->globalData(), this, SecurityLabelObject::createStructure(exec->globalData(), this, m_securityLabelPrototype.get()));
+    m_securityLabelPrototype->freeze(exec->globalData());
 
     m_securityTagPrototype.set(exec->globalData(), this, SecurityTagPrototype::create(exec, this, SecurityTagPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get())));
     m_securityTagStructure.set(exec->globalData(), this, SecurityTagObject::createStructure(exec->globalData(), this, m_securityTagPrototype.get()));
@@ -398,7 +398,6 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitIfNeeded(visitor, &thisObject->m_regExpMatchesArrayStructure);
     visitIfNeeded(visitor, &thisObject->m_regExpStructure);
     visitIfNeeded(visitor, &thisObject->m_stringObjectStructure);
-    visitIfNeeded(visitor, &thisObject->m_securityLabelStructure);
     visitIfNeeded(visitor, &thisObject->m_securityTagStructure);
     visitIfNeeded(visitor, &thisObject->m_internalFunctionStructure);
 

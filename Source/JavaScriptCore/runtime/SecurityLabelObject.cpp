@@ -33,18 +33,7 @@ namespace JSC {
         thisObject->SecurityLabelObject::~SecurityLabelObject();
     }
 
-    const ClassInfo SecurityLabelObject::s_info = { "SecurityLabel", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityLabelObject) };
-    
-    SecurityLabelObject::SecurityLabelObject(JSGlobalData& globalData, Structure* structure)
-    : JSNonFinalObject(globalData, structure)
-    {
-    }
-    
-    void SecurityLabelObject::finishCreation(JSGlobalData& globalData)
-    {
-        Base::finishCreation(globalData);
-        ASSERT(inherits(&s_info));
-    }
+    const ClassInfo SecurityLabelObject::s_info = { "SecurityLabel", 0, 0, 0, CREATE_METHOD_TABLE(SecurityLabelObject) };
     
     SecurityLabel SecurityLabelObject::securityLabelCell(const JSCell* cell) {
         const SecurityLabelObject* obj = jsCast<const SecurityLabelObject*>(cell);
@@ -53,18 +42,6 @@ namespace JSC {
     
     void SecurityLabelObject::mergeSecurityLabelCell(JSC::JSCell*, JSC::ExecState*, SecurityLabel) {
         return;
-    }
-    
-    SecurityLabelObject* constructSecurityLabel(ExecState* exec, JSGlobalObject* globalObject)
-    {
-        SecurityLabelObject* object = SecurityLabelObject::create(exec->globalData(), globalObject->securityLabelStructure());
-        return object;
-    }
-    
-    SecurityLabelObject* constructSecurityLabel(ExecState* exec, JSGlobalObject* globalObject, SecurityLabel label)
-    {
-        SecurityLabelObject* object = SecurityLabelObject::create(exec->globalData(), globalObject->securityLabelStructure(), label);
-        return object;
     }
     
 } // namespace JSC

@@ -337,9 +337,10 @@
 		2600B5A7152BAAA70091EE5F /* JSStringJoiner.h in Headers */ = {isa = PBXBuildFile; fileRef = 2600B5A5152BAAA70091EE5F /* JSStringJoiner.h */; };
 		41359CF30FDD89AD00206180 /* DateConversion.h in Headers */ = {isa = PBXBuildFile; fileRef = D21202290AD4310C00ED79B6 /* DateConversion.h */; };
 		451539B912DC994500EF7AC4 /* Yarr.h in Headers */ = {isa = PBXBuildFile; fileRef = 451539B812DC994500EF7AC4 /* Yarr.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		511253751565C11100FE8EF7 /* SecurityLabelCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 511253741565C11100FE8EF7 /* SecurityLabelCache.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		517FC9CB1548C80300A8B708 /* JSLabeledValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 517FC9CA1548C80300A8B708 /* JSLabeledValue.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		517FC9CE1548CEAF00A8B708 /* JSLabeledValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 517FC9CD1548CEAF00A8B708 /* JSLabeledValue.cpp */; };
-		51BD33371535D8B7009FF4BA /* SecurityLabelPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD33361535D8B6009FF4BA /* SecurityLabelPrototype.h */; };
+		51BD33371535D8B7009FF4BA /* SecurityLabelPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD33361535D8B6009FF4BA /* SecurityLabelPrototype.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		51BD33391535D90B009FF4BA /* SecurityLabelPrototype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51BD33381535D90B009FF4BA /* SecurityLabelPrototype.cpp */; };
 		51BD333B1535D9C8009FF4BA /* SecurityLabelObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 51BD333A1535D9C7009FF4BA /* SecurityLabelObject.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		51BD333D1535DA2C009FF4BA /* SecurityLabelObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51BD333C1535DA2C009FF4BA /* SecurityLabelObject.cpp */; };
@@ -987,6 +988,7 @@
 		449097EE0F8F81B50076A327 /* FeatureDefines.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = FeatureDefines.xcconfig; sourceTree = "<group>"; };
 		451539B812DC994500EF7AC4 /* Yarr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Yarr.h; path = yarr/Yarr.h; sourceTree = "<group>"; };
 		45E12D8806A49B0F00E9DF84 /* jsc.cpp */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.cpp.cpp; path = jsc.cpp; sourceTree = "<group>"; tabWidth = 4; };
+		511253741565C11100FE8EF7 /* SecurityLabelCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityLabelCache.h; sourceTree = "<group>"; };
 		517FC9CA1548C80300A8B708 /* JSLabeledValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSLabeledValue.h; sourceTree = "<group>"; };
 		517FC9CD1548CEAF00A8B708 /* JSLabeledValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSLabeledValue.cpp; sourceTree = "<group>"; };
 		51BD33361535D8B6009FF4BA /* SecurityLabelPrototype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityLabelPrototype.h; sourceTree = "<group>"; };
@@ -2024,6 +2026,7 @@
 				14BFCE6810CDB1FC00364CCE /* WeakGCMap.h */,
 				1420BE7A10AA6DDB00F455D2 /* WeakRandom.h */,
 				A7DCB77912E3D90500911940 /* WriteBarrier.h */,
+				511253741565C11100FE8EF7 /* SecurityLabelCache.h */,
 			);
 			path = runtime;
 			sourceTree = "<group>";
@@ -2616,6 +2619,7 @@
 				0F1E3A461534CBAF000F9456 /* DFGArgumentPosition.h in Headers */,
 				0F1E3A471534CBB9000F9456 /* DFGDoubleFormatState.h in Headers */,
 				517FC9CB1548C80300A8B708 /* JSLabeledValue.h in Headers */,
+				511253751565C11100FE8EF7 /* SecurityLabelCache.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

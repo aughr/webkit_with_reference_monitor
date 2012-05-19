@@ -28,6 +28,7 @@
 #include "JSVariableObject.h"
 #include "JSWeakObjectMapRefInternal.h"
 #include "NumberPrototype.h"
+#include "SecurityLabelPrototype.h"
 #include "StringPrototype.h"
 #include "StructureChain.h"
 #include <wtf/HashSet.h>
@@ -51,7 +52,6 @@ namespace JSC {
     class RegExpConstructor;
     class RegExpPrototype;
     class RegisterFile;
-    class SecurityLabelPrototype;
     class SecurityTagConstructor;
     class SecurityTagPrototype;
 
@@ -141,7 +141,6 @@ namespace JSC {
         WriteBarrier<Structure> m_numberObjectStructure;
         WriteBarrier<Structure> m_regExpMatchesArrayStructure;
         WriteBarrier<Structure> m_regExpStructure;
-        WriteBarrier<Structure> m_securityLabelStructure;
         WriteBarrier<Structure> m_securityTagStructure;
         WriteBarrier<Structure> m_stringObjectStructure;
         WriteBarrier<Structure> m_internalFunctionStructure;
@@ -153,6 +152,7 @@ namespace JSC {
         WeakRandom m_weakRandom;
 
         SymbolTable m_symbolTable;
+        WeakGCMap<StringImpl*, SecurityLabelObject> securityLabelCache;
 
         bool m_evalEnabled;
 
@@ -258,6 +258,7 @@ namespace JSC {
         NumberPrototype* numberPrototype() const { return m_numberPrototype.get(); }
         DatePrototype* datePrototype() const { return m_datePrototype.get(); }
         RegExpPrototype* regExpPrototype() const { return m_regExpPrototype.get(); }
+        SecurityLabelPrototype* securityLabelPrototype() const { return m_securityLabelPrototype.get(); }
         SecurityTagPrototype* securityTagPrototype() const { return m_securityTagPrototype.get(); }
 
         JSObject* methodCallDummy() const { return m_methodCallDummy.get(); }
@@ -280,7 +281,6 @@ namespace JSC {
         Structure* internalFunctionStructure() const { return m_internalFunctionStructure.get(); }
         Structure* regExpMatchesArrayStructure() const { return m_regExpMatchesArrayStructure.get(); }
         Structure* regExpStructure() const { return m_regExpStructure.get(); }
-        Structure* securityLabelStructure() const { return m_securityLabelStructure.get(); }
         Structure* securityTagStructure() const { return m_securityTagStructure.get(); }
         Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
 
@@ -401,8 +401,11 @@ namespace JSC {
         if (isObject())
             return m_prototype.get();
 
-        ASSERT(typeInfo().type() == StringType);
-        return exec->lexicalGlobalObject()->stringPrototype();
+        ASSERT(typeInfo().type() == StringType || typeInfo().type() == SecurityLabelType);
+        if (typeInfo().type() == StringType)
+            return exec->lexicalGlobalObject()->stringPrototype();
+        else
+            return exec->lexicalGlobalObject()->securityLabelPrototype();
     }
 
     inline StructureChain* Structure::prototypeChain(ExecState* exec) const

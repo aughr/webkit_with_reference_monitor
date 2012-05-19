@@ -36,14 +36,11 @@ namespace JSC {
     
 }
 
-#include "SecurityTagPrototype.lut.h"
-
 namespace JSC {
     
     const ClassInfo SecurityTagPrototype::s_info = { "SecurityTag", &SecurityTagObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagPrototype) };
     
     ASSERT_CLASS_FITS_IN_CELL(SecurityTagPrototype);
-    //ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagPrototype);
     
     SecurityTagPrototype::SecurityTagPrototype(ExecState* exec, Structure* structure)
     : SecurityTagObject(exec->globalData(), structure)
