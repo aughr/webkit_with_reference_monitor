@@ -59,7 +59,7 @@ namespace WebCore {
         
         // Check to see if this data shouldn't leave
         ScriptExecutionContext* context = impl->scriptExecutionContext();
-        if (context->isDocument()) {
+        if (context && context->isDocument()) {
             DOMWindow* window = activeDOMWindow(exec);
             RefPtr<SecurityEventTarget> target = window->securityEventTarget();
             if (target->hasListenerType(SecurityEventTarget::CHECKPOSTMESSAGE_LISTENER)) {
