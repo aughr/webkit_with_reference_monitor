@@ -198,7 +198,7 @@ inline AtomicString AtomicString::fromUTF8(const char* characters)
 
 inline StringImpl* SecurityLabel::descriptor() const
 {
-  return m_impl ? m_impl->descriptor() : AtomicString("").impl();
+    return m_impl ? m_impl->descriptor() : StringImpl::empty();
 }
 
 // AtomicStringHash is the default hash for AtomicString
