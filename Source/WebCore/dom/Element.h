@@ -405,6 +405,9 @@ public:
     IntSize savedLayerScrollOffset() const;
     void setSavedLayerScrollOffset(const IntSize&);
 
+    void mergeSecurityLabel(SecurityLabel label);
+    void mergeSecurityLabelToAttributes(SecurityLabel& label);
+
 protected:
     Element(const QualifiedName& tagName, Document* document, ConstructionType type)
         : ContainerNode(document, type)
@@ -465,6 +468,9 @@ private:
     // are used instead.
     virtual PassRefPtr<Node> cloneNode(bool deep);
     virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren();
+
+    // subclasses can override to merge label in earlier when setting attributes
+    virtual bool elementShouldMergeLabel();
 
     QualifiedName m_tagName;
     virtual OwnPtr<NodeRareData> createRareData();
@@ -609,10 +615,8 @@ inline const AtomicString& Element::fastGetAttribute(const QualifiedName& name) 
 {
     ASSERT(fastAttributeLookupAllowed(name));
     if (m_attributeData) {
-        if (Attribute* attribute = getAttributeItem(name)) {
-            attribute->mergeSecurityLabel(securityLabel());
+        if (Attribute* attribute = getAttributeItem(name))
             return attribute->value();
-        }
     }
     return nullAtom;
 }
@@ -698,6 +702,12 @@ inline bool Element::hasID() const
 inline bool Element::hasClass() const
 {
     return attributeData() && attributeData()->hasClass();
+}
+
+inline void Element::mergeSecurityLabel(SecurityLabel label) {
+    Node::mergeSecurityLabel(label);
+    if (hasAttributes())
+        mergeSecurityLabelToAttributes(label);
 }
 
 // Put here to make them inline.

@@ -233,10 +233,8 @@ const AtomicString& Element::getAttribute(const QualifiedName& name) const
 #endif
 
     if (m_attributeData) {
-        if (Attribute* attribute = getAttributeItem(name)) {
-            attribute->mergeSecurityLabel(securityLabel());
+        if (Attribute* attribute = getAttributeItem(name))
             return attribute->value();
-        }
     }
     return nullAtom;
 }
@@ -613,10 +611,8 @@ const AtomicString& Element::getAttribute(const String& name) const
 #endif
 
     if (m_attributeData) {
-        if (Attribute* attribute = m_attributeData->getAttributeItem(name, ignoreCase)) {
-            attribute->mergeSecurityLabel(securityLabel());
+        if (Attribute* attribute = m_attributeData->getAttributeItem(name, ignoreCase))
             return attribute->value();
-        }
     }
 
     return nullAtom;
@@ -686,6 +682,9 @@ void Element::attributeChanged(Attribute* attr)
         if (!styleSelector || styleSelector->hasSelectorForAttribute(attr->name().localName()))
             setNeedsStyleRecalc();
     }
+
+    if (elementShouldMergeLabel())
+        attr->mergeSecurityLabel(securityLabel());
 
     invalidateNodeListsCacheAfterAttributeChanged(attr->name());
 
@@ -2087,6 +2086,18 @@ void Element::setSavedLayerScrollOffset(const IntSize& size)
     if (size.isZero() && !hasRareData())
         return;
     ensureRareData()->m_savedLayerScrollOffset = size;
+}
+
+bool Element::elementShouldMergeLabel() {
+    return true;
+}
+
+void Element::mergeSecurityLabelToAttributes(SecurityLabel& label) {
+    ASSERT(hasAttributes());
+    for (unsigned i = 0; i < attributeCount(); ++i) {
+        Attribute* it = attributeItem(i);
+        it->mergeSecurityLabel(label);
+    }
 }
 
 } // namespace WebCore

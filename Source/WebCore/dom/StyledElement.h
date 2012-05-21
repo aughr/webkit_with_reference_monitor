@@ -67,6 +67,9 @@ protected:
     virtual void parseAttribute(Attribute*);
     virtual void copyNonAttributeProperties(const Element*);
 
+    // subclasses can override to merge label in earlier when setting attributes
+    virtual bool elementShouldMergeLabel() OVERRIDE;
+
     virtual bool isPresentationAttribute(const QualifiedName&) const { return false; }
 
     void addPropertyToAttributeStyle(StylePropertySet*, CSSPropertyID, int identifier);

@@ -71,4 +71,9 @@ JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Eleme
     return wrapper;    
 }
 
+void JSElement::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::ExecState*, SecurityLabel label) {
+    JSElement* thisObject = jsCast<JSElement*>(cell);
+    thisObject->impl()->mergeSecurityLabel(label);
+}
+
 } // namespace WebCore

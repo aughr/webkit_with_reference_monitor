@@ -138,6 +138,7 @@ CSSStyleDeclaration* StyledElement::style()
 
 void StyledElement::attributeChanged(Attribute* attr)
 {
+    attr->mergeSecurityLabel(securityLabel());
     parseAttribute(attr);
 
     if (isPresentationAttribute(attr->name())) {
@@ -337,6 +338,10 @@ void StyledElement::addPropertyToAttributeStyle(StylePropertySet* style, CSSProp
 void StyledElement::addPropertyToAttributeStyle(StylePropertySet* style, CSSPropertyID propertyID, const String& value)
 {
     style->setProperty(propertyID, value, false, document()->elementSheet()->internal());
+}
+
+bool StyledElement::elementShouldMergeLabel() {
+    return false;
 }
 
 }

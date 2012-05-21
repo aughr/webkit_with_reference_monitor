@@ -811,6 +811,11 @@ sub GenerateHeader
         push(@headerContent, "    static SecurityLabel securityLabelCell(const JSC::JSCell*);\n");
         push(@headerContent, "    static void mergeSecurityLabelCell(JSC::JSCell*, JSC::ExecState*, SecurityLabel);\n");
     }
+    
+    # A custom security label function exists on Element
+    if ($interfaceName eq "Element") {
+        push(@headerContent, "    static void mergeSecurityLabelCell(JSC::JSCell*, JSC::ExecState*, SecurityLabel);\n");
+    }
 
     # Custom getOwnPropertyNames function
     if ($dataNode->extendedAttributes->{"CustomEnumerateProperty"} || $dataNode->extendedAttributes->{"IndexedGetter"} || $dataNode->extendedAttributes->{"NumericIndexedGetter"}) {
