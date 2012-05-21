@@ -299,6 +299,7 @@ JSGlobalData::~JSGlobalData()
     delete propertyNames;
     if (globalDataType != Default)
         deleteIdentifierTable(identifierTable);
+    delete securityLabelCache;
 
     delete clientData;
     delete m_regExpCache;
