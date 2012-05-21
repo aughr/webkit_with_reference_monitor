@@ -391,8 +391,8 @@ public:
     String(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_impl.isHashTableDeletedValue(); }
 
-    WTF_EXPORT_PRIVATE SecurityLabel securityLabel() const;
-    WTF_EXPORT_PRIVATE void mergeSecurityLabel(const SecurityLabel&);
+    SecurityLabel securityLabel() const { return m_label; }
+    void mergeSecurityLabel(const SecurityLabel& label) { m_label.merge(label); }
 
 #ifndef NDEBUG
     void show() const;

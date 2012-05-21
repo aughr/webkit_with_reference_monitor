@@ -24,31 +24,31 @@
 
 namespace WTF {
 
-void SecurityLabel::add(const SecurityTag& tag) {
-    if (hasTag(tag))
-        return;
-
-    m_impl = SecurityLabelImpl::add(m_impl, tag);
-}
-
-bool SecurityLabel::hasTag(const SecurityTag& tag) const {
-    return !isNull() && m_impl->hasTag(tag);
-}
-
-bool SecurityLabel::hasLabel(const SecurityLabel& other) const {
-    if (isNull() || other.isNull())
-        return other.isNull();
-    return m_impl->hasLabel(other.m_impl);
-}
-
-void SecurityLabel::merge(const SecurityLabel& other) {
-    if (other.isNull() || m_impl == other.m_impl)
-        return;
-
-    if (isNull())
-        m_impl = other.m_impl;
-    else
-        m_impl = SecurityLabelImpl::combine(m_impl, other.m_impl);
-}
+//void SecurityLabel::add(const SecurityTag& tag) {
+//    if (hasTag(tag))
+//        return;
+//
+//    m_impl = SecurityLabelImpl::add(m_impl, tag);
+//}
+//
+//bool SecurityLabel::hasTag(const SecurityTag& tag) const {
+//    return !isNull() && m_impl->hasTag(tag);
+//}
+//
+//bool SecurityLabel::hasLabel(const SecurityLabel& other) const {
+//    if (isNull() || other.isNull())
+//        return other.isNull();
+//    return m_impl->hasLabel(other.m_impl);
+//}
+//
+//void SecurityLabel::merge(const SecurityLabel& other) {
+//    if (other.isNull() || m_impl == other.m_impl)
+//        return;
+//
+//    if (isNull())
+//        m_impl = other.m_impl;
+//    else
+//        m_impl = SecurityLabelImpl::combine(m_impl, other.m_impl);
+//}
 
 } // namespace WTF

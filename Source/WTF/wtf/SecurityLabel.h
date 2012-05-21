@@ -33,17 +33,44 @@ namespace WTF {
         SecurityLabel() : m_impl(0) {}
 
         bool isNull() const { return m_impl == NULL; }
-        StringImpl* descriptor() const;
+        StringImpl* descriptor() const { return m_impl ? m_impl->descriptor() : StringImpl::empty(); }
 
-        WTF_EXPORT_PRIVATE void add(const SecurityTag& tag);        
-        WTF_EXPORT_PRIVATE bool hasTag(const SecurityTag& tag) const;
-        WTF_EXPORT_PRIVATE bool hasLabel(const SecurityLabel& other) const;
-        WTF_EXPORT_PRIVATE void merge(const SecurityLabel& other);
+        void add(const SecurityTag& tag);        
+        bool hasTag(const SecurityTag& tag) const;
+        bool hasLabel(const SecurityLabel& other) const;
+        void merge(const SecurityLabel& other);
     private:
         void duplicateOrInit();
 
         RefPtr<SecurityLabelImpl> m_impl;
     };
+    
+    inline void SecurityLabel::add(const SecurityTag& tag) {
+        if (hasTag(tag))
+            return;
+        
+        m_impl = SecurityLabelImpl::add(m_impl, tag);
+    }
+    
+    inline bool SecurityLabel::hasTag(const SecurityTag& tag) const {
+        return !isNull() && m_impl->hasTag(tag);
+    }
+    
+    inline bool SecurityLabel::hasLabel(const SecurityLabel& other) const {
+        if (isNull() || other.isNull())
+            return other.isNull();
+        return m_impl->hasLabel(other.m_impl);
+    }
+    
+    ALWAYS_INLINE void SecurityLabel::merge(const SecurityLabel& other) {
+        if (other.isNull() || m_impl == other.m_impl)
+            return;
+        
+        if (isNull())
+            m_impl = other.m_impl;
+        else
+            m_impl = SecurityLabelImpl::combine(m_impl, other.m_impl);
+    }
 }
 
 using WTF::SecurityLabel;

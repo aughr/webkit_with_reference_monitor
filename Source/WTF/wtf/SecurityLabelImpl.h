@@ -46,8 +46,8 @@ namespace WTF {
         bool hasTag(const SecurityTag& tag);
         bool hasLabel(const RefPtr<SecurityLabelImpl>& other);
         
-        static PassRefPtr<SecurityLabelImpl> add(RefPtr<SecurityLabelImpl> impl, const SecurityTag& tag);
-        static PassRefPtr<SecurityLabelImpl> combine(RefPtr<SecurityLabelImpl> impl, const RefPtr<SecurityLabelImpl>& other);
+        WTF_EXPORT_PRIVATE static PassRefPtr<SecurityLabelImpl> add(RefPtr<SecurityLabelImpl> impl, const SecurityTag& tag);
+        WTF_EXPORT_PRIVATE static PassRefPtr<SecurityLabelImpl> combine(RefPtr<SecurityLabelImpl> impl, const RefPtr<SecurityLabelImpl>& other);
         
         static PassRefPtr<SecurityLabelImpl> create()
         {
@@ -63,7 +63,7 @@ namespace WTF {
         SecurityLabelImpl() : m_setCreated(false) {}
         SecurityLabelImpl(RefPtr<StringImpl> descriptor) : m_descriptor(descriptor), m_setCreated(false) {}
 
-        void createSet();
+        WTF_EXPORT_PRIVATE void createSet();
 
         RefPtr<StringImpl> m_descriptor;
         SecurityTagSet m_tagSet;

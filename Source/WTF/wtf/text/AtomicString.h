@@ -196,11 +196,6 @@ inline AtomicString AtomicString::fromUTF8(const char* characters)
 }
 #endif
 
-inline StringImpl* SecurityLabel::descriptor() const
-{
-    return m_impl ? m_impl->descriptor() : StringImpl::empty();
-}
-
 // AtomicStringHash is the default hash for AtomicString
 template<typename T> struct DefaultHash;
 template<> struct DefaultHash<AtomicString> {

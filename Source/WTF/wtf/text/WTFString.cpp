@@ -816,14 +816,6 @@ String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
         return String(string, size);
     return utf8;
 }
-    
-SecurityLabel String::securityLabel() const {
-    return m_label;
-}
-
-void String::mergeSecurityLabel(const SecurityLabel& label) {
-    m_label.merge(label);
-}
 
 // String Operations
 
