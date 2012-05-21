@@ -88,6 +88,7 @@ namespace JSC {
         JSCell* duplicateNotObject(ExecState* exec);
         void mergeSecurityLabel(ExecState*, SecurityLabel);
         SecurityLabel securityLabel() const;
+        SecurityLabel internalSecurityLabel() const;
         JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
         JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, ExecState*, SecurityLabel);
 

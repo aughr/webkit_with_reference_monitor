@@ -28,6 +28,7 @@
 #include "JSLabeledValue.h"
 #include "PropertyDescriptor.h"
 #include "PropertySlot.h"
+#include "SecurityLabelObject.h"
 #include "Structure.h"
 
 namespace JSC {
@@ -205,14 +206,14 @@ namespace JSC {
         {
             if (isRope())
                 resolveRope(exec);
-            m_value.setSecurityLabel(securityLabel());
+            m_value.setSecurityLabel(internalSecurityLabel());
             return m_value;
         }
         const UString& tryGetValue() const
         {
             if (isRope())
                 resolveRope(0);
-            m_value.setSecurityLabel(securityLabel());
+            m_value.setSecurityLabel(internalSecurityLabel());
             return m_value;
         }
         unsigned length() { return m_length; }

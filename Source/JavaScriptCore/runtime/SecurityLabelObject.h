@@ -20,11 +20,14 @@
 #ifndef SecurityLabelObject_h
 #define SecurityLabelObject_h
 
-#include "JSObject.h"
+#include "JSCell.h"
+#include "Structure.h"
 #include "wtf/SecurityLabel.h"
 
 namespace JSC {
-    
+
+    class Structure;
+
     class SecurityLabelObject : public JSCell {
     protected:
         SecurityLabelObject(JSGlobalData& globalData)
@@ -59,6 +62,14 @@ namespace JSC {
     private:
         WTF::SecurityLabel m_label;
     };
+    
+    inline SecurityLabel JSCell::internalSecurityLabel() const {
+        if (m_label)
+            return m_label->securityLabel();
+        else {
+            return SecurityLabel();
+        }
+    }
 
 } // namespace JSC
 

@@ -21,6 +21,7 @@
 #include "SecurityLabelObject.h"
 
 #include "JSGlobalObject.h"
+#include "JSObject.h"
 #include "SecurityLabelPrototype.h"
 
 namespace JSC {
