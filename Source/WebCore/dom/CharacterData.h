@@ -47,6 +47,8 @@ public:
     // Returns how much could be added before length limit was met.
     unsigned parserAppendData(const UChar*, unsigned dataLength, unsigned lengthLimit);
 
+    void mergeSecurityLabel(SecurityLabel label);
+
 protected:
     CharacterData(Document* document, const String& text, ConstructionType type)
         : Node(document, type, text.securityLabel())
@@ -76,6 +78,11 @@ private:
 
     String m_data;
 };
+
+inline void CharacterData::mergeSecurityLabel(SecurityLabel label) {
+    Node::mergeSecurityLabel(label);
+    m_data.mergeSecurityLabel(label);
+}
 
 } // namespace WebCore
 
