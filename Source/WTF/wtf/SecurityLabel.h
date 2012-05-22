@@ -62,7 +62,7 @@ namespace WTF {
         return m_impl->hasLabel(other.m_impl);
     }
     
-    ALWAYS_INLINE void SecurityLabel::merge(const SecurityLabel& other) {
+    inline void SecurityLabel::merge(const SecurityLabel& other) {
         if (other.isNull() || m_impl == other.m_impl)
             return;
         
