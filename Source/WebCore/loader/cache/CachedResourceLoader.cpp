@@ -309,8 +309,7 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const KURL& url
     if (document()->domWindow() && document()->domWindow()->securityEventTarget()->hasListenerType(SecurityEventTarget::CHECKBEFORELOAD_LISTENER)) {
         RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
         if (!document()->dispatchSecurityEvent(securityEvent)) {
-            if (!forPreload)
-                FrameLoader::reportLocalLoadFailed(document()->frame(), url.string());
+             document()->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checkbeforeload: " + url.string());
             LOG(ResourceLoading, "CachedResourceLoader::requestResource URL was not allowed by checkbeforeload.");
             return 0;
         }

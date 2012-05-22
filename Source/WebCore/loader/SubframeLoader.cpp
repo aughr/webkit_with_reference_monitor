@@ -273,12 +273,12 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement* ownerElement, const K
 
     if (!ownerElement->document()->contentSecurityPolicy()->allowChildFrameFromSource(url))
         return 0;
-    
+
     RefPtr<SecurityEventTarget> target = m_frame->domWindow()->securityEventTarget();
-    if (target->hasListenerType(SecurityEventTarget::CHECKNAVIGATE_LISTENER)) {
-        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checknavigateEvent, url.string().securityLabel(), "", url.string(), m_frame->domWindow());
+    if (target->hasListenerType(SecurityEventTarget::CHECKBEFORELOAD_LISTENER)) {
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), "", url.string(), m_frame->domWindow());
         if (!m_frame->domWindow()->dispatchSecurityEvent(securityEvent)) {
-            m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checknavigate: " + url.string());
+            m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checkbeforeload: " + url.string());
             return 0;
         }
     }
