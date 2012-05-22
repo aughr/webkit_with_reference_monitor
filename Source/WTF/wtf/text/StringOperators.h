@@ -24,13 +24,54 @@
 
 namespace WTF {
 
+template<typename StringType>
+class StringSecurityLabelAdapter {
+public:
+    StringSecurityLabelAdapter<StringType>(const StringType) {}
+
+    SecurityLabel securityLabel() const { return SecurityLabel(); }
+};
+
+template<>
+class StringSecurityLabelAdapter<String> {
+public:
+    StringSecurityLabelAdapter<String>(const String& string)
+    : m_string(string)
+    {
+    }
+
+    SecurityLabel securityLabel() const { return m_string.securityLabel(); }
+private:
+    const String& m_string;
+};
+
+template<>
+class StringSecurityLabelAdapter<AtomicString> {
+public:
+    StringSecurityLabelAdapter<AtomicString>(const AtomicString& string)
+    : m_adapter(string.string())
+    {
+    }
+
+    SecurityLabel securityLabel() const { return m_adapter.securityLabel(); }
+
+private:
+    StringSecurityLabelAdapter<String> m_adapter;
+};
+
 template<typename StringType1, typename StringType2>
 class StringAppend {
 public:
-    StringAppend(StringType1 string1, StringType2 string2)
+    StringAppend(StringType1 string1, StringType2 string2, SecurityLabel label=SecurityLabel())
         : m_string1(string1)
         , m_string2(string2)
+        , m_label(label)
     {
+    }
+
+    SecurityLabel securityLabel() const
+    {
+        return m_label;
     }
 
     operator String() const
@@ -38,7 +79,7 @@ public:
         RefPtr<StringImpl> resultImpl = tryMakeString(m_string1, m_string2);
         if (!resultImpl)
             CRASH();
-        return resultImpl.release();
+        return String(resultImpl.release(), m_label);
     }
 
     operator AtomicString() const
@@ -75,11 +116,12 @@ public:
         StringTypeAdapter<StringType1> adapter1(m_string1);
         StringTypeAdapter<StringType2> adapter2(m_string2);
         return adapter1.length() + adapter2.length();
-    }    
+    }
 
 private:
     StringType1 m_string1;
     StringType2 m_string2;
+    SecurityLabel m_label;
 };
 
 template<typename StringType1, typename StringType2>
@@ -101,48 +143,68 @@ private:
     StringAppend<StringType1, StringType2>& m_buffer;
 };
 
+template<typename StringType1, typename StringType2>
+class StringSecurityLabelAdapter<StringAppend<StringType1, StringType2> > {
+public:
+    StringSecurityLabelAdapter<StringAppend<StringType1, StringType2> >(StringAppend<StringType1, StringType2>& buffer)
+    : m_buffer(buffer)
+    {
+    }
+    
+    SecurityLabel securityLabel() const { return m_buffer.securityLabel(); }
+    
+private:
+    StringAppend<StringType1, StringType2>& m_buffer;
+};
+
 inline StringAppend<const char*, String> operator+(const char* string1, const String& string2)
 {
-    return StringAppend<const char*, String>(string1, string2);
+    return StringAppend<const char*, String>(string1, string2, string2.securityLabel());
 }
 
 inline StringAppend<const char*, AtomicString> operator+(const char* string1, const AtomicString& string2)
 {
-    return StringAppend<const char*, AtomicString>(string1, string2);
+    return StringAppend<const char*, AtomicString>(string1, string2, string2.string().securityLabel());
 }
 
 template<typename U, typename V>
 StringAppend<const char*, StringAppend<U, V> > operator+(const char* string1, const StringAppend<U, V>& string2)
 {
-    return StringAppend<const char*, StringAppend<U, V> >(string1, string2);
+    return StringAppend<const char*, StringAppend<U, V> >(string1, string2, string2.securityLabel());
 }
 
 inline StringAppend<const UChar*, String> operator+(const UChar* string1, const String& string2)
 {
-    return StringAppend<const UChar*, String>(string1, string2);
+    return StringAppend<const UChar*, String>(string1, string2, string2.securityLabel());
 }
 
 inline StringAppend<const UChar*, AtomicString> operator+(const UChar* string1, const AtomicString& string2)
 {
-    return StringAppend<const UChar*, AtomicString>(string1, string2);
+    return StringAppend<const UChar*, AtomicString>(string1, string2, string2.string().securityLabel());
 }
 
 template<typename U, typename V>
 StringAppend<const UChar*, StringAppend<U, V> > operator+(const UChar* string1, const StringAppend<U, V>& string2)
 {
-    return StringAppend<const UChar*, StringAppend<U, V> >(string1, string2);
+    return StringAppend<const UChar*, StringAppend<U, V> >(string1, string2, string2.string().securityLabel());
 }
 
 template<typename T>
 StringAppend<String, T> operator+(const String& string1, T string2)
 {
-    return StringAppend<String, T>(string1, string2);
+    StringSecurityLabelAdapter<T> labelAdapter(string2);
+    SecurityLabel label = string1.securityLabel();
+    label.merge(labelAdapter.securityLabel());
+    return StringAppend<String, T>(string1, string2, label);
 }
 
 template<typename U, typename V, typename W>
 StringAppend<StringAppend<U, V>, W> operator+(const StringAppend<U, V>& string1, W string2)
 {
-    return StringAppend<StringAppend<U, V>, W>(string1, string2);
+    StringSecurityLabelAdapter<W> labelAdapter(string2);
+    SecurityLabel label = string1.securityLabel();
+    label.merge(labelAdapter.securityLabel());
+    return StringAppend<StringAppend<U, V>, W>(string1, string2, label);
 }
 
 } // namespace WTF
