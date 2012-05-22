@@ -214,7 +214,7 @@ SecurityLabel JSNode::securityLabelCell(const JSC::JSCell* cell) {
     return thisObject->impl()->securityLabel();
 }
     
-void JSNode::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::ExecState*, SecurityLabel label) {
+void JSNode::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::JSGlobalData&, SecurityLabel label) {
     JSNode* thisObject = jsCast<JSNode*>(cell);
     thisObject->impl()->mergeSecurityLabel(label);
 }

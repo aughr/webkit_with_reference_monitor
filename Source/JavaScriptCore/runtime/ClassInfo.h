@@ -93,7 +93,7 @@ namespace JSC {
         typedef SecurityLabel (*SecurityLabelPtr)(const JSCell*);
         SecurityLabelPtr securityLabelCell;
         
-        typedef void (*MergeSecurityLabelPtr)(JSCell*, ExecState* exec, SecurityLabel label);
+        typedef void (*MergeSecurityLabelPtr)(JSCell*, JSGlobalData&, SecurityLabel);
         MergeSecurityLabelPtr mergeSecurityLabelCell;
     };
 

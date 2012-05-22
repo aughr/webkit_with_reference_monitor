@@ -45,12 +45,12 @@ inline SecurityLabelObject* SecurityLabelObject::create(JSGlobalData& globalData
     return labelObj;
 }
 
-inline SecurityLabelObject* lookupOrConstructSecurityLabel(ExecState* exec, SecurityLabel label) {
-    SecurityLabelObject* object = exec->globalData().securityLabelCache->get(label.descriptor());
+inline SecurityLabelObject* lookupOrConstructSecurityLabel(JSGlobalData& globalData, SecurityLabel label) {
+    SecurityLabelObject* object = globalData.securityLabelCache->get(label.descriptor());
     if (object)
         return object;
     else
-        return SecurityLabelObject::create(exec->globalData(), label);
+        return SecurityLabelObject::create(globalData, label);
 }
 
 } // namespace JSC

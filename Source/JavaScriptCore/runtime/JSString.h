@@ -365,7 +365,9 @@ namespace JSC {
             if (c <= maxSingleCharacterString)
                 return globalData->smallStrings.singleCharacterString(globalData, c);
         }
-        return JSString::createHasOtherOwner(*globalData, StringImpl::create8(s.impl(), offset, length));
+        JSString* result = JSString::createHasOtherOwner(*globalData, StringImpl::create8(s.impl(), offset, length));
+        result->mergeSecurityLabel(*globalData, s.securityLabel());
+        return result;
     }
 
     inline JSString* jsSubstring(JSGlobalData* globalData, const UString& s, unsigned offset, unsigned length)
@@ -380,7 +382,9 @@ namespace JSC {
             if (c <= maxSingleCharacterString)
                 return globalData->smallStrings.singleCharacterString(globalData, c);
         }
-        return JSString::createHasOtherOwner(*globalData, StringImpl::create(s.impl(), offset, length));
+        JSString* result = JSString::createHasOtherOwner(*globalData, StringImpl::create(s.impl(), offset, length));
+        result->mergeSecurityLabel(*globalData, s.securityLabel());
+        return result;
     }
 
     inline JSString* jsOwnedString(JSGlobalData* globalData, const UString& s)
@@ -393,7 +397,9 @@ namespace JSC {
             if (c <= maxSingleCharacterString)
                 return globalData->smallStrings.singleCharacterString(globalData, c);
         }
-        return JSString::createHasOtherOwner(*globalData, s.impl());
+        JSString* result = JSString::createHasOtherOwner(*globalData, s.impl());
+        result->mergeSecurityLabel(*globalData, s.securityLabel());
+        return result;
     }
 
     inline JSString* jsStringBuilder(JSGlobalData* globalData)

@@ -41,7 +41,7 @@ namespace JSC {
         return obj->securityLabel();
     }
     
-    void SecurityLabelObject::mergeSecurityLabelCell(JSC::JSCell*, JSC::ExecState*, SecurityLabel) {
+    void SecurityLabelObject::mergeSecurityLabelCell(JSCell*, JSGlobalData&, SecurityLabel) {
         return;
     }
     

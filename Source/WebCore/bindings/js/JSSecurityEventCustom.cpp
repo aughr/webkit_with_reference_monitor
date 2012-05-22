@@ -44,7 +44,7 @@ JSValue JSSecurityEvent::securityLabel(ExecState* exec) const
         return cachedValue;
 
     SecurityEvent* event = static_cast<SecurityEvent*>(impl());
-    JSValue result = lookupOrConstructSecurityLabel(exec, event->securityLabel());;
+    JSValue result = lookupOrConstructSecurityLabel(exec->globalData(), event->securityLabel());;
 
     // Save the result so we don't have to deserialize the value again.
     const_cast<JSSecurityEvent*>(this)->m_securityLabel.set(exec->globalData(), this, result);

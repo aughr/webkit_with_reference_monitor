@@ -537,8 +537,8 @@ inline SecurityLabel JSCell::securityLabel() const {
     return methodTable()->securityLabelCell(this);
 }
 
-inline void JSCell::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {
-    methodTable()->mergeSecurityLabelCell(this, exec, label);
+inline void JSCell::mergeSecurityLabel(JSGlobalData& globalData, SecurityLabel label) {
+    methodTable()->mergeSecurityLabelCell(this, globalData, label);
 }
 
 inline JSCell* JSCell::duplicateNotObject(ExecState* exec) {

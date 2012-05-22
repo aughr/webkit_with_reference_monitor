@@ -145,15 +145,15 @@ SecurityLabel JSCell::securityLabelCell(const JSCell* cell) {
         return SecurityLabel();
 }
 
-void JSCell::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::ExecState* exec, SecurityLabel label) {
+void JSCell::mergeSecurityLabelCell(JSC::JSCell* cell, JSGlobalData& globalData, SecurityLabel label) {
     if (label.isNull())
         return;
     if (cell->m_label) {
         SecurityLabel current = cell->m_label->securityLabel();
         current.merge(label);
-        cell->m_label.set(exec->globalData(), cell, lookupOrConstructSecurityLabel(exec, current));
+        cell->m_label.set(globalData, cell, lookupOrConstructSecurityLabel(globalData, current));
     } else
-        cell->m_label.set(exec->globalData(), cell, lookupOrConstructSecurityLabel(exec, label));
+        cell->m_label.set(globalData, cell, lookupOrConstructSecurityLabel(globalData, label));
 }
 
 JSObject* JSCell::toThisObject(JSCell* cell, ExecState* exec)

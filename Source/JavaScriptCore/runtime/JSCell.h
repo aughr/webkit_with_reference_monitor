@@ -86,11 +86,12 @@ namespace JSC {
 
         // SecurityLabel related.
         JSCell* duplicateNotObject(ExecState* exec);
-        void mergeSecurityLabel(ExecState*, SecurityLabel);
+        void mergeSecurityLabel(JSGlobalData&, SecurityLabel);
+        void mergeSecurityLabel(ExecState* exec, SecurityLabel label) { mergeSecurityLabel(exec->globalData(), label); }
         SecurityLabel securityLabel() const;
         SecurityLabel internalSecurityLabel() const;
         JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
-        JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, ExecState*, SecurityLabel);
+        JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, JSGlobalData&, SecurityLabel);
 
         Structure* structure() const;
         void setStructure(JSGlobalData&, Structure*);

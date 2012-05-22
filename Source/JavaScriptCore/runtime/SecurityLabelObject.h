@@ -58,7 +58,7 @@ namespace JSC {
         SecurityLabel securityLabel() const { return m_label; }
         
         JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
-        JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, ExecState*, SecurityLabel);
+        JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, JSGlobalData&, SecurityLabel);
     private:
         WTF::SecurityLabel m_label;
     };
