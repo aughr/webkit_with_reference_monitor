@@ -33,6 +33,7 @@
 #include "config.h"
 #include "SubframeLoader.h"
 
+#include "Console.h"
 #include "ContentSecurityPolicy.h"
 #include "Frame.h"
 #include "FrameLoaderClient.h"
@@ -46,6 +47,7 @@
 #include "PluginDocument.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderView.h"
+#include "SecurityEventTarget.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
@@ -271,6 +273,15 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement* ownerElement, const K
 
     if (!ownerElement->document()->contentSecurityPolicy()->allowChildFrameFromSource(url))
         return 0;
+    
+    RefPtr<SecurityEventTarget> target = m_frame->domWindow()->securityEventTarget();
+    if (target->hasListenerType(SecurityEventTarget::CHECKNAVIGATE_LISTENER)) {
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checknavigateEvent, url.string().securityLabel(), "", url.string(), m_frame->domWindow());
+        if (!m_frame->domWindow()->dispatchSecurityEvent(securityEvent)) {
+            m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checknavigate: " + url.string());
+            return 0;
+        }
+    }
 
     String referrerToUse = SecurityPolicy::generateReferrerHeader(ownerElement->document()->referrerPolicy(), url, referrer);
     RefPtr<Frame> frame = m_frame->loader()->client()->createFrame(url, name, ownerElement, referrerToUse, allowsScrolling, marginWidth, marginHeight);
