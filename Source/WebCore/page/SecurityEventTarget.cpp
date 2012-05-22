@@ -114,6 +114,8 @@ void SecurityEventTarget::fireEventListeners(Event* event, Event* concealedEvent
         // To match Mozilla, the AT_TARGET phase fires both capturing and bubbling
         // event listeners, even though that violates some versions of the DOM spec.
         registeredListener.listener->handleEvent(context, eventToFire);
+        if (eventToFire->defaultPrevented())
+            event->preventDefault();
         InspectorInstrumentation::didHandleEvent(cookie);
     }
     d->firingEventIterators.removeLast();

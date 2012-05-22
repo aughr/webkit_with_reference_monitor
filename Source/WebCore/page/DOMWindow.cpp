@@ -1656,7 +1656,7 @@ bool DOMWindow::dispatchSecurityEvent(PassRefPtr<SecurityEvent> prpEvent)
     target->setWindow(this);
     target->fireEventListeners(event.get(), concealedEvent.get());
     target->setWindow(0);
-    defaultPrevented = defaultPrevented || event->defaultPrevented();
+    defaultPrevented = event->defaultPrevented() || concealedEvent->defaultPrevented();
     if (defaultPrevented)
         event->preventDefault();
     return !defaultPrevented;
