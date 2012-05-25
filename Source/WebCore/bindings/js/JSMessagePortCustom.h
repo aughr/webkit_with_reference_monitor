@@ -64,7 +64,7 @@ namespace WebCore {
             RefPtr<SecurityEventTarget> target = window->securityEventTarget();
             if (target->hasListenerType(SecurityEventTarget::CHECKPOSTMESSAGE_LISTENER)) {
                 SecurityLabel label = message->securityLabel();
-                RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkpostmessageEvent, label, "", "", window);
+                RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkpostmessageEvent, label, "", window);
                 if (!window->dispatchSecurityEvent(securityEvent)) {
                     setDOMException(exec, SECURITY_ERR);
                     return JSC::jsUndefined();

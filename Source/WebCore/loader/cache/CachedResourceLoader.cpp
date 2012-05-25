@@ -307,7 +307,7 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const KURL& url
 
     // fire checkbeforeload event to allow reference monitor to validate request
     if (document()->domWindow() && document()->domWindow()->securityEventTarget()->hasListenerType(SecurityEventTarget::CHECKBEFORELOAD_LISTENER)) {
-        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), "", url.string(), document()->domWindow());
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), url.string(), document()->domWindow());
         if (!document()->dispatchSecurityEvent(securityEvent)) {
              document()->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checkbeforeload: " + url.string());
             LOG(ResourceLoading, "CachedResourceLoader::requestResource URL was not allowed by checkbeforeload.");

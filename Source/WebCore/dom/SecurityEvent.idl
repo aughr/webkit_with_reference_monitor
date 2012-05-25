@@ -30,7 +30,6 @@ module events {
         JSNoStaticTables,
         OmitConstructor
     ] SecurityEvent : Event {
-        readonly attribute [InitializedByEventConstructor] DOMString origin;
         readonly attribute [InitializedByEventConstructor] DOMString destination;
         readonly attribute [InitializedByEventConstructor] DOMWindow source;
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT

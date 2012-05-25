@@ -39,7 +39,6 @@ struct SecurityEventInit : public EventInit {
     SecurityEventInit();
 
     SecurityLabel securityLabel;
-    String origin;
     String destination;
     RefPtr<DOMWindow> source;
 };
@@ -50,9 +49,9 @@ public:
     {
         return adoptRef(new SecurityEvent());
     }
-    static PassRefPtr<SecurityEvent> create(const AtomicString& type, SecurityLabel label, const String& origin = String(), const String& destination = String(), PassRefPtr<DOMWindow> source = 0)
+    static PassRefPtr<SecurityEvent> create(const AtomicString& type, SecurityLabel label, const String& destination = String(), PassRefPtr<DOMWindow> source = 0)
     {
-        return adoptRef(new SecurityEvent(type, label, origin, destination, source));
+        return adoptRef(new SecurityEvent(type, label, destination, source));
     }
     static PassRefPtr<SecurityEvent> create(const AtomicString& type, const SecurityEventInit& initializer)
     {
@@ -60,9 +59,8 @@ public:
     }
     virtual ~SecurityEvent();
 
-    void initSecurityEvent(const AtomicString& type, SecurityLabel data, const String& origin, const String& destination, DOMWindow* source);
+    void initSecurityEvent(const AtomicString& type, SecurityLabel data, const String& destination, DOMWindow* source);
 
-    const String& origin() const { return m_origin; }
     const String& destination() const { return m_destination; }
     DOMWindow* source() const { return m_source.get(); }
 
@@ -73,10 +71,9 @@ public:
 private:
     SecurityEvent();
     SecurityEvent(const AtomicString&, const SecurityEventInit&);
-    SecurityEvent(const AtomicString& type, SecurityLabel label, const String& origin, const String& destination, PassRefPtr<DOMWindow> source);
+    SecurityEvent(const AtomicString& type, SecurityLabel label, const String& destination, PassRefPtr<DOMWindow> source);
 
     SecurityLabel m_label;
-    String m_origin;
     String m_destination;
     RefPtr<DOMWindow> m_source;
 };

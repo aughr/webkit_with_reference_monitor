@@ -659,7 +659,7 @@ bool Editor::dispatchCPPEvent(const AtomicString &eventType, ClipboardAccessPoli
         SecurityLabel label = range->securityLabel();
         if (HTMLTextFormControlElement* textFormControlOfSelectionStart = enclosingTextFormControl(m_frame->selection()->start()))
             label.merge(textFormControlOfSelectionStart->securityLabel());
-        RefPtr<SecurityEvent> securityEvt = SecurityEvent::create("check" + eventType, label, "", "", m_frame->existingDOMWindow());
+        RefPtr<SecurityEvent> securityEvt = SecurityEvent::create("check" + eventType, label, "", m_frame->existingDOMWindow());
         m_frame->document()->dispatchSecurityEvent(securityEvt);
         if (securityEvt->defaultPrevented())
             return false;

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -41,20 +41,18 @@ SecurityEvent::SecurityEvent()
 : Event(AtomicString(), false, true)
 {
 }
-    
+
 SecurityEvent::SecurityEvent(const AtomicString& type, const SecurityEventInit& initializer)
     : Event(type, false, true)
     , m_label(initializer.securityLabel)
-    , m_origin(initializer.origin)
     , m_destination(initializer.destination)
     , m_source(initializer.source)
 {
 }
 
-SecurityEvent::SecurityEvent(const AtomicString& type, SecurityLabel label, const String& origin, const String& destination, PassRefPtr<DOMWindow> source)
+SecurityEvent::SecurityEvent(const AtomicString& type, SecurityLabel label, const String& destination, PassRefPtr<DOMWindow> source)
     : Event(type, false, true)
     , m_label(label)
-    , m_origin(origin)
     , m_destination(destination)
     , m_source(source)
 {
@@ -64,8 +62,8 @@ SecurityEvent::~SecurityEvent()
 {
 }
 
-    
-void SecurityEvent::initSecurityEvent(const AtomicString& type, SecurityLabel label, const String& origin, const String& destination, DOMWindow* source)
+
+void SecurityEvent::initSecurityEvent(const AtomicString& type, SecurityLabel label, const String& destination, DOMWindow* source)
 {
     if (dispatched())
         return;
@@ -73,7 +71,6 @@ void SecurityEvent::initSecurityEvent(const AtomicString& type, SecurityLabel la
     initEvent(type, false, true);
 
     m_label = label;
-    m_origin = origin;
     m_destination = destination;
     m_source = source;
 }

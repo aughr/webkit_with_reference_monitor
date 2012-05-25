@@ -276,7 +276,7 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement* ownerElement, const K
 
     RefPtr<SecurityEventTarget> target = m_frame->domWindow()->securityEventTarget();
     if (target->hasListenerType(SecurityEventTarget::CHECKBEFORELOAD_LISTENER)) {
-        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), "", url.string(), m_frame->domWindow());
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkbeforeloadEvent, url.string().securityLabel(), url.string(), m_frame->domWindow());
         if (!m_frame->domWindow()->dispatchSecurityEvent(securityEvent)) {
             m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checkbeforeload: " + url.string());
             return 0;

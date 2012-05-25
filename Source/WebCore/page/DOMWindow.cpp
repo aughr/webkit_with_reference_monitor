@@ -802,7 +802,7 @@ void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, const Mes
     RefPtr<SecurityEventTarget> secTarget = source->securityEventTarget();
     if (secTarget->hasListenerType(SecurityEventTarget::CHECKPOSTMESSAGE_LISTENER)) {
         SecurityLabel label = message->securityLabel();
-        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkpostmessageEvent, label, "", "", source);
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checkpostmessageEvent, label, "", source);
         if (!source->dispatchSecurityEvent(securityEvent)) {
             ec = SECURITY_ERR;
             return;

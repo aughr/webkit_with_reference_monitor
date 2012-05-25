@@ -272,7 +272,7 @@ void FrameLoader::urlSelected(const FrameLoadRequest& passedRequest, PassRefPtr<
     RefPtr<SecurityEventTarget> target = m_frame->domWindow()->securityEventTarget();
     if (target->hasListenerType(SecurityEventTarget::CHECKNAVIGATE_LISTENER)) {
         const KURL& url = frameRequest.resourceRequest().url();
-        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checknavigateEvent, url.string().securityLabel(), "", url.string(), m_frame->domWindow());
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checknavigateEvent, url.string().securityLabel(), url.string(), m_frame->domWindow());
         if (!m_frame->domWindow()->dispatchSecurityEvent(securityEvent)) {
             m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load resource by checknavigate: " + url.string());
             return;
@@ -319,7 +319,7 @@ void FrameLoader::submitForm(PassRefPtr<FormSubmission> submission)
         const KURL& url = submission->action();
         SecurityLabel label = url.string().securityLabel();
         label.merge(submission->state()->securityLabel());
-        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checksubmitEvent, label, "", url.string(), m_frame->domWindow());
+        RefPtr<SecurityEvent> securityEvent = SecurityEvent::create(eventNames().checksubmitEvent, label, url.string(), m_frame->domWindow());
         if (!m_frame->domWindow()->dispatchSecurityEvent(securityEvent)) {
             m_frame->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to submit form by checksubmit: " + url.string());
             return;
