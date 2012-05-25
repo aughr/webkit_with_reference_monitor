@@ -1167,9 +1167,14 @@ void JIT::emit_op_eq_null(Instruction* currentInstruction)
     Jump isImmediate = branch32(NotEqual, regT1, TrustedImm32(JSValue::CellTag));
 
     loadPtr(Address(regT0, JSCell::structureOffset()), regT1);
+    Jump isLabeledValue = branch8(Equal, Address(regT1, Structure::typeInfoTypeOffset()), TrustedImm32(LabeledType));
     test8(NonZero, Address(regT1, Structure::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined), regT1);
 
     Jump wasNotImmediate = jump();
+
+    // Handle labeled values
+    isLabeledValue.link(this);
+    loadPtr(Address(regT0, JSLabeledValue::valueTagOffset()), regT1);
 
     isImmediate.link(this);
 
@@ -1191,9 +1196,14 @@ void JIT::emit_op_neq_null(Instruction* currentInstruction)
     Jump isImmediate = branch32(NotEqual, regT1, TrustedImm32(JSValue::CellTag));
 
     loadPtr(Address(regT0, JSCell::structureOffset()), regT1);
+    Jump isLabeledValue = branch8(Equal, Address(regT1, Structure::typeInfoTypeOffset()), TrustedImm32(LabeledType));
     test8(Zero, Address(regT1, Structure::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined), regT1);
 
     Jump wasNotImmediate = jump();
+
+    // Handle labeled values
+    isLabeledValue.link(this);
+    loadPtr(Address(regT0, JSLabeledValue::valueTagOffset()), regT1);
 
     isImmediate.link(this);
 

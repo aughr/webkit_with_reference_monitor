@@ -59,6 +59,7 @@ namespace JSC {
     namespace LLInt {
         class Data;
     }
+    class JSLabeledValue;
 
     struct ClassInfo;
     struct Instruction;
@@ -123,6 +124,7 @@ namespace JSC {
         friend class DFG::SpeculativeJIT;
 #endif
         friend class LLInt::Data;
+        friend class JSLabeledValue;
 
     public:
         static EncodedJSValue encode(JSValue);

@@ -456,10 +456,10 @@ _llint_op_eq_null:
     loadi PayloadOffset[cfr, t0, 8], t0
     bineq t1, CellTag, .opEqNullImmediate
     loadp JSCell::m_structure[t0], t1
-    bbeq Structure::m_typeInfo + TypeInfo::m_type[t2], LabeledType, .slow
+    bbeq Structure::m_typeInfo + TypeInfo::m_type[t1], LabeledType, .opEqNullSlow
     tbnz Structure::m_typeInfo + TypeInfo::m_flags[t1], MasqueradesAsUndefined, t1
     jmp .opEqNullNotImmediate
-.slow:
+.opEqNullSlow:
     callSlowPath(_llint_slow_path_eq_null)
     dispatch(3)
 .opEqNullImmediate:
@@ -501,10 +501,10 @@ _llint_op_neq_null:
     loadi PayloadOffset[cfr, t0, 8], t0
     bineq t1, CellTag, .opNeqNullImmediate
     loadp JSCell::m_structure[t0], t1
-    bbeq Structure::m_typeInfo + TypeInfo::m_type[t2], LabeledType, .slow
+    bbeq Structure::m_typeInfo + TypeInfo::m_type[t1], LabeledType, .opNeqNullSlow
     tbz Structure::m_typeInfo + TypeInfo::m_flags[t1], MasqueradesAsUndefined, t1
     jmp .opNeqNullNotImmediate
-.slow:
+.opNeqNullSlow:
     callSlowPath(_llint_slow_path_neq_null)
     dispatch(3)
 .opNeqNullImmediate:

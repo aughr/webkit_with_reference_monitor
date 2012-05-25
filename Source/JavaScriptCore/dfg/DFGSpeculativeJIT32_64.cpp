@@ -600,12 +600,14 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompareNull(Edge operand, bool inv
         JITCompiler::Jump done = m_jit.jump();
 
         labeledValue.link(&m_jit);
-        m_jit.loadPtr(JITCompiler::Address(argPayloadGPR, JSLabeledValue::valueTagOffset()), argTagGPR);
+        m_jit.loadPtr(JITCompiler::Address(argPayloadGPR, JSLabeledValue::valueTagOffset()), resultPayloadGPR);
+        JITCompiler::Jump moved = m_jit.jump();
 
         notCell.link(&m_jit);
         // null or undefined?
         COMPILE_ASSERT((JSValue::UndefinedTag | 1) == JSValue::NullTag, UndefinedTag_OR_1_EQUALS_NullTag);
         m_jit.move(argTagGPR, resultPayloadGPR);
+        moved.link(&m_jit);
         m_jit.or32(TrustedImm32(1), resultPayloadGPR);
         m_jit.compare32(invert ? JITCompiler::NotEqual : JITCompiler::Equal, resultPayloadGPR, TrustedImm32(JSValue::NullTag), resultPayloadGPR);
 
@@ -643,19 +645,21 @@ void SpeculativeJIT::nonSpeculativePeepholeBranchNull(Edge operand, NodeIndex br
     
     m_jit.loadPtr(JITCompiler::Address(argPayloadGPR, JSCell::structureOffset()), resultGPR);
     if (!isKnownCell(operand.index()))
-        labeledValue = m_jit.branch8(JITCompiler::Equal, JITCompiler::Address(resultPayloadGPR, Structure::typeInfoTypeOffset()), JITCompiler::TrustedImm32(LabeledType));
+        labeledValue = m_jit.branch8(JITCompiler::Equal, JITCompiler::Address(resultGPR, Structure::typeInfoTypeOffset()), JITCompiler::TrustedImm32(LabeledType));
     branchTest8(invert ? JITCompiler::Zero : JITCompiler::NonZero, JITCompiler::Address(resultGPR, Structure::typeInfoFlagsOffset()), JITCompiler::TrustedImm32(MasqueradesAsUndefined), taken);
     
     if (!isKnownCell(operand.index())) {
         jump(notTaken, ForceJump);
 
         labeledValue.link(&m_jit);
-        m_jit.loadPtr(JITCompiler::Address(argPayloadGPR, JSLabeledValue::valueTagOffset()), argTagGPR);
+        m_jit.loadPtr(JITCompiler::Address(argPayloadGPR, JSLabeledValue::valueTagOffset()), resultGPR);
+        JITCompiler::Jump moved = m_jit.jump();
 
         notCell.link(&m_jit);
         // null or undefined?
         COMPILE_ASSERT((JSValue::UndefinedTag | 1) == JSValue::NullTag, UndefinedTag_OR_1_EQUALS_NullTag);
         m_jit.move(argTagGPR, resultGPR);
+        moved.link(&m_jit);
         m_jit.or32(TrustedImm32(1), resultGPR);
         branch32(invert ? JITCompiler::NotEqual : JITCompiler::Equal, resultGPR, JITCompiler::TrustedImm32(JSValue::NullTag), taken);
     }
