@@ -130,6 +130,9 @@ private:
     Vector<Holder, 16> m_holderStack;
     UString m_repeatedGap;
     UString m_indent;
+
+    SecurityLabel m_label;
+    SecurityLabel m_replacerLabel;
 };
 
 // ------------------------------ helper functions --------------------------------
@@ -228,7 +231,9 @@ Stringifier::Stringifier(ExecState* exec, const Local<Unknown>& replacer, const 
                     continue;
             }
 
-            m_arrayReplacerPropertyNames.add(Identifier(exec, name.toString(exec)->value(exec)));
+            UString nameString = name.toString(exec)->value(exec);
+            m_replacerLabel.merge(nameString.securityLabel());
+            m_arrayReplacerPropertyNames.add(Identifier(exec, nameString));
         }
         return;
     }
@@ -245,13 +250,16 @@ Local<Unknown> Stringifier::stringify(Handle<Unknown> value)
     PropertyNameForFunctionCall emptyPropertyName(m_exec->globalData().propertyNames->emptyIdentifier);
     object->putDirect(m_exec->globalData(), m_exec->globalData().propertyNames->emptyIdentifier, value.get());
 
+    m_label = m_replacerLabel;
     UStringBuilder result;
     if (appendStringifiedValue(result, value.get(), object, emptyPropertyName) != StringifySucceeded)
         return Local<Unknown>(m_exec->globalData(), jsUndefined());
     if (m_exec->hadException())
         return Local<Unknown>(m_exec->globalData(), jsNull());
 
-    return Local<Unknown>(m_exec->globalData(), jsString(m_exec, result.toUString()));
+    JSString* resultString = jsString(m_exec, result.toUString());
+    resultString->mergeSecurityLabel(m_exec, m_label);
+    return Local<Unknown>(m_exec->globalData(), resultString);
 }
 
 template <typename CharType>
@@ -366,6 +374,8 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(UStringBuilder&
         return StringifySucceeded;
     }
 
+    m_label.merge(value.securityLabel());
+    value = value.unwrappedValue();
     value = unwrapBoxedPrimitive(m_exec, value);
 
     if (m_exec->hadException())
@@ -815,12 +825,12 @@ EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(ExecState* exec)
     JSValue unfiltered;
     LocalScope scope(exec->globalData());
     if (source.is8Bit()) {
-        LiteralParser<LChar> jsonParser(exec, source.characters8(), source.length(), StrictJSON);
+        LiteralParser<LChar> jsonParser(exec, source.characters8(), source.length(), StrictJSON, source.securityLabel());
         unfiltered = jsonParser.tryLiteralParse();
         if (!unfiltered)
             return throwVMError(exec, createSyntaxError(exec, jsonParser.getErrorMessage()));
     } else {
-        LiteralParser<UChar> jsonParser(exec, source.characters16(), source.length(), StrictJSON);
+        LiteralParser<UChar> jsonParser(exec, source.characters16(), source.length(), StrictJSON, source.securityLabel());
         unfiltered = jsonParser.tryLiteralParse();
         if (!unfiltered)
             return throwVMError(exec, createSyntaxError(exec, jsonParser.getErrorMessage()));        

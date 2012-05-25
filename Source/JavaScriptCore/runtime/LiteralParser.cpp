@@ -38,6 +38,20 @@
 namespace JSC {
 
 template <typename CharType>
+inline JSValue LiteralParser<CharType>::possiblyLabel(JSCell* cell) {
+    cell->mergeSecurityLabel(m_exec, m_label);
+    return cell;
+}
+
+template <typename CharType>
+inline JSValue LiteralParser<CharType>::possiblyLabel(JSValue value) {
+    if (!m_label.isNull())
+        return JSLabeledValue::create(m_exec, m_label, value);
+    else
+        return value;
+}
+
+template <typename CharType>
 static inline bool isJSONWhiteSpace(const CharType& c)
 {
     // The JSON RFC 4627 defines a list of allowed characters to be considered
@@ -547,6 +561,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
             startParseArray:
             case StartParseArray: {
                 JSArray* array = constructEmptyArray(m_exec);
+                possiblyLabel(array);
                 objectStack.append(array);
                 // fallthrough
             }
@@ -586,6 +601,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
             startParseObject:
             case StartParseObject: {
                 JSObject* object = constructEmptyObject(m_exec);
+                possiblyLabel(object);
                 objectStack.append(object);
 
                 TokenType type = m_lexer.next();
@@ -664,30 +680,30 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
                         LiteralParserToken<CharType> stringToken = m_lexer.currentToken();
                         m_lexer.next();
                         if (stringToken.stringIs8Bit)
-                            lastValue = jsString(m_exec, makeIdentifier(stringToken.stringToken8, stringToken.stringLength).ustring());
+                            lastValue = possiblyLabel(jsString(m_exec, makeIdentifier(stringToken.stringToken8, stringToken.stringLength).ustring()));
                         else
-                            lastValue = jsString(m_exec, makeIdentifier(stringToken.stringToken16, stringToken.stringLength).ustring());
+                            lastValue = possiblyLabel(jsString(m_exec, makeIdentifier(stringToken.stringToken16, stringToken.stringLength).ustring()));
                         break;
                     }
                     case TokNumber: {
                         LiteralParserToken<CharType> numberToken = m_lexer.currentToken();
                         m_lexer.next();
-                        lastValue = jsNumber(numberToken.numberToken);
+                        lastValue = possiblyLabel(jsNumber(numberToken.numberToken));
                         break;
                     }
                     case TokNull:
                         m_lexer.next();
-                        lastValue = jsNull();
+                        lastValue = possiblyLabel(jsNull());
                         break;
 
                     case TokTrue:
                         m_lexer.next();
-                        lastValue = jsBoolean(true);
+                        lastValue = possiblyLabel(jsBoolean(true));
                         break;
 
                     case TokFalse:
                         m_lexer.next();
-                        lastValue = jsBoolean(false);
+                        lastValue = possiblyLabel(jsBoolean(false));
                         break;
                     case TokRBracket:
                         m_parseErrorMessage = "Unexpected token ']'";
