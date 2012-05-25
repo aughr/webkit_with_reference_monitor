@@ -63,6 +63,7 @@ end
 
 # Type constants.
 const StringType = 5
+const LabeledType = 7
 const ObjectType = 15
 
 # Type flags constants.

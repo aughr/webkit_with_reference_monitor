@@ -456,8 +456,12 @@ _llint_op_eq_null:
     loadi PayloadOffset[cfr, t0, 8], t0
     bineq t1, CellTag, .opEqNullImmediate
     loadp JSCell::m_structure[t0], t1
+    bbeq Structure::m_typeInfo + TypeInfo::m_type[t2], LabeledType, .slow
     tbnz Structure::m_typeInfo + TypeInfo::m_flags[t1], MasqueradesAsUndefined, t1
     jmp .opEqNullNotImmediate
+.slow:
+    callSlowPath(_llint_slow_path_eq_null)
+    dispatch(3)
 .opEqNullImmediate:
     cieq t1, NullTag, t2
     cieq t1, UndefinedTag, t1
@@ -497,8 +501,12 @@ _llint_op_neq_null:
     loadi PayloadOffset[cfr, t0, 8], t0
     bineq t1, CellTag, .opNeqNullImmediate
     loadp JSCell::m_structure[t0], t1
+    bbeq Structure::m_typeInfo + TypeInfo::m_type[t2], LabeledType, .slow
     tbz Structure::m_typeInfo + TypeInfo::m_flags[t1], MasqueradesAsUndefined, t1
     jmp .opNeqNullNotImmediate
+.slow:
+    callSlowPath(_llint_slow_path_neq_null)
+    dispatch(3)
 .opNeqNullImmediate:
     cineq t1, NullTag, t2
     cineq t1, UndefinedTag, t1
@@ -1328,11 +1336,15 @@ macro equalNull(cellHandler, immediateHandler)
     loadi PayloadOffset[cfr, t0, 8], t0
     bineq t1, CellTag, .immediate
     loadp JSCell::m_structure[t0], t2
+    bbeq Structure::m_typeInfo + TypeInfo::m_type[t2], LabeledType, .labeled
     cellHandler(Structure::m_typeInfo + TypeInfo::m_flags[t2], .target)
     dispatch(3)
 
 .target:
     dispatchBranch(8[PC])
+
+.labeled:
+    loadi JSLabeledValue::m_value + TagOffset[t0], t1
 
 .immediate:
     ori 1, t1

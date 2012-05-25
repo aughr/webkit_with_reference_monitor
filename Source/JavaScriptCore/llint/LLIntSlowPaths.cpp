@@ -537,12 +537,30 @@ LLINT_SLOW_PATH_DECL(slow_path_eq)
     LLINT_RETURN_WITH_LABELS(jsBoolean(JSValue::equal(exec, v1, v2)), exec, v1.securityLabel(), v2.securityLabel());
 }
 
+LLINT_SLOW_PATH_DECL(slow_path_eq_null)
+{
+    LLINT_BEGIN();
+    JSValue v = LLINT_OP_C(2).jsValue();
+    JSValue srcValue = v.unwrappedValue();
+    bool result = srcValue.isUndefinedOrNull() || (srcValue.isCell() && srcValue.asCell()->structure()->typeInfo().masqueradesAsUndefined());
+    LLINT_RETURN_WITH_LABEL(jsBoolean(result), exec, v.securityLabel());
+}
+
 LLINT_SLOW_PATH_DECL(slow_path_neq)
 {
     LLINT_BEGIN();
     JSValue v1 = LLINT_OP_C(2).jsValue();
     JSValue v2 = LLINT_OP_C(3).jsValue();
     LLINT_RETURN_WITH_LABELS(jsBoolean(!JSValue::equal(exec, v1, v2)), exec, v1.securityLabel(), v2.securityLabel());
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_neq_null)
+{
+    LLINT_BEGIN();
+    JSValue v = LLINT_OP_C(2).jsValue();
+    JSValue srcValue = v.unwrappedValue();
+    bool result = srcValue.isUndefinedOrNull() || (srcValue.isCell() && srcValue.asCell()->structure()->typeInfo().masqueradesAsUndefined());
+    LLINT_RETURN_WITH_LABEL(jsBoolean(!result), exec, v.securityLabel());
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_stricteq)

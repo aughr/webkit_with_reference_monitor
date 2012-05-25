@@ -930,9 +930,14 @@ void JIT::emit_op_jeq_null(Instruction* currentInstruction)
 
     // First, handle JSCell cases - check MasqueradesAsUndefined bit on the structure.
     loadPtr(Address(regT0, JSCell::structureOffset()), regT2);
+    Jump isLabeledValue = branch8(Equal, Address(regT2, Structure::typeInfoTypeOffset()), TrustedImm32(LabeledType));
     addJump(branchTest8(NonZero, Address(regT2, Structure::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined)), target);
 
     Jump wasNotImmediate = jump();
+
+    // Handle labeled values
+    isLabeledValue.link(this);
+    load32(Address(regT0, JSLabeledValue::valueTagOffset()), regT1);
 
     // Now handle the immediate cases - undefined & null
     isImmediate.link(this);
@@ -955,9 +960,14 @@ void JIT::emit_op_jneq_null(Instruction* currentInstruction)
 
     // First, handle JSCell cases - check MasqueradesAsUndefined bit on the structure.
     loadPtr(Address(regT0, JSCell::structureOffset()), regT2);
+    Jump isLabeledValue = branch8(Equal, Address(regT2, Structure::typeInfoTypeOffset()), TrustedImm32(LabeledType));
     addJump(branchTest8(Zero, Address(regT2, Structure::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined)), target);
 
     Jump wasNotImmediate = jump();
+
+    // Handle labeled values
+    isLabeledValue.link(this);
+    load32(Address(regT0, JSLabeledValue::valueTagOffset()), regT1);
 
     // Now handle the immediate cases - undefined & null
     isImmediate.link(this);

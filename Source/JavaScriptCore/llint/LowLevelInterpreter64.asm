@@ -330,13 +330,17 @@ _llint_op_neq:
         _llint_slow_path_neq)
 
 
-macro equalNullComparison()
+macro equalNullComparison(slowPath)
     loadis 16[PB, PC, 8], t0
     loadp [cfr, t0, 8], t0
     btpnz t0, tagMask, .immediate
     loadp JSCell::m_structure[t0], t2
+    bbeq Structure::m_typeInfo + TypeInfo::m_type[t2], LabeledType, .slow
     tbnz Structure::m_typeInfo + TypeInfo::m_flags[t2], MasqueradesAsUndefined, t0
     jmp .done
+.slow:
+    callSlowPath(slowPath)
+    dispatch(3)
 .immediate:
     andp ~TagBitUndefined, t0
     cpeq t0, ValueNull, t0
@@ -345,7 +349,7 @@ end
 
 _llint_op_eq_null:
     traceExecution()
-    equalNullComparison()
+    equalNullComparison(_llint_slow_path_eq_null)
     loadis 8[PB, PC, 8], t1
     orp ValueFalse, t0
     storep t0, [cfr, t1, 8]
@@ -354,7 +358,7 @@ _llint_op_eq_null:
 
 _llint_op_neq_null:
     traceExecution()
-    equalNullComparison()
+    equalNullComparison(_llint_slow_path_neq_null)
     loadis 8[PB, PC, 8], t1
     xorp ValueTrue, t0
     storep t0, [cfr, t1, 8]
@@ -1172,11 +1176,15 @@ macro equalNull(cellHandler, immediateHandler)
     loadp [cfr, t0, 8], t0
     btpnz t0, tagMask, .immediate
     loadp JSCell::m_structure[t0], t2
+    bbeq Structure::m_typeInfo + TypeInfo::m_type[t2], LabeledType, .labeled
     cellHandler(Structure::m_typeInfo + TypeInfo::m_flags[t2], .target)
     dispatch(3)
 
 .target:
     dispatch(16[PB, PC, 8])
+
+.labeled:
+    loadp JSLabeledValue::m_value[t0], t0
 
 .immediate:
     andp ~TagBitUndefined, t0

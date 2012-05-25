@@ -559,28 +559,30 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompareNull(Edge operand, bool inv
     JSValueOperand arg(this, operand);
     GPRReg argGPR = arg.gpr();
     
-    GPRTemporary result(this, arg);
+    GPRTemporary result(this);
     GPRReg resultGPR = result.gpr();
     
     JITCompiler::Jump notCell;
+    JITCompiler::Jump labeledValue;
     
-    if (!isKnownCell(operand.index()))
-        notCell = m_jit.branchTestPtr(MacroAssembler::NonZero, argGPR, GPRInfo::tagMaskRegister);
+    notCell = m_jit.branchTestPtr(MacroAssembler::NonZero, argGPR, GPRInfo::tagMaskRegister);
     
     m_jit.loadPtr(JITCompiler::Address(argGPR, JSCell::structureOffset()), resultGPR);
+    labeledValue = m_jit.branch8(JITCompiler::Equal, JITCompiler::Address(resultGPR, Structure::typeInfoTypeOffset()), JITCompiler::TrustedImm32(LabeledType));
     m_jit.test8(invert ? JITCompiler::Zero : JITCompiler::NonZero, JITCompiler::Address(resultGPR, Structure::typeInfoFlagsOffset()), JITCompiler::TrustedImm32(MasqueradesAsUndefined), resultGPR);
     
-    if (!isKnownCell(operand.index())) {
-        JITCompiler::Jump done = m_jit.jump();
-        
-        notCell.link(&m_jit);
-        
-        m_jit.move(argGPR, resultGPR);
-        m_jit.andPtr(JITCompiler::TrustedImm32(~TagBitUndefined), resultGPR);
-        m_jit.comparePtr(invert ? JITCompiler::NotEqual : JITCompiler::Equal, resultGPR, JITCompiler::TrustedImm32(ValueNull), resultGPR);
-        
-        done.link(&m_jit);
-    }
+    JITCompiler::Jump done = m_jit.jump();
+
+    labeledValue.link(&m_jit);
+    m_jit.loadPtr(JITCompiler::Address(argGPR, JSLabeledValue::valueOffset()), argGPR);
+
+    notCell.link(&m_jit);
+    
+    m_jit.move(argGPR, resultGPR);
+    m_jit.andPtr(JITCompiler::TrustedImm32(~TagBitUndefined), resultGPR);
+    m_jit.comparePtr(invert ? JITCompiler::NotEqual : JITCompiler::Equal, resultGPR, JITCompiler::TrustedImm32(ValueNull), resultGPR);
+    
+    done.link(&m_jit);
     
     m_jit.or32(TrustedImm32(ValueFalse), resultGPR);
     jsValueResult(resultGPR, m_compileIndex, DataFormatJSBoolean);
@@ -602,26 +604,28 @@ void SpeculativeJIT::nonSpeculativePeepholeBranchNull(Edge operand, NodeIndex br
     JSValueOperand arg(this, operand);
     GPRReg argGPR = arg.gpr();
     
-    GPRTemporary result(this, arg);
+    GPRTemporary result(this);
     GPRReg resultGPR = result.gpr();
     
     JITCompiler::Jump notCell;
+    JITCompiler::Jump labeledValue;
     
-    if (!isKnownCell(operand.index()))
-        notCell = m_jit.branchTestPtr(MacroAssembler::NonZero, argGPR, GPRInfo::tagMaskRegister);
-    
+    notCell = m_jit.branchTestPtr(MacroAssembler::NonZero, argGPR, GPRInfo::tagMaskRegister);
+
     m_jit.loadPtr(JITCompiler::Address(argGPR, JSCell::structureOffset()), resultGPR);
+    labeledValue = m_jit.branch8(JITCompiler::Equal, JITCompiler::Address(resultGPR, Structure::typeInfoTypeOffset()), JITCompiler::TrustedImm32(LabeledType));
     branchTest8(invert ? JITCompiler::Zero : JITCompiler::NonZero, JITCompiler::Address(resultGPR, Structure::typeInfoFlagsOffset()), JITCompiler::TrustedImm32(MasqueradesAsUndefined), taken);
     
-    if (!isKnownCell(operand.index())) {
-        jump(notTaken, ForceJump);
-        
-        notCell.link(&m_jit);
-        
-        m_jit.move(argGPR, resultGPR);
-        m_jit.andPtr(JITCompiler::TrustedImm32(~TagBitUndefined), resultGPR);
-        branchPtr(invert ? JITCompiler::NotEqual : JITCompiler::Equal, resultGPR, JITCompiler::TrustedImmPtr(reinterpret_cast<void*>(ValueNull)), taken);
-    }
+    jump(notTaken, ForceJump);
+
+    labeledValue.link(&m_jit);
+    m_jit.loadPtr(JITCompiler::Address(argGPR, JSLabeledValue::valueOffset()), argGPR);
+
+    notCell.link(&m_jit);
+    
+    m_jit.move(argGPR, resultGPR);
+    m_jit.andPtr(JITCompiler::TrustedImm32(~TagBitUndefined), resultGPR);
+    branchPtr(invert ? JITCompiler::NotEqual : JITCompiler::Equal, resultGPR, JITCompiler::TrustedImmPtr(reinterpret_cast<void*>(ValueNull)), taken);
     
     jump(notTaken);
 }

@@ -69,7 +69,26 @@ namespace JSC {
 
         static void visitChildren(JSCell*, SlotVisitor&);
 
+        static ptrdiff_t valueOffset()
+        {
+            return OBJECT_OFFSETOF(JSLabeledValue, m_value);
+        }
+        
+#if USE(JSVALUE32_64)
+        static ptrdiff_t valueTagOffset()
+        {
+            return OBJECT_OFFSETOF(JSLabeledValue, m_value) + OBJECT_OFFSETOF(JSValue, u.asBits.tag);
+        }
+        
+        static ptrdiff_t valuePayloadOffset()
+        {
+            return OBJECT_OFFSETOF(JSLabeledValue, m_value) + OBJECT_OFFSETOF(JSValue, u.asBits.payload);
+        }
+#endif
+
     private:
+        friend class LLIntOffsetsExtractor;
+
         JSValue m_value;
     };
 

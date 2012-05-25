@@ -4043,7 +4043,7 @@ skip_id_custom_self:
         */
         int src = vPC[1].u.operand;
         int target = vPC[2].u.operand;
-        JSValue srcValue = callFrame->r(src).jsValue();
+        JSValue srcValue = callFrame->r(src).jsValue().unwrappedValue();
 
         if (!srcValue.isUndefinedOrNull() && (!srcValue.isCell() || !srcValue.asCell()->structure()->typeInfo().masqueradesAsUndefined())) {
             vPC += target;
