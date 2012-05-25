@@ -161,7 +161,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext* scriptExecutionContext
             if (!retval.isUndefinedOrNull() && event->storesResultAsString())
                 event->storeResult(ustringToString(retval.toString(exec)->value(exec)));
             if (m_isAttribute) {
-                if (retval.isFalse())
+                if (retval.unwrappedValue().isFalse())
                     event->preventDefault();
             }
         }
