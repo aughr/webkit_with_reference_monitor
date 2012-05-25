@@ -36,8 +36,6 @@ namespace WTF {
     template<> struct DefaultHash<SecurityTag> { typedef FloatHash<double> Hash; };
     template<> struct HashTraits<SecurityTag> : FloatHashTraits<double> { };
     
-    class AtomicString;
-    
     class SecurityLabelImpl : public RefCounted<SecurityLabelImpl> {
     private:
         typedef HashSet<SecurityTag> SecurityTagSet;

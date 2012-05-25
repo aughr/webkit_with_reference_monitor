@@ -40,8 +40,6 @@ namespace WTF {
         bool hasLabel(const SecurityLabel& other) const;
         void merge(const SecurityLabel& other);
     private:
-        void duplicateOrInit();
-
         RefPtr<SecurityLabelImpl> m_impl;
     };
     
