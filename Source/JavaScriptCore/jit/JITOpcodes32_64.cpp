@@ -1102,7 +1102,9 @@ void JIT::compileOpStrictEq(Instruction* currentInstruction, CompileOpStrictEqTy
 
     // Jump to a slow case if both are strings.
     Jump notCell = branch32(NotEqual, regT1, TrustedImm32(JSValue::CellTag));
+    addSlowCase(branchPtr(Equal, Address(regT0, JSCell::classInfoOffset()), TrustedImmPtr(&JSLabeledValue::s_info)));
     Jump firstNotString = branchPtr(NotEqual, Address(regT0, JSCell::classInfoOffset()), TrustedImmPtr(&JSString::s_info));
+    addSlowCase(branchPtr(Equal, Address(regT2, JSCell::classInfoOffset()), TrustedImmPtr(&JSLabeledValue::s_info)));
     addSlowCase(branchPtr(Equal, Address(regT2, JSCell::classInfoOffset()), TrustedImmPtr(&JSString::s_info)));
     notCell.link(this);
     firstNotString.link(this);
@@ -1130,6 +1132,8 @@ void JIT::emitSlow_op_stricteq(Instruction* currentInstruction, Vector<SlowCaseE
     linkSlowCase(iter);
     linkSlowCase(iter);
     linkSlowCase(iter);
+    linkSlowCase(iter);
+    linkSlowCase(iter);
 
     JITStubCall stubCall(this, cti_op_stricteq);
     stubCall.addArgument(src1);
@@ -1148,6 +1152,8 @@ void JIT::emitSlow_op_nstricteq(Instruction* currentInstruction, Vector<SlowCase
     unsigned src1 = currentInstruction[2].u.operand;
     unsigned src2 = currentInstruction[3].u.operand;
 
+    linkSlowCase(iter);
+    linkSlowCase(iter);
     linkSlowCase(iter);
     linkSlowCase(iter);
     linkSlowCase(iter);

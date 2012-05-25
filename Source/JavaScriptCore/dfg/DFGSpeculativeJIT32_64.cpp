@@ -786,8 +786,8 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node& node, MacroAssembler
         
         jsValueResult(resultTagGPR, resultPayloadGPR, m_compileIndex, UseChildrenCalledExplicitly);
     } else {
-        GPRTemporary resultTag(this, arg1);
-        GPRTemporary resultPayload(this, arg1, false);
+        GPRResult resultPayload(this);
+        GPRResult2 resultTag(this);
         GPRReg resultTagGPR = resultTag.gpr();
         GPRReg resultPayloadGPR = resultPayload.gpr();
 
@@ -892,18 +892,20 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeStrictEq(Node& node, bool invert)
         JITCompiler::Jump notEqualCase = m_jit.branchPtr(JITCompiler::NotEqual, arg1PayloadGPR, arg2PayloadGPR);
         
         m_jit.move(JITCompiler::TrustedImm32(!invert), resultPayloadGPR);
+        m_jit.move(JITCompiler::TrustedImm32(JSValue::BooleanTag), resultTagGPR);
         JITCompiler::Jump done = m_jit.jump();
 
         notEqualCase.link(&m_jit);
         
         silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
         callOperation(operationCompareStrictEqCell, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
-        silentFillAllRegisters(resultPayloadGPR);
+        silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
         
         done.link(&m_jit);
     } else {
         // FIXME: Add fast paths.
 
+        m_jit.breakpoint();
         silentSpillAllRegisters(resultTagGPR, resultPayloadGPR);
         callOperation(operationCompareStrictEq, resultTagGPR, resultPayloadGPR, arg1TagGPR, arg1PayloadGPR, arg2TagGPR, arg2PayloadGPR);
         silentFillAllRegisters(resultTagGPR, resultPayloadGPR);
@@ -1679,7 +1681,7 @@ void SpeculativeJIT::compileLogicalNot(Node& node)
     GPRTemporary resultPayload(this, arg1, false);
     GPRReg arg1TagGPR = arg1.tagGPR();
     GPRReg arg1PayloadGPR = arg1.payloadGPR();
-    GPRReg resultTagGPR = resultPayload.gpr();
+    GPRReg resultTagGPR = resultTag.gpr();
     GPRReg resultPayloadGPR = resultPayload.gpr();
         
     arg1.use();
