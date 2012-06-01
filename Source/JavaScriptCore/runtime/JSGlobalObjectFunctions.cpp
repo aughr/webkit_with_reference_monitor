@@ -560,7 +560,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL globalFuncParseFloat(ExecState* exec)
 {
-    JSString *string = exec->argument(0).toString(exec);
+    JSString* string = exec->argument(0).toString(exec);
     return JSValue::encode(jsNumber(parseFloat(string->value(exec))), exec, string->securityLabel());
 }
 

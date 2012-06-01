@@ -27,7 +27,7 @@ namespace WTF {
 template<typename StringType>
 class StringSecurityLabelAdapter {
 public:
-    StringSecurityLabelAdapter<StringType>(const StringType) {}
+    StringSecurityLabelAdapter<StringType>(const StringType) { }
 
     SecurityLabel securityLabel() const { return SecurityLabel(); }
 };
@@ -62,7 +62,7 @@ private:
 template<typename StringType1, typename StringType2>
 class StringAppend {
 public:
-    StringAppend(StringType1 string1, StringType2 string2, SecurityLabel label=SecurityLabel())
+    StringAppend(StringType1 string1, StringType2 string2, SecurityLabel label = SecurityLabel())
         : m_string1(string1)
         , m_string2(string2)
         , m_label(label)

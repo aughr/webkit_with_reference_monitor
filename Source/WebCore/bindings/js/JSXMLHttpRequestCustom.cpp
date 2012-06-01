@@ -47,8 +47,8 @@
 #include "JSEventListener.h"
 #include "SecurityEvent.h"
 #include "XMLHttpRequest.h"
-#include <runtime/JSObject.h>
 #include <runtime/Error.h>
+#include <runtime/JSObject.h>
 #include <interpreter/Interpreter.h>
 #include <wtf/ArrayBuffer.h>
 

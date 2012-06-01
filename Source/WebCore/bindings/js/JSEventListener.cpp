@@ -71,6 +71,12 @@ void JSEventListener::visitJSFunction(SlotVisitor& visitor)
         visitor.append(&m_protectedWrapper);
 }
 
+void JSEventListener::protectJSWrapper()
+{
+    if (m_wrapper)
+        m_protectedWrapper.set(*m_isolatedWorld->globalData(), m_wrapper.get(), m_wrapper.get());
+}
+
 void JSEventListener::handleEvent(ScriptExecutionContext* scriptExecutionContext, Event* event)
 {
     ASSERT(scriptExecutionContext);

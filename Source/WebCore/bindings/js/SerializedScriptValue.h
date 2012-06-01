@@ -115,10 +115,10 @@ private:
     static PassOwnPtr<ArrayBufferContentsArray> transferArrayBuffers(ArrayBufferArray&, SerializationReturnCode&);
 
     SerializedScriptValue(Vector<unsigned char>&);
-    SerializedScriptValue(Vector<unsigned char>&, SecurityLabel label);
+    SerializedScriptValue(Vector<unsigned char>&, SecurityLabel);
     SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs);
     SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray>);
-    SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray>, SecurityLabel label);
+    SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray>, SecurityLabel);
     Vector<unsigned char> m_data;
     OwnPtr<ArrayBufferContentsArray> m_arrayBufferContentsArray;
     Vector<String> m_blobURLs;

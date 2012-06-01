@@ -46,7 +46,8 @@ bool JSCell::getString(ExecState* exec, UString&stringValue) const
     if (isString()) {
         stringValue = static_cast<const JSString*>(this)->value(exec);
         return true;
-    } else if (isLabeledValue())
+    }
+    if (isLabeledValue())
         return static_cast<const JSLabeledValue*>(this)->getString(exec, stringValue);
     return false;
 }
@@ -55,10 +56,9 @@ UString JSCell::getString(ExecState* exec) const
 {
     if (isString())
         return static_cast<const JSString*>(this)->value(exec);
-    else if (isLabeledValue())
+    if (isLabeledValue())
         return static_cast<const JSLabeledValue*>(this)->getString(exec);
-    else
-        return UString();
+    return UString();
 }
 
 JSObject* JSCell::getObject()
@@ -138,14 +138,15 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned ident
     return thisObject->methodTable()->deletePropertyByIndex(thisObject, exec, identifier);
 }
 
-SecurityLabel JSCell::securityLabelCell(const JSCell* cell) {
+SecurityLabel JSCell::securityLabelCell(const JSCell* cell)
+{
     if (cell->m_label)
         return cell->m_label->securityLabel();
-    else
-        return SecurityLabel();
+    return SecurityLabel();
 }
 
-void JSCell::mergeSecurityLabelCell(JSC::JSCell* cell, JSGlobalData& globalData, SecurityLabel label) {
+void JSCell::mergeSecurityLabelCell(JSC::JSCell* cell, JSGlobalData& globalData, SecurityLabel label)
+{
     if (label.isNull())
         return;
     if (cell->m_label) {

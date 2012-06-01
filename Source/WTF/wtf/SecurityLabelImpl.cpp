@@ -20,13 +20,14 @@
  */
 
 #include "config.h"
-#include <wtf/HashMap.h>
-#include <wtf/AtomicString.h>
-#include <wtf/SecurityLabelImpl.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/Vector.h>
-#include <wtf/WTFThreadData.h>
+#include "SecurityLabelImpl.h"
+
+#include "AtomicString.h"
+#include "HashMap.h"
+#include "Vector.h"
+#include "WTFThreadData.h"
 #include <algorithm>
+#include <wtf/text/StringBuilder.h>
 
 namespace WTF {
 
@@ -67,15 +68,17 @@ static inline SecurityLabelTable::Table& labelTable()
     return table->table();
 }
 
-static inline PassRefPtr<SecurityLabelImpl> lookupOrCreateForDescriptor(RefPtr<StringImpl> descriptor) {
+static inline PassRefPtr<SecurityLabelImpl> lookupOrCreateForDescriptor(PassRefPtr<StringImpl> prpDescriptor)
+{
+    RefPtr<StringImpl> descriptor = prpDescriptor;
+
     SecurityLabelImpl* impl = labelTable().get(descriptor);
     if (impl)
         return impl;
-    else {
-        RefPtr<SecurityLabelImpl> newImpl = SecurityLabelImpl::create(descriptor);
-        labelTable().add(descriptor, newImpl.get());
-        return newImpl;
-    }
+
+    RefPtr<SecurityLabelImpl> newImpl = SecurityLabelImpl::create(descriptor);
+    labelTable().add(descriptor, newImpl.get());
+    return newImpl;
 }
 
 static inline PassRefPtr<SecurityLabelImpl> lookupOrCreateForTag(const SecurityTag& tag) 
@@ -88,91 +91,95 @@ static inline PassRefPtr<SecurityLabelImpl> lookupOrCreateForTag(const SecurityT
     return lookupOrCreateForDescriptor(newDescriptor.string().impl());
 }
 
-SecurityLabelImpl::~SecurityLabelImpl() {
+SecurityLabelImpl::~SecurityLabelImpl()
+{
     labelTable().remove(m_descriptor);
 }
 
-PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::add(RefPtr<SecurityLabelImpl> impl, const SecurityTag& tag) {
+PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::add(PassRefPtr<SecurityLabelImpl> prpImpl, const SecurityTag& tag)
+{
+    RefPtr<SecurityLabelImpl> impl = prpImpl;
     if (!impl)
         return lookupOrCreateForTag(tag);
 
     if (impl->hasTag(tag))
         return impl;
 
-    
+
     RefPtr<StringImpl> descriptor = impl->m_tagTransitionTable.get(tag);
     if (descriptor)
         return lookupOrCreateForDescriptor(descriptor);
-    else {
-        descriptor = impl->m_descriptor;
-        Vector<SecurityTag> tags;
 
-        // copy the tags into a vector and sort them
-        ASSERT(descriptor->length() % WTF_CHARACTERS_PER_SECURITY_TAG == 0);
-        size_t length = descriptor->length() / WTF_CHARACTERS_PER_SECURITY_TAG;
-        const SecurityTag* descriptorTags = reinterpret_cast<const SecurityTag*>(descriptor->characters16());
-        for (size_t i = 0; i < length; i++)
-            tags.append(descriptorTags[i]);
-        tags.append(tag);
-        std::sort(tags.begin(), tags.end());
-        
-        StringBuilder builder;
-        for (size_t i = 0; i < tags.size(); i++) {
-            UChar *chars = reinterpret_cast<UChar*>(&tags[i]);
-            builder.append(chars, WTF_CHARACTERS_PER_SECURITY_TAG);
-        }
-        
-        AtomicString newDescriptor = builder.toAtomicString();
-        impl->m_tagTransitionTable.add(tag, newDescriptor.impl());
-        return lookupOrCreateForDescriptor(newDescriptor.impl());
+    descriptor = impl->m_descriptor;
+    Vector<SecurityTag> tags;
+
+    // copy the tags into a vector and sort them
+    ASSERT(!(descriptor->length() % WTF_CHARACTERS_PER_SECURITY_TAG));
+    size_t length = descriptor->length() / WTF_CHARACTERS_PER_SECURITY_TAG;
+    const SecurityTag* descriptorTags = reinterpret_cast<const SecurityTag*>(descriptor->characters16());
+    for (size_t i = 0; i < length; i++)
+        tags.append(descriptorTags[i]);
+    tags.append(tag);
+    std::sort(tags.begin(), tags.end());
+    
+    StringBuilder builder;
+    for (size_t i = 0; i < tags.size(); i++) {
+        UChar* chars = reinterpret_cast<UChar*>(&tags[i]);
+        builder.append(chars, WTF_CHARACTERS_PER_SECURITY_TAG);
     }
+    
+    AtomicString newDescriptor = builder.toAtomicString();
+    impl->m_tagTransitionTable.add(tag, newDescriptor.impl());
+    return lookupOrCreateForDescriptor(newDescriptor.impl());
 }
 
-PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::combine(RefPtr<SecurityLabelImpl> impl, const RefPtr<SecurityLabelImpl>& other) {
+PassRefPtr<SecurityLabelImpl> SecurityLabelImpl::combine(PassRefPtr<SecurityLabelImpl> prpImpl, const PassRefPtr<SecurityLabelImpl>& prpOther)
+{
+    RefPtr<SecurityLabelImpl> impl = prpImpl;
+    RefPtr<SecurityLabelImpl> other = prpOther;
     if (!impl)
         return other;
     
     if (impl->hasLabel(other))
         return impl;
-    
-    
+
     RefPtr<StringImpl> descriptor = impl->m_transitionTable.get(other->m_descriptor);
     if (descriptor)
         return lookupOrCreateForDescriptor(descriptor);
-    else {
-        descriptor = impl->m_descriptor;
-        RefPtr<StringImpl> descriptor2 = other->m_descriptor;
-        Vector<SecurityTag> tags;
-        
-        // copy the tags into a vector and sort them
-        ASSERT(descriptor->length() % WTF_CHARACTERS_PER_SECURITY_TAG == 0);
-        ASSERT(descriptor2->length() % WTF_CHARACTERS_PER_SECURITY_TAG == 0);
 
-        size_t length = descriptor->length() / WTF_CHARACTERS_PER_SECURITY_TAG;
-        const SecurityTag* descriptorTags = reinterpret_cast<const SecurityTag*>(descriptor->characters16());
-        for (size_t i = 0; i < length; i++)
-            tags.append(descriptorTags[i]);
+    descriptor = impl->m_descriptor;
+    RefPtr<StringImpl> descriptor2 = other->m_descriptor;
+    Vector<SecurityTag> tags;
+    
+    // copy the tags into a vector and sort them
+    ASSERT(!(descriptor->length() % WTF_CHARACTERS_PER_SECURITY_TAG));
+    ASSERT(!(descriptor2->length() % WTF_CHARACTERS_PER_SECURITY_TAG));
 
-        length = descriptor2->length() / WTF_CHARACTERS_PER_SECURITY_TAG;
-        descriptorTags = reinterpret_cast<const SecurityTag*>(descriptor2->characters16());
-        for (size_t i = 0; i < length; i++)
-            tags.append(descriptorTags[i]);
-        std::sort(tags.begin(), tags.end());
-        std::unique(tags.begin(), tags.end());
-        
-        StringBuilder builder;
-        for (size_t i = 0; i < tags.size(); i++) {
-            UChar *chars = reinterpret_cast<UChar*>(&tags[i]);
-            builder.append(chars, WTF_CHARACTERS_PER_SECURITY_TAG);
-        }
-        
-        AtomicString newDescriptor = builder.toAtomicString();
-        impl->m_transitionTable.add(other->m_descriptor, newDescriptor.impl());
-        return lookupOrCreateForDescriptor(newDescriptor.impl());
+    size_t length = descriptor->length() / WTF_CHARACTERS_PER_SECURITY_TAG;
+    const SecurityTag* descriptorTags = reinterpret_cast<const SecurityTag*>(descriptor->characters16());
+    for (size_t i = 0; i < length; i++)
+        tags.append(descriptorTags[i]);
+
+    length = descriptor2->length() / WTF_CHARACTERS_PER_SECURITY_TAG;
+    descriptorTags = reinterpret_cast<const SecurityTag*>(descriptor2->characters16());
+    for (size_t i = 0; i < length; i++)
+        tags.append(descriptorTags[i]);
+    std::sort(tags.begin(), tags.end());
+    std::unique(tags.begin(), tags.end());
+    
+    StringBuilder builder;
+    for (size_t i = 0; i < tags.size(); i++) {
+        UChar* chars = reinterpret_cast<UChar*>(&tags[i]);
+        builder.append(chars, WTF_CHARACTERS_PER_SECURITY_TAG);
     }
+    
+    AtomicString newDescriptor = builder.toAtomicString();
+    impl->m_transitionTable.add(other->m_descriptor, newDescriptor.impl());
+    return lookupOrCreateForDescriptor(newDescriptor.impl());
 }
 
-void SecurityLabelImpl::createSet() {
+void SecurityLabelImpl::createSet()
+{
     RefPtr<StringImpl> descriptor = m_descriptor;
     size_t length = descriptor->length() / (sizeof(SecurityTag) / sizeof(UChar));
     const SecurityTag* descriptorTags = reinterpret_cast<const SecurityTag*>(descriptor->characters16());

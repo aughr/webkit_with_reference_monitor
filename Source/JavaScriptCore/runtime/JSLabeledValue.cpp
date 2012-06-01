@@ -26,8 +26,8 @@
 #include "Error.h"
 #include "ExceptionHelpers.h"
 #include "GetterSetter.h"
-#include "JSGlobalObject.h"
 #include "JSFunction.h"
+#include "JSGlobalObject.h"
 #include "JSNotAnObject.h"
 #include "NumberObject.h"
 #include <wtf/MathExtras.h>
@@ -35,48 +35,48 @@
 
 namespace JSC {
 
-    const ClassInfo JSLabeledValue::s_info = { "LabeledValue", 0, 0, 0, CREATE_METHOD_TABLE(JSLabeledValue) };
-    
-    void JSLabeledValue::visitChildren(JSCell* cell, SlotVisitor& visitor)
-    {
-        JSLabeledValue* thisObject = jsCast<JSLabeledValue*>(cell);
-        Base::visitChildren(thisObject, visitor);
-        if (thisObject->m_value.isCell()) {
-            JSCell *valueCell = thisObject->m_value.asCell();
-            valueCell->methodTable()->visitChildren(valueCell, visitor);
-        }
-    }
+const ClassInfo JSLabeledValue::s_info = { "LabeledValue", 0, 0, 0, CREATE_METHOD_TABLE(JSLabeledValue) };
 
-    JSValue JSLabeledValue::toPrimitive(ExecState*, PreferredPrimitiveType) const
-    {
-        return this;
+void JSLabeledValue::visitChildren(JSCell* cell, SlotVisitor& visitor)
+{
+    JSLabeledValue* thisObject = jsCast<JSLabeledValue*>(cell);
+    Base::visitChildren(thisObject, visitor);
+    if (thisObject->m_value.isCell()) {
+        JSCell* valueCell = thisObject->m_value.asCell();
+        valueCell->methodTable()->visitChildren(valueCell, visitor);
     }
+}
 
-    bool JSLabeledValue::getPrimitiveNumber(ExecState* exec, double& number, JSValue& result) const
-    {
-        return m_value.getPrimitiveNumber(exec, number, result);
-    }
+JSValue JSLabeledValue::toPrimitive(ExecState*, PreferredPrimitiveType) const
+{
+    return this;
+}
 
-    bool JSLabeledValue::toBoolean(ExecState* exec) const
-    {
-        return m_value.toBoolean(exec);
-    }
+bool JSLabeledValue::getPrimitiveNumber(ExecState* exec, double& number, JSValue& result) const
+{
+    return m_value.getPrimitiveNumber(exec, number, result);
+}
 
-    double JSLabeledValue::toNumber(ExecState* exec) const
-    {
-        return m_value.toNumber(exec);
-    }
+bool JSLabeledValue::toBoolean(ExecState* exec) const
+{
+    return m_value.toBoolean(exec);
+}
 
-    JSString* JSLabeledValue::toString(ExecState* exec) const
-    {
-        JSString *result = m_value.toString(exec);
-        result->mergeSecurityLabel(exec, securityLabel());
-        return result;
-    }
+double JSLabeledValue::toNumber(ExecState* exec) const
+{
+    return m_value.toNumber(exec);
+}
 
-    JSObject* JSLabeledValue::toObject(ExecState* exec, JSGlobalObject* globalObject) const
-    {
-        return m_value.toObject(exec, globalObject);
-    }
+JSString* JSLabeledValue::toString(ExecState* exec) const
+{
+    JSString* result = m_value.toString(exec);
+    result->mergeSecurityLabel(exec, securityLabel());
+    return result;
+}
+
+JSObject* JSLabeledValue::toObject(ExecState* exec, JSGlobalObject* globalObject) const
+{
+    return m_value.toObject(exec, globalObject);
+}
 
 } // namespace JSC

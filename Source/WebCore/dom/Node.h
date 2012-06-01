@@ -35,8 +35,8 @@
 #include "WebKitMutationObserver.h"
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
-#include <wtf/text/AtomicString.h>
 #include <wtf/SecurityLabel.h>
+#include <wtf/text/AtomicString.h>
 
 #if USE(JSC)
 namespace JSC {
@@ -699,7 +699,7 @@ protected:
         CreateSVGElement = CreateStyledElement | IsSVGFlag,
         CreateDocument = CreateContainer | InDocumentFlag
     };
-    Node(Document*, ConstructionType, SecurityLabel label=SecurityLabel());
+    Node(Document*, ConstructionType, SecurityLabel = SecurityLabel());
 
     virtual void didMoveToNewDocument(Document* oldDocument);
     

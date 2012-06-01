@@ -22,53 +22,59 @@
 #ifndef WTF_SecurityLabel_h
 #define WTF_SecurityLabel_h
 
-#include <wtf/RefCounted.h>
 #include <wtf/CurrentTime.h>
+#include <wtf/RefCounted.h>
 #include <wtf/SecurityLabelImpl.h>
 #include <wtf/SecurityTag.h>
 
 namespace WTF {
-    class SecurityLabel {
-    public:
-        SecurityLabel() : m_impl(0) {}
 
-        bool isNull() const { return m_impl == NULL; }
-        StringImpl* descriptor() const { return m_impl ? m_impl->descriptor() : StringImpl::empty(); }
+class SecurityLabel {
+public:
+    SecurityLabel() : m_impl(0) { }
 
-        void add(const SecurityTag& tag);        
-        bool hasTag(const SecurityTag& tag) const;
-        bool hasLabel(const SecurityLabel& other) const;
-        void merge(const SecurityLabel& other);
-    private:
-        RefPtr<SecurityLabelImpl> m_impl;
-    };
+    bool isNull() const { return !m_impl; }
+    StringImpl* descriptor() const { return m_impl ? m_impl->descriptor() : StringImpl::empty(); }
+
+    void add(const SecurityTag&);
+    bool hasTag(const SecurityTag&) const;
+    bool hasLabel(const SecurityLabel& other) const;
+    void merge(const SecurityLabel& other);
+private:
+    RefPtr<SecurityLabelImpl> m_impl;
+};
+
+inline void SecurityLabel::add(const SecurityTag& tag)
+{
+    if (hasTag(tag))
+        return;
     
-    inline void SecurityLabel::add(const SecurityTag& tag) {
-        if (hasTag(tag))
-            return;
-        
-        m_impl = SecurityLabelImpl::add(m_impl, tag);
-    }
+    m_impl = SecurityLabelImpl::add(m_impl, tag);
+}
+
+inline bool SecurityLabel::hasTag(const SecurityTag& tag) const
+{
+    return !isNull() && m_impl->hasTag(tag);
+}
+
+inline bool SecurityLabel::hasLabel(const SecurityLabel& other) const
+{
+    if (isNull() || other.isNull())
+        return other.isNull();
+    return m_impl->hasLabel(other.m_impl);
+}
+
+inline void SecurityLabel::merge(const SecurityLabel& other)
+{
+    if (other.isNull() || m_impl == other.m_impl)
+        return;
     
-    inline bool SecurityLabel::hasTag(const SecurityTag& tag) const {
-        return !isNull() && m_impl->hasTag(tag);
-    }
-    
-    inline bool SecurityLabel::hasLabel(const SecurityLabel& other) const {
-        if (isNull() || other.isNull())
-            return other.isNull();
-        return m_impl->hasLabel(other.m_impl);
-    }
-    
-    inline void SecurityLabel::merge(const SecurityLabel& other) {
-        if (other.isNull() || m_impl == other.m_impl)
-            return;
-        
-        if (isNull())
-            m_impl = other.m_impl;
-        else
-            m_impl = SecurityLabelImpl::combine(m_impl, other.m_impl);
-    }
+    if (isNull())
+        m_impl = other.m_impl;
+    else
+        m_impl = SecurityLabelImpl::combine(m_impl, other.m_impl);
+}
+
 }
 
 using WTF::SecurityLabel;

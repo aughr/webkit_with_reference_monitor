@@ -48,7 +48,8 @@ PassRefPtr<FormState> FormState::create(PassRefPtr<HTMLFormElement> form, String
     return adoptRef(new FormState(form, textFieldValuesToAdopt, sourceDocument, formSubmissionTrigger));
 }
 
-SecurityLabel FormState::securityLabel() {
+SecurityLabel FormState::securityLabel()
+{
     if (m_securityLabelGenerated)
         return m_securityLabel;
     

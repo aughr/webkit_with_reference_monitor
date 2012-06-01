@@ -47,7 +47,7 @@ public:
     // Returns how much could be added before length limit was met.
     unsigned parserAppendData(const UChar*, unsigned dataLength, unsigned lengthLimit);
 
-    void mergeSecurityLabel(SecurityLabel label);
+    void mergeSecurityLabel(SecurityLabel);
 
 protected:
     CharacterData(Document* document, const String& text, ConstructionType type)
@@ -79,7 +79,8 @@ private:
     String m_data;
 };
 
-inline void CharacterData::mergeSecurityLabel(SecurityLabel label) {
+inline void CharacterData::mergeSecurityLabel(SecurityLabel label)
+{
     Node::mergeSecurityLabel(label);
     m_data.mergeSecurityLabel(label);
 }

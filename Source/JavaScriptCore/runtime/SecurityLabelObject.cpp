@@ -25,24 +25,26 @@
 #include "SecurityLabelPrototype.h"
 
 namespace JSC {
-    
-    ASSERT_CLASS_FITS_IN_CELL(SecurityLabelObject);
-    
-    void SecurityLabelObject::destroy(JSCell* cell)
-    {
-        SecurityLabelObject* thisObject = jsCast<SecurityLabelObject*>(cell);
-        thisObject->SecurityLabelObject::~SecurityLabelObject();
-    }
 
-    const ClassInfo SecurityLabelObject::s_info = { "SecurityLabel", 0, 0, 0, CREATE_METHOD_TABLE(SecurityLabelObject) };
-    
-    SecurityLabel SecurityLabelObject::securityLabelCell(const JSCell* cell) {
-        const SecurityLabelObject* obj = jsCast<const SecurityLabelObject*>(cell);
-        return obj->securityLabel();
-    }
-    
-    void SecurityLabelObject::mergeSecurityLabelCell(JSCell*, JSGlobalData&, SecurityLabel) {
-        return;
-    }
-    
+ASSERT_CLASS_FITS_IN_CELL(SecurityLabelObject);
+
+void SecurityLabelObject::destroy(JSCell* cell)
+{
+    SecurityLabelObject* thisObject = jsCast<SecurityLabelObject*>(cell);
+    thisObject->SecurityLabelObject::~SecurityLabelObject();
+}
+
+const ClassInfo SecurityLabelObject::s_info = { "SecurityLabel", 0, 0, 0, CREATE_METHOD_TABLE(SecurityLabelObject) };
+
+SecurityLabel SecurityLabelObject::securityLabelCell(const JSCell* cell)
+{
+    const SecurityLabelObject* obj = jsCast<const SecurityLabelObject*>(cell);
+    return obj->securityLabel();
+}
+
+void SecurityLabelObject::mergeSecurityLabelCell(JSCell*, JSGlobalData&, SecurityLabel)
+{
+    return;
+}
+
 } // namespace JSC

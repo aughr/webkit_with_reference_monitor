@@ -533,15 +533,18 @@ inline const MethodTable* JSCell::methodTable() const
     return &classInfo()->methodTable;
 }
 
-inline SecurityLabel JSCell::securityLabel() const {
+inline SecurityLabel JSCell::securityLabel() const
+{
     return methodTable()->securityLabelCell(this);
 }
 
-inline void JSCell::mergeSecurityLabel(JSGlobalData& globalData, SecurityLabel label) {
+inline void JSCell::mergeSecurityLabel(JSGlobalData& globalData, SecurityLabel label)
+{
     methodTable()->mergeSecurityLabelCell(this, globalData, label);
 }
 
-inline JSCell* JSCell::duplicateNotObject(ExecState* exec) {
+inline JSCell* JSCell::duplicateNotObject(ExecState* exec)
+{
     ASSERT(!isObject());
     SecurityLabel current = securityLabel();
     if (isString()) {
@@ -549,9 +552,9 @@ inline JSCell* JSCell::duplicateNotObject(ExecState* exec) {
         JSCell* cell = JSString::create(exec->globalData(), string->value(exec).impl());
         cell->mergeSecurityLabel(exec, current);
         return cell;
-    } else if (isLabeledValue()) {
-        return JSLabeledValue::create(exec, current, static_cast<const JSLabeledValue*>(this)->value());
     }
+    if (isLabeledValue())
+        return JSLabeledValue::create(exec, current, static_cast<const JSLabeledValue*>(this)->value());
 
     ASSERT_NOT_REACHED();
     return this;
@@ -897,7 +900,8 @@ inline void JSValue::putByIndex(ExecState* exec, unsigned propertyName, JSValue 
     asCell()->methodTable()->putByIndex(asCell(), exec, propertyName, value, shouldThrow);
 }
 
-inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label) {
+inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label)
+{
     if (label.isNull())
         return *this;
 
@@ -914,19 +918,18 @@ inline JSValue JSValue::mergeSecurityLabel(ExecState* exec, SecurityLabel label)
     return cell;
 }
 
-inline SecurityLabel JSValue::securityLabel() const {
+inline SecurityLabel JSValue::securityLabel() const
+{
     if (isCell())
         return asCell()->securityLabel();
-    else
-        return SecurityLabel();
+    return SecurityLabel();
 }
 
-inline EncodedJSValue JSValue::encode(JSValue value, ExecState* exec, SecurityLabel label) {
-    if (label.isNull()) {
+inline EncodedJSValue JSValue::encode(JSValue value, ExecState* exec, SecurityLabel label)
+{
+    if (label.isNull())
         return encode(value);
-    } else {
-        return encode(value.mergeSecurityLabel(exec, label));
-    }
+    return encode(value.mergeSecurityLabel(exec, label));
 }
 
 // --- JSValue inlines ----------------------------

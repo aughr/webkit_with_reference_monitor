@@ -23,47 +23,47 @@
 #include "JSObject.h"
 
 namespace JSC {
-    
-    class SecurityTagObject : public JSNonFinalObject {
-    protected:
-        SecurityTagObject(JSGlobalData&, Structure*, WTF::SecurityTag=WTF::SecurityTag());
-        void finishCreation(JSGlobalData&);
-        
-    public:
-        typedef JSNonFinalObject Base;
-        
-        static SecurityTagObject* create(JSGlobalData& globalData, Structure* structure, WTF::SecurityTag tag=WTF::SecurityTag())
-        {
-            SecurityTagObject* tagObject = new (NotNull, allocateCell<SecurityTagObject>(globalData.heap)) SecurityTagObject(globalData, structure, tag);
-            tagObject->finishCreation(globalData);
-            return tagObject;
-        }
-        
-        static JS_EXPORTDATA const ClassInfo s_info;
-        
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
-        {
-            return Structure::freezeTransition(globalData, Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info));
-        }
-        
-        WTF::SecurityTag tag() const { return m_tag; };
-        SecurityLabel labelForTag() const { return m_labelForTag; };
-    private:
-        WTF::SecurityTag m_tag;
-        SecurityLabel m_labelForTag;
-    };
-    
-    JS_EXPORT_PRIVATE SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*);
-    JS_EXPORT_PRIVATE SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*, WTF::SecurityTag);
-    
-    SecurityTagObject* asSecurityTagObject(JSValue);
-    
-    inline SecurityTagObject* asSecurityTagObject(JSValue value)
+
+class SecurityTagObject : public JSNonFinalObject {
+protected:
+    SecurityTagObject(JSGlobalData&, Structure*, WTF::SecurityTag = WTF::SecurityTag());
+    void finishCreation(JSGlobalData&);
+
+public:
+    typedef JSNonFinalObject Base;
+
+    static SecurityTagObject* create(JSGlobalData& globalData, Structure* structure, WTF::SecurityTag tag = WTF::SecurityTag())
     {
-        ASSERT(asObject(value)->inherits(&SecurityTagObject::s_info));
-        return static_cast<SecurityTagObject*>(asObject(value));
+        SecurityTagObject* tagObject = new (NotNull, allocateCell<SecurityTagObject>(globalData.heap)) SecurityTagObject(globalData, structure, tag);
+        tagObject->finishCreation(globalData);
+        return tagObject;
     }
-    
+
+    static JS_EXPORTDATA const ClassInfo s_info;
+
+    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::freezeTransition(globalData, Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info));
+    }
+
+    WTF::SecurityTag tag() const { return m_tag; };
+    SecurityLabel labelForTag() const { return m_labelForTag; };
+private:
+    WTF::SecurityTag m_tag;
+    SecurityLabel m_labelForTag;
+};
+
+JS_EXPORT_PRIVATE SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*);
+JS_EXPORT_PRIVATE SecurityTagObject* constructSecurityTag(ExecState*, JSGlobalObject*, WTF::SecurityTag);
+
+SecurityTagObject* asSecurityTagObject(JSValue);
+
+inline SecurityTagObject* asSecurityTagObject(JSValue value)
+{
+    ASSERT(asObject(value)->inherits(&SecurityTagObject::s_info));
+    return static_cast<SecurityTagObject*>(asObject(value));
+}
+
 } // namespace JSC
 
 #endif // SecurityTagObject_h

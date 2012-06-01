@@ -404,8 +404,7 @@ namespace JSC {
         ASSERT(typeInfo().type() == StringType || typeInfo().type() == SecurityLabelType);
         if (typeInfo().type() == StringType)
             return exec->lexicalGlobalObject()->stringPrototype();
-        else
-            return exec->lexicalGlobalObject()->securityLabelPrototype();
+        return exec->lexicalGlobalObject()->securityLabelPrototype();
     }
 
     inline StructureChain* Structure::prototypeChain(ExecState* exec) const

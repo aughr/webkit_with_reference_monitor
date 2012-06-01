@@ -630,8 +630,8 @@ LLINT_SLOW_PATH_DECL(slow_path_post_inc)
     LLINT_BEGIN();
     JSValue v = LLINT_OP(2).jsValue();
     double result = v.toNumber(exec);
-    JSValue result_v = jsNumber(result + 1);
-    LLINT_OP(2) = result_v.mergeSecurityLabel(exec, v.securityLabel());
+    JSValue resultValue = jsNumber(result + 1);
+    LLINT_OP(2) = resultValue.mergeSecurityLabel(exec, v.securityLabel());
     LLINT_RETURN_WITH_LABEL(jsNumber(result), exec, v.securityLabel());
 }
 
@@ -640,8 +640,8 @@ LLINT_SLOW_PATH_DECL(slow_path_post_dec)
     LLINT_BEGIN();
     JSValue v = LLINT_OP(2).jsValue();
     double result = v.toNumber(exec);
-    JSValue result_v = jsNumber(result - 1);
-    LLINT_OP(2) = result_v.mergeSecurityLabel(exec, v.securityLabel());
+    JSValue resultValue = jsNumber(result - 1);
+    LLINT_OP(2) = resultValue.mergeSecurityLabel(exec, v.securityLabel());
     LLINT_RETURN_WITH_LABEL(jsNumber(result), exec, v.securityLabel());
 }
 

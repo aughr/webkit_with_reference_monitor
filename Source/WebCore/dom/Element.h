@@ -405,8 +405,8 @@ public:
     IntSize savedLayerScrollOffset() const;
     void setSavedLayerScrollOffset(const IntSize&);
 
-    void mergeSecurityLabel(SecurityLabel label);
-    void mergeSecurityLabelToAttributes(SecurityLabel& label);
+    void mergeSecurityLabel(SecurityLabel);
+    void mergeSecurityLabelToAttributes(SecurityLabel&);
 
 protected:
     Element(const QualifiedName& tagName, Document* document, ConstructionType type)
@@ -704,7 +704,8 @@ inline bool Element::hasClass() const
     return attributeData() && attributeData()->hasClass();
 }
 
-inline void Element::mergeSecurityLabel(SecurityLabel label) {
+inline void Element::mergeSecurityLabel(SecurityLabel label)
+{
     Node::mergeSecurityLabel(label);
     if (hasAttributes())
         mergeSecurityLabelToAttributes(label);

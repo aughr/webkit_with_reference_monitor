@@ -11,7 +11,6 @@
 		51F2FEAF15647F4900D27E63 /* SecurityLabelImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F2FEAE15647F4900D27E63 /* SecurityLabelImpl.cpp */; };
 		51F2FEB11564812000D27E63 /* SecurityTag.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F2FEB01564811F00D27E63 /* SecurityTag.h */; };
 		51F8284015350B08006118A6 /* SecurityLabel.h in Headers */ = {isa = PBXBuildFile; fileRef = 51F8283F153508D5006118A6 /* SecurityLabel.h */; };
-		51F8284215350B77006118A6 /* SecurityLabel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51F8284115350B74006118A6 /* SecurityLabel.cpp */; };
 		A876DBD8151816E500DADB95 /* Platform.h in Headers */ = {isa = PBXBuildFile; fileRef = A876DBD7151816E500DADB95 /* Platform.h */; };
 		A8A4737F151A825B004123FF /* Alignment.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A47254151A825A004123FF /* Alignment.h */; };
 		A8A47380151A825B004123FF /* AlwaysInline.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A47255151A825A004123FF /* AlwaysInline.h */; };
@@ -251,7 +250,6 @@
 		51F2FEAE15647F4900D27E63 /* SecurityLabelImpl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityLabelImpl.cpp; sourceTree = "<group>"; };
 		51F2FEB01564811F00D27E63 /* SecurityTag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecurityTag.h; sourceTree = "<group>"; };
 		51F8283F153508D5006118A6 /* SecurityLabel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SecurityLabel.h; sourceTree = "<group>"; };
-		51F8284115350B74006118A6 /* SecurityLabel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecurityLabel.cpp; sourceTree = "<group>"; };
 		5D247B6214689B8600E78B76 /* libWTF.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWTF.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		5D247B6E14689C4700E78B76 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		5D247B6F14689C4700E78B76 /* CompilerVersion.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = CompilerVersion.xcconfig; sourceTree = "<group>"; };
@@ -671,7 +669,6 @@
 				A8A47303151A825B004123FF /* RefPtr.h */,
 				A8A47304151A825B004123FF /* RefPtrHashMap.h */,
 				A8A47305151A825B004123FF /* RetainPtr.h */,
-				51F8284115350B74006118A6 /* SecurityLabel.cpp */,
 				51F8283F153508D5006118A6 /* SecurityLabel.h */,
 				51F2FEAE15647F4900D27E63 /* SecurityLabelImpl.cpp */,
 				51F2FEAB15647DA400D27E63 /* SecurityLabelImpl.h */,
@@ -1194,7 +1191,6 @@
 				A8A47477151A825B004123FF /* URLEscape.cpp in Sources */,
 				A8A4747B151A825B004123FF /* URLSegments.cpp in Sources */,
 				A8A47486151A825B004123FF /* WTFThreadData.cpp in Sources */,
-				51F8284215350B77006118A6 /* SecurityLabel.cpp in Sources */,
 				51F2FEAF15647F4900D27E63 /* SecurityLabelImpl.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -2599,12 +2599,11 @@ exit:
     return result;
 }
     
-UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool isDisplayString, TextIteratorBehavior defaultBehavior) {
+UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, bool isDisplayString, TextIteratorBehavior defaultBehavior)
+{
     SecurityLabel label;
     return plainTextToMallocAllocatedBuffer(r, bufferLength, label, isDisplayString, defaultBehavior);
 }
-    
-
 
 String plainText(const Range* r, TextIteratorBehavior defaultBehavior)
 {

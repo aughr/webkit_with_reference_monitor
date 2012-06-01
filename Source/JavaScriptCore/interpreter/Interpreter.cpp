@@ -1057,7 +1057,8 @@ static inline JSObject* checkedReturn(JSObject* returnValue)
     return returnValue;
 }
 
-static inline JSValue mergeLabels(CallFrame* callFrame, JSValue returnValue, JSValue v1, JSValue v2) {
+static inline JSValue mergeLabels(CallFrame* callFrame, JSValue returnValue, JSValue v1, JSValue v2)
+{
     SecurityLabel label;
     label.merge(v1.securityLabel());
     label.merge(v2.securityLabel());
@@ -2291,15 +2292,15 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = v;
         } else {
             double number = callFrame->r(srcDst).jsValue().toNumber(callFrame);
-            JSValue srcDst_result = jsNumber(number + 1);
-            JSValue dst_result = jsNumber(number);
+            JSValue srcDstResult = jsNumber(number + 1);
+            JSValue dstResult = jsNumber(number);
             SecurityLabel label;
             label.merge(v.securityLabel());
-            srcDst_result = srcDst_result.mergeSecurityLabel(callFrame, label);
-            dst_result = dst_result.mergeSecurityLabel(callFrame, label);
+            srcDstResult = srcDstResult.mergeSecurityLabel(callFrame, label);
+            dstResult = dstResult.mergeSecurityLabel(callFrame, label);
             CHECK_FOR_EXCEPTION();
-            callFrame->uncheckedR(srcDst) = srcDst_result;
-            callFrame->uncheckedR(dst) = dst_result;
+            callFrame->uncheckedR(srcDst) = srcDstResult;
+            callFrame->uncheckedR(dst) = dstResult;
         }
 
         vPC += OPCODE_LENGTH(op_post_inc);
@@ -2320,15 +2321,15 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
             callFrame->uncheckedR(dst) = v;
         } else {
             double number = callFrame->r(srcDst).jsValue().toNumber(callFrame);
-            JSValue srcDst_result = jsNumber(number - 1);
-            JSValue dst_result = jsNumber(number);
+            JSValue srcDstResult = jsNumber(number - 1);
+            JSValue dstResult = jsNumber(number);
             SecurityLabel label;
             label.merge(v.securityLabel());
-            srcDst_result = srcDst_result.mergeSecurityLabel(callFrame, label);
-            dst_result = dst_result.mergeSecurityLabel(callFrame, label);
+            srcDstResult = srcDstResult.mergeSecurityLabel(callFrame, label);
+            dstResult = dstResult.mergeSecurityLabel(callFrame, label);
             CHECK_FOR_EXCEPTION();
-            callFrame->uncheckedR(srcDst) = srcDst_result;
-            callFrame->uncheckedR(dst) = dst_result;
+            callFrame->uncheckedR(srcDst) = srcDstResult;
+            callFrame->uncheckedR(dst) = dstResult;
         }
 
         vPC += OPCODE_LENGTH(op_post_dec);

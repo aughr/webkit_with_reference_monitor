@@ -25,8 +25,8 @@
 #include "JSDOMGlobalObject.h"
 #include <heap/Weak.h>
 #include <runtime/WeakGCMap.h>
-#include <wtf/Forward.h>
 #include <utility>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 

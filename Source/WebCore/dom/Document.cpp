@@ -2556,9 +2556,9 @@ void Document::setURL(const KURL& url)
         String urlString = newURL.string();
         urlString.mergeSecurityLabel(m_urlLabel);
         m_url = KURL(ParsedURLString, urlString);
-    } else {
+    } else
         m_url = newURL;
-    }
+
     m_documentURI = m_url.string();
     updateBaseURL();
 }

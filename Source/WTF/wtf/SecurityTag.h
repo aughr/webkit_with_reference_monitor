@@ -28,7 +28,7 @@ namespace WTF {
 
 struct SecurityTag {
 public:
-    SecurityTag() : m_impl(monotonicallyIncreasingTime()) {}
+    SecurityTag() : m_impl(monotonicallyIncreasingTime()) { }
     operator double() const { return m_impl; }
 private:
     double m_impl;

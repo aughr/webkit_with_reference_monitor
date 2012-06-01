@@ -74,9 +74,9 @@ namespace JSC {
             Base::finishCreation(globalData);
             ASSERT(inherits(&s_info));
             if (!message.isNull()) {
-                JSValue message_value = jsString(&globalData, message);
-                message_value = message_value.mergeSecurityLabel(exec, label);
-                putDirect(globalData, globalData.propertyNames->message, message_value, DontEnum);
+                JSValue messageValue = jsString(&globalData, message);
+                messageValue = messageValue.mergeSecurityLabel(exec, label);
+                putDirect(globalData, globalData.propertyNames->message, messageValue, DontEnum);
             }
         }
 

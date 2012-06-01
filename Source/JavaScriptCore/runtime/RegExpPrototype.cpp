@@ -163,10 +163,9 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncToString(ExecState* exec)
         postfix[index++] = 'i';
     if (thisObject->get(exec, exec->propertyNames().multiline).toBoolean(exec))
         postfix[index] = 'm';
-    JSString *source_string = thisObject->get(exec, exec->propertyNames().source).toString(exec);
-    UString source = source_string->value(exec);
+    UString source = thisObject->get(exec, exec->propertyNames().source).toString(exec)->value(exec);
     SecurityLabel label = thisObject->securityLabel();
-    label.merge(source_string->securityLabel());
+    label.merge(source.securityLabel());
     // If source is empty, use "/(?:)/" to avoid colliding with comment syntax
     return JSValue::encode(jsMakeNontrivialString(exec, "/", source, postfix), exec, label);
 }

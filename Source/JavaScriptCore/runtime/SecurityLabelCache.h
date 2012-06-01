@@ -26,14 +26,13 @@
 #ifndef SecurityLabelCache_h
 #define SecurityLabelCache_h
 
-#include <wtf/text/StringImpl.h>
 #include "SecurityLabelObject.h"
 #include "WeakGCMap.h"
+#include <wtf/text/StringImpl.h>
 
 namespace JSC {
 
-class SecurityLabelCache : public WeakGCMap<StringImpl*, SecurityLabelObject>
-{
+class SecurityLabelCache : public WeakGCMap<StringImpl*, SecurityLabelObject> {
 };
 
 inline SecurityLabelObject* SecurityLabelObject::create(JSGlobalData& globalData, SecurityLabel label)
@@ -45,12 +44,12 @@ inline SecurityLabelObject* SecurityLabelObject::create(JSGlobalData& globalData
     return labelObj;
 }
 
-inline SecurityLabelObject* lookupOrConstructSecurityLabel(JSGlobalData& globalData, SecurityLabel label) {
+inline SecurityLabelObject* lookupOrConstructSecurityLabel(JSGlobalData& globalData, SecurityLabel label)
+{
     SecurityLabelObject* object = globalData.securityLabelCache->get(label.descriptor());
     if (object)
         return object;
-    else
-        return SecurityLabelObject::create(globalData, label);
+    return SecurityLabelObject::create(globalData, label);
 }
 
 } // namespace JSC

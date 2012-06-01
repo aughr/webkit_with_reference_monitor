@@ -85,7 +85,7 @@ namespace JSC {
         bool isAPIValueWrapper() const;
 
         // SecurityLabel related.
-        JSCell* duplicateNotObject(ExecState* exec);
+        JSCell* duplicateNotObject(ExecState*);
         void mergeSecurityLabel(JSGlobalData&, SecurityLabel);
         void mergeSecurityLabel(ExecState* exec, SecurityLabel label) { mergeSecurityLabel(exec->globalData(), label); }
         SecurityLabel securityLabel() const;

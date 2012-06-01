@@ -28,8 +28,8 @@
 
 #include "FindOptions.h"
 #include "Range.h"
-#include <wtf/Vector.h>
 #include <wtf/SecurityLabel.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -62,7 +62,7 @@ inline bool isCollapsibleWhitespace(UChar c)
 }
 
 String plainText(const Range*, TextIteratorBehavior defaultBehavior = TextIteratorDefaultBehavior);
-UChar* plainTextToMallocAllocatedBuffer(const Range* r, unsigned& bufferLength, SecurityLabel& label, bool isDisplayString, TextIteratorBehavior defaultBehavior);
+UChar* plainTextToMallocAllocatedBuffer(const Range*, unsigned& bufferLength, SecurityLabel&, bool isDisplayString, TextIteratorBehavior);
 UChar* plainTextToMallocAllocatedBuffer(const Range*, unsigned& bufferLength, bool isDisplayString, TextIteratorBehavior = TextIteratorDefaultBehavior);
 PassRefPtr<Range> findPlainText(const Range*, const String&, FindOptions);
 

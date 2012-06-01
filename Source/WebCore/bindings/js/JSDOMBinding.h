@@ -407,19 +407,23 @@ enum ParameterDefaultPolicy {
         return result;
     }
 
-    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState* exec, const String& string) {
+    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState* exec, const String& string)
+    {
         return value.mergeSecurityLabel(exec, string.securityLabel());
     }
 
-    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState* exec, const KURL& url) {
+    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState* exec, const KURL& url)
+    {
         return jsLabel(value, exec, url.string());
     }
 
-    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState*, const JSC::UString&) {
+    inline JSC::JSValue jsLabel(JSC::JSValue value, JSC::ExecState*, const JSC::UString&)
+    {
         return value;
     }
 
-    inline String valueToString(JSC::ExecState* exec, JSC::JSValue value) {
+    inline String valueToString(JSC::ExecState* exec, JSC::JSValue value)
+    {
         if (value.isEmpty())
             return ustringToString(JSC::UString());
 

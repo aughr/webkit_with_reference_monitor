@@ -23,8 +23,8 @@
 #ifndef UString_h
 #define UString_h
 
-#include <wtf/text/StringImpl.h>
 #include <wtf/SecurityLabel.h>
+#include <wtf/text/StringImpl.h>
 
 namespace JSC {
 

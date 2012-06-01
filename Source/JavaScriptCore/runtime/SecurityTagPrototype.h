@@ -23,32 +23,32 @@
 #include "SecurityTagObject.h"
 
 namespace JSC {
+
+class SecurityTagPrototype : public SecurityTagObject {
+public:
+    typedef SecurityTagObject Base;
     
-    class SecurityTagPrototype : public SecurityTagObject {
-    public:
-        typedef SecurityTagObject Base;
-        
-        static SecurityTagPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
-        {
-            SecurityTagPrototype* prototype = new (NotNull, allocateCell<SecurityTagPrototype>(*exec->heap())) SecurityTagPrototype(exec, structure);
-            prototype->finishCreation(exec, globalObject);
-            return prototype;
-        }
-        
-        static const ClassInfo s_info;
-        
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
-        {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
-        }
-        
-    protected:
-        void finishCreation(ExecState*, JSGlobalObject*);
-        
-    private:
-        SecurityTagPrototype(ExecState*, Structure*);
-    };
+    static SecurityTagPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
+    {
+        SecurityTagPrototype* prototype = new (NotNull, allocateCell<SecurityTagPrototype>(*exec->heap())) SecurityTagPrototype(exec, structure);
+        prototype->finishCreation(exec, globalObject);
+        return prototype;
+    }
     
+    static const ClassInfo s_info;
+    
+    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+    }
+    
+protected:
+    void finishCreation(ExecState*, JSGlobalObject*);
+    
+private:
+    SecurityTagPrototype(ExecState*, Structure*);
+};
+
 } // namespace JSC
 
 #endif // SecurityTagPrototype_h

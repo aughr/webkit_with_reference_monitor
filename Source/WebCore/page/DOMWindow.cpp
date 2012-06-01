@@ -1535,9 +1535,9 @@ bool DOMWindow::addEventListener(const AtomicString& eventType, PassRefPtr<Event
         if (securityEventTarget()->addEventListener(eventType, listener, false)) {
             securityEventTarget()->addListenerTypeIfNeeded(eventType);
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     if (!EventTarget::addEventListener(eventType, listener, useCapture))
@@ -1901,9 +1901,8 @@ PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicStrin
     if (result) {
         result->domWindow()->m_securityEventTarget = securityEventTarget();
         return result->domWindow();
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 void DOMWindow::showModalDialog(const String& urlString, const String& dialogFeaturesString,

@@ -24,42 +24,42 @@
 #include "BigInteger.h"
 #include "Error.h"
 #include "JSFunction.h"
-#include "JSObject.h"
 #include "JSGlobalObject.h"
+#include "JSObject.h"
 #include <wtf/Assertions.h>
 
 namespace JSC {
-    
-    static EncodedJSValue JSC_HOST_CALL securityLabelProtoFuncToString(ExecState*);
-    
+
+static EncodedJSValue JSC_HOST_CALL securityLabelProtoFuncToString(ExecState*);
+
 }
 
 namespace JSC {
-    
-    const ClassInfo SecurityLabelPrototype::s_info = { "SecurityLabel", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityLabelPrototype) };
-    
-    ASSERT_CLASS_FITS_IN_CELL(SecurityLabelPrototype);
-    
-    SecurityLabelPrototype::SecurityLabelPrototype(ExecState* exec, Structure* structure)
-    : JSNonFinalObject(exec->globalData(), structure)
-    {
-    }
-    
-    void SecurityLabelPrototype::finishCreation(ExecState* exec, JSGlobalObject* globalObject)
-    {
-        Base::finishCreation(exec->globalData());
 
-        ASSERT(inherits(&s_info));
+const ClassInfo SecurityLabelPrototype::s_info = { "SecurityLabel", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityLabelPrototype) };
 
-        JSFunction* toStringFunction = JSFunction::create(exec, globalObject, 0, exec->propertyNames().toString, securityLabelProtoFuncToString);
-        putDirectWithoutTransition(exec->globalData(), exec->propertyNames().toString, toStringFunction, DontEnum | DontDelete | ReadOnly);
-    }
-    
-    // ------------------------------ Functions ---------------------------
-    
-    EncodedJSValue JSC_HOST_CALL securityLabelProtoFuncToString(ExecState* exec)
-    {
-        return JSValue::encode(jsString(exec, "SecurityLabel"));
-    }
+ASSERT_CLASS_FITS_IN_CELL(SecurityLabelPrototype);
+
+SecurityLabelPrototype::SecurityLabelPrototype(ExecState* exec, Structure* structure)
+: JSNonFinalObject(exec->globalData(), structure)
+{
+}
+
+void SecurityLabelPrototype::finishCreation(ExecState* exec, JSGlobalObject* globalObject)
+{
+    Base::finishCreation(exec->globalData());
+
+    ASSERT(inherits(&s_info));
+
+    JSFunction* toStringFunction = JSFunction::create(exec, globalObject, 0, exec->propertyNames().toString, securityLabelProtoFuncToString);
+    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().toString, toStringFunction, DontEnum | DontDelete | ReadOnly);
+}
+
+// ------------------------------ Functions ---------------------------
+
+EncodedJSValue JSC_HOST_CALL securityLabelProtoFuncToString(ExecState* exec)
+{
+    return JSValue::encode(jsString(exec, "SecurityLabel"));
+}
 
 } // namespace JSC

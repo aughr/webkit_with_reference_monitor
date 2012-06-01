@@ -209,12 +209,14 @@ void JSNode::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.addOpaqueRoot(root(node));
 }
     
-SecurityLabel JSNode::securityLabelCell(const JSC::JSCell* cell) {
+SecurityLabel JSNode::securityLabelCell(const JSC::JSCell* cell)
+{
     const JSNode* thisObject = jsCast<const JSNode*>(cell);
     return thisObject->impl()->securityLabel();
 }
     
-void JSNode::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::JSGlobalData&, SecurityLabel label) {
+void JSNode::mergeSecurityLabelCell(JSC::JSCell* cell, JSC::JSGlobalData&, SecurityLabel label)
+{
     JSNode* thisObject = jsCast<JSNode*>(cell);
     thisObject->impl()->mergeSecurityLabel(label);
 }

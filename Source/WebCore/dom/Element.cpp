@@ -2088,11 +2088,13 @@ void Element::setSavedLayerScrollOffset(const IntSize& size)
     ensureRareData()->m_savedLayerScrollOffset = size;
 }
 
-bool Element::elementShouldMergeLabel() {
+bool Element::elementShouldMergeLabel()
+{
     return true;
 }
 
-void Element::mergeSecurityLabelToAttributes(SecurityLabel& label) {
+void Element::mergeSecurityLabelToAttributes(SecurityLabel& label)
+{
     ASSERT(hasAttributes());
     for (unsigned i = 0; i < attributeCount(); ++i) {
         Attribute* it = attributeItem(i);

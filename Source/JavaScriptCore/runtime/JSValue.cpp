@@ -97,8 +97,7 @@ JSObject* JSValue::synthesizePrototype(ExecState* exec) const
         ASSERT(isString() || isSecurityLabel());
         if (isString())
             return exec->lexicalGlobalObject()->stringPrototype();
-        else
-            return exec->lexicalGlobalObject()->securityLabelPrototype();
+        return exec->lexicalGlobalObject()->securityLabelPrototype();
     }
 
     if (isNumber())

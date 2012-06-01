@@ -55,7 +55,7 @@ namespace WebCore {
         JSC::JSObject* wrapper() const { return m_wrapper.get(); }
         void setWrapper(JSC::JSGlobalData& globalData, JSC::JSObject* wrapper) const { m_wrapper = JSC::PassWeak<JSC::JSObject>(globalData, wrapper, 0); }
 
-        virtual void protectJSWrapper() { if (m_wrapper) m_protectedWrapper.set(*m_isolatedWorld->globalData(), m_wrapper.get(), m_wrapper.get()); }
+        virtual void protectJSWrapper();
 
     private:
         virtual JSC::JSObject* initializeJSFunction(ScriptExecutionContext*) const;

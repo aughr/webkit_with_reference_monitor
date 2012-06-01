@@ -1070,7 +1070,8 @@ template<typename T> static T throwExceptionFromOpCall(JITStackFrame& jitStackFr
     return throwExceptionFromOpCall<T>(jitStackFrame, newCallFrame, returnAddressSlot);
 }
 
-static ALWAYS_INLINE SecurityLabel labelFor(JSValue v1, JSValue v2) {
+static ALWAYS_INLINE SecurityLabel labelFor(JSValue v1, JSValue v2)
+{
     SecurityLabel label = v1.securityLabel();
     label.merge(v2.securityLabel());
     return label;
@@ -2897,22 +2898,23 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_post_inc)
 }
 
 #if !defined(NDEBUG)
-static inline bool opEqInline3264(JSValue src1, JSValue src2, JITStackFrame& stackFrame, StackHack& stackHack) {
+static inline bool opEqInline3264(JSValue src1, JSValue src2, JITStackFrame& stackFrame, StackHack& stackHack)
 #else
-static inline bool opEqInline3264(JSValue src1, JSValue src2, JITStackFrame& stackFrame) {
+static inline bool opEqInline3264(JSValue src1, JSValue src2, JITStackFrame& stackFrame)
 #endif
+{
 start:
     src1 = src1.unwrappedValue();
     src2 = src2.unwrappedValue();
     if (src2.isUndefined()) {
-        return src1.isNull() || 
-        (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
+        return src1.isNull()
+        || (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
         || src1.isUndefined();
     }
     
     if (src2.isNull()) {
-        return src1.isUndefined() || 
-        (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
+        return src1.isUndefined()
+        || (src1.isCell() && src1.asCell()->structure()->typeInfo().masqueradesAsUndefined())
         || src1.isNull();
     }
     
@@ -3002,7 +3004,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_eq)
 #else // USE(JSVALUE32_64)
     bool result = JSValue::equalSlowCaseInline(callFrame, src1, src2);
     CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(jsBoolean(result), callFrame, labelFor(src1, src2));;
+    return JSValue::encode(jsBoolean(result), callFrame, labelFor(src1, src2));
 #endif // USE(JSVALUE32_64)
 }
     

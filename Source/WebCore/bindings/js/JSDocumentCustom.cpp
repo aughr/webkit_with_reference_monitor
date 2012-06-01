@@ -126,7 +126,7 @@ JSValue JSDocument::securityTag(ExecState* exec) const
     if (JSValue cachedValue = m_securityTag.get())
         return cachedValue;
 
-    JSValue result = constructSecurityTag(exec, globalObject(), impl()->securityTag());;
+    JSValue result = constructSecurityTag(exec, globalObject(), impl()->securityTag());
 
     // Save the result so we don't have to deserialize the value again.
     const_cast<JSDocument*>(this)->m_securityTag.set(exec->globalData(), this, result);
@@ -138,7 +138,7 @@ JSValue JSDocument::cookieTag(ExecState* exec) const
     if (JSValue cachedValue = m_cookieTag.get())
         return cachedValue;
 
-    JSValue result = constructSecurityTag(exec, globalObject(), impl()->cookieTag());;
+    JSValue result = constructSecurityTag(exec, globalObject(), impl()->cookieTag());
 
     // Save the result so we don't have to deserialize the value again.
     const_cast<JSDocument*>(this)->m_cookieTag.set(exec->globalData(), this, result);
@@ -150,7 +150,7 @@ JSValue JSDocument::urlTag(ExecState* exec) const
     if (JSValue cachedValue = m_urlTag.get())
         return cachedValue;
     
-    JSValue result = constructSecurityTag(exec, globalObject(), impl()->urlTag());;
+    JSValue result = constructSecurityTag(exec, globalObject(), impl()->urlTag());
     
     // Save the result so we don't have to deserialize the value again.
     const_cast<JSDocument*>(this)->m_urlTag.set(exec->globalData(), this, result);

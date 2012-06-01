@@ -22,54 +22,51 @@
 
 #include "JSCell.h"
 #include "Structure.h"
-#include "wtf/SecurityLabel.h"
+#include <wtf/SecurityLabel.h>
 
 namespace JSC {
 
-    class Structure;
-
-    class SecurityLabelObject : public JSCell {
-    protected:
-        SecurityLabelObject(JSGlobalData& globalData)
-        : JSCell(globalData, globalData.securityLabelStructure.get())
-        {
-        }
-
-        void finishCreation(JSGlobalData& globalData)
-        {
-            Base::finishCreation(globalData);
-            ASSERT(inherits(&s_info));
-        }
-        
-    public:
-        typedef JSCell Base;
-        
-        static void destroy(JSCell*);
-
-        static SecurityLabelObject* create(JSGlobalData&, SecurityLabel);
-        
-        static JS_EXPORTDATA const ClassInfo s_info;
-        
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
-        {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(SecurityLabelType, OverridesGetOwnPropertySlot), &s_info);
-        }
-        
-        SecurityLabel securityLabel() const { return m_label; }
-        
-        JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
-        JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, JSGlobalData&, SecurityLabel);
-    private:
-        WTF::SecurityLabel m_label;
-    };
-    
-    inline SecurityLabel JSCell::internalSecurityLabel() const {
-        if (m_label)
-            return m_label->securityLabel();
-        else {
-            return SecurityLabel();
-        }
+class SecurityLabelObject : public JSCell {
+protected:
+    SecurityLabelObject(JSGlobalData& globalData)
+    : JSCell(globalData, globalData.securityLabelStructure.get())
+    {
     }
+
+    void finishCreation(JSGlobalData& globalData)
+    {
+        Base::finishCreation(globalData);
+        ASSERT(inherits(&s_info));
+    }
+    
+public:
+    typedef JSCell Base;
+    
+    static void destroy(JSCell*);
+
+    static SecurityLabelObject* create(JSGlobalData&, SecurityLabel);
+    
+    static JS_EXPORTDATA const ClassInfo s_info;
+    
+    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::create(globalData, globalObject, prototype, TypeInfo(SecurityLabelType, OverridesGetOwnPropertySlot), &s_info);
+    }
+    
+    SecurityLabel securityLabel() const { return m_label; }
+    
+    JS_EXPORT_PRIVATE static SecurityLabel securityLabelCell(const JSCell*);
+    JS_EXPORT_PRIVATE static void mergeSecurityLabelCell(JSCell*, JSGlobalData&, SecurityLabel);
+private:
+    WTF::SecurityLabel m_label;
+};
+
+inline SecurityLabel JSCell::internalSecurityLabel() const
+{
+    if (m_label)
+        return m_label->securityLabel();
+    return SecurityLabel();
+}
 
 } // namespace JSC
 

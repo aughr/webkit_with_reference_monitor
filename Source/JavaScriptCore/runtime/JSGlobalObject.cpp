@@ -68,11 +68,11 @@
 #include "RegExpObject.h"
 #include "RegExpPrototype.h"
 #include "ScopeChainMark.h"
-#include "StringConstructor.h"
-#include "StringPrototype.h"
 #include "SecurityLabelPrototype.h"
 #include "SecurityTagConstructor.h"
 #include "SecurityTagPrototype.h"
+#include "StringConstructor.h"
+#include "StringPrototype.h"
 #include "Debugger.h"
 
 #include "JSGlobalObject.lut.h"

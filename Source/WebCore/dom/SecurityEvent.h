@@ -59,7 +59,7 @@ public:
     }
     virtual ~SecurityEvent();
 
-    void initSecurityEvent(const AtomicString& type, SecurityLabel data, const String& destination, DOMWindow* source);
+    void initSecurityEvent(const AtomicString& type, SecurityLabel, const String& destination, DOMWindow* source);
 
     const String& destination() const { return m_destination; }
     DOMWindow* source() const { return m_source.get(); }
@@ -71,7 +71,7 @@ public:
 private:
     SecurityEvent();
     SecurityEvent(const AtomicString&, const SecurityEventInit&);
-    SecurityEvent(const AtomicString& type, SecurityLabel label, const String& destination, PassRefPtr<DOMWindow> source);
+    SecurityEvent(const AtomicString&, SecurityLabel, const String& destination, PassRefPtr<DOMWindow> source);
 
     SecurityLabel m_label;
     String m_destination;

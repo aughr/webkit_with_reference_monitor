@@ -1121,9 +1121,8 @@ SecurityLabel Range::securityLabel(ExceptionCode& ec) const
     SecurityLabel label;
 
     Node* pastLast = pastLastNode();
-    for (Node* n = firstNode(); n != pastLast; n = n->traverseNextNode()) {
+    for (Node* n = firstNode(); n != pastLast; n = n->traverseNextNode())
         label.merge(n->securityLabel());
-    }
 
     return label;
 }

@@ -38,17 +38,18 @@
 namespace JSC {
 
 template <typename CharType>
-inline JSValue LiteralParser<CharType>::possiblyLabel(JSCell* cell) {
+inline JSValue LiteralParser<CharType>::possiblyLabel(JSCell* cell)
+{
     cell->mergeSecurityLabel(m_exec, m_label);
     return cell;
 }
 
 template <typename CharType>
-inline JSValue LiteralParser<CharType>::possiblyLabel(JSValue value) {
+inline JSValue LiteralParser<CharType>::possiblyLabel(JSValue value)
+{
     if (!m_label.isNull())
         return JSLabeledValue::create(m_exec, m_label, value);
-    else
-        return value;
+    return value;
 }
 
 template <typename CharType>

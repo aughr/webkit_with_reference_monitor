@@ -923,9 +923,8 @@ static EncodedJSValue setNewValueFromTimeArgs(ExecState* exec, int numArgsToUse,
     
     SecurityLabel label;
     label.merge(thisValue.securityLabel());
-    for (int i = 0; i < numArgsToUse; i++) {
+    for (int i = 0; i < numArgsToUse; i++)
         label.merge(exec->argument(i).securityLabel());
-    }
     JSValue result = jsNumber(gregorianDateTimeToMS(exec, gregorianDateTime, ms, inputIsUTC));
     thisDateObj->setInternalValue(exec->globalData(), result);
     thisDateObj->mergeSecurityLabel(exec, label);
@@ -969,9 +968,8 @@ static EncodedJSValue setNewValueFromDateArgs(ExecState* exec, int numArgsToUse,
       
     SecurityLabel label;
     label.merge(thisValue.securityLabel());
-    for (int i = 0; i < numArgsToUse; i++) {
+    for (int i = 0; i < numArgsToUse; i++)
         label.merge(exec->argument(i).securityLabel());
-    }
     JSValue result = jsNumber(gregorianDateTimeToMS(exec, gregorianDateTime, ms, inputIsUTC));
     thisDateObj->setInternalValue(exec->globalData(), result);
     thisDateObj->mergeSecurityLabel(exec, label);

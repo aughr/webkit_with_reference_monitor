@@ -340,7 +340,8 @@ void StyledElement::addPropertyToAttributeStyle(StylePropertySet* style, CSSProp
     style->setProperty(propertyID, value, false, document()->elementSheet()->internal());
 }
 
-bool StyledElement::elementShouldMergeLabel() {
+bool StyledElement::elementShouldMergeLabel()
+{
     return false;
 }
 

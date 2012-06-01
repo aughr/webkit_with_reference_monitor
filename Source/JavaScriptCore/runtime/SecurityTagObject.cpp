@@ -24,36 +24,35 @@
 #include "SecurityTagPrototype.h"
 
 namespace JSC {
-    
-    ASSERT_CLASS_FITS_IN_CELL(SecurityTagObject);
-    //ASSERT_HAS_TRIVIAL_DESTRUCTOR(SecurityTagObject);
-    
-    const ClassInfo SecurityTagObject::s_info = { "SecurityTag", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagObject) };
-    
-    SecurityTagObject::SecurityTagObject(JSGlobalData& globalData, Structure* structure, WTF::SecurityTag tag)
-    : JSNonFinalObject(globalData, structure)
-    , m_tag(tag)
-    {
-        m_labelForTag.add(tag);
-        ASSERT(!m_labelForTag.isNull());
-    }
-    
-    void SecurityTagObject::finishCreation(JSGlobalData& globalData)
-    {
-        Base::finishCreation(globalData);
-        ASSERT(inherits(&s_info));
-    }
-    
-    SecurityTagObject* constructSecurityTag(ExecState* exec, JSGlobalObject* globalObject)
-    {
-        SecurityTagObject* object = SecurityTagObject::create(exec->globalData(), globalObject->securityTagStructure());
-        return object;
-    }
 
-    SecurityTagObject* constructSecurityTag(ExecState* exec, JSGlobalObject* globalObject, WTF::SecurityTag tag)
-    {
-        SecurityTagObject* object = SecurityTagObject::create(exec->globalData(), globalObject->securityTagStructure(), tag);
-        return object;
-    }
-    
+ASSERT_CLASS_FITS_IN_CELL(SecurityTagObject);
+
+const ClassInfo SecurityTagObject::s_info = { "SecurityTag", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagObject) };
+
+SecurityTagObject::SecurityTagObject(JSGlobalData& globalData, Structure* structure, WTF::SecurityTag tag)
+: JSNonFinalObject(globalData, structure)
+, m_tag(tag)
+{
+    m_labelForTag.add(tag);
+    ASSERT(!m_labelForTag.isNull());
+}
+
+void SecurityTagObject::finishCreation(JSGlobalData& globalData)
+{
+    Base::finishCreation(globalData);
+    ASSERT(inherits(&s_info));
+}
+
+SecurityTagObject* constructSecurityTag(ExecState* exec, JSGlobalObject* globalObject)
+{
+    SecurityTagObject* object = SecurityTagObject::create(exec->globalData(), globalObject->securityTagStructure());
+    return object;
+}
+
+SecurityTagObject* constructSecurityTag(ExecState* exec, JSGlobalObject* globalObject, WTF::SecurityTag tag)
+{
+    SecurityTagObject* object = SecurityTagObject::create(exec->globalData(), globalObject->securityTagStructure(), tag);
+    return object;
+}
+
 } // namespace JSC

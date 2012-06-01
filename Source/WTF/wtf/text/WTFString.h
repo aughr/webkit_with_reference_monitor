@@ -25,9 +25,9 @@
 // This file would be called String.h, but that conflicts with <string.h>
 // on systems without case-sensitive file systems.
 
+#include <wtf/SecurityLabel.h>
 #include <wtf/text/ASCIIFastPath.h>
 #include <wtf/text/StringImpl.h>
-#include <wtf/SecurityLabel.h>
 
 #ifdef __OBJC__
 #include <objc/objc.h>
@@ -128,9 +128,9 @@ public:
     WTF_EXPORT_PRIVATE String(const char* characters);
 
     // Construct a string referencing an existing StringImpl.
-    String(StringImpl* impl, SecurityLabel label=SecurityLabel()) : m_impl(impl), m_label(label) { }
-    String(PassRefPtr<StringImpl> impl, SecurityLabel label=SecurityLabel()) : m_impl(impl), m_label(label) { }
-    String(RefPtr<StringImpl> impl, SecurityLabel label=SecurityLabel()) : m_impl(impl), m_label(label) { }
+    String(StringImpl* impl, SecurityLabel label = SecurityLabel()) : m_impl(impl), m_label(label) { }
+    String(PassRefPtr<StringImpl> impl, SecurityLabel label = SecurityLabel()) : m_impl(impl), m_label(label) { }
+    String(RefPtr<StringImpl> impl, SecurityLabel label = SecurityLabel()) : m_impl(impl), m_label(label) { }
 
     // Inline the destructor.
     ALWAYS_INLINE ~String() { }

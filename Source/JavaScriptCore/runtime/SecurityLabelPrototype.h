@@ -23,31 +23,31 @@
 #include "JSObject.h"
 
 namespace JSC {
-    
-    class SecurityLabelPrototype : public JSNonFinalObject {
-    public:
-        typedef JSNonFinalObject Base;
-        
-        static SecurityLabelPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
-        {
-            SecurityLabelPrototype* prototype = new (NotNull, allocateCell<SecurityLabelPrototype>(*exec->heap())) SecurityLabelPrototype(exec, structure);
-            prototype->finishCreation(exec, globalObject);
-            return prototype;
-        }
-        
-        static const ClassInfo s_info;
-        
-        static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
-        {
-            return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
-        }
-        
-    protected:
-        void finishCreation(ExecState*, JSGlobalObject*);
-        
-    private:
-        SecurityLabelPrototype(ExecState*, Structure*);
-    };
+
+class SecurityLabelPrototype : public JSNonFinalObject {
+public:
+    typedef JSNonFinalObject Base;
+
+    static SecurityLabelPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
+    {
+        SecurityLabelPrototype* prototype = new (NotNull, allocateCell<SecurityLabelPrototype>(*exec->heap())) SecurityLabelPrototype(exec, structure);
+        prototype->finishCreation(exec, globalObject);
+        return prototype;
+    }
+
+    static const ClassInfo s_info;
+
+    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+    }
+
+protected:
+    void finishCreation(ExecState*, JSGlobalObject*);
+
+private:
+    SecurityLabelPrototype(ExecState*, Structure*);
+};
     
 } // namespace JSC
 

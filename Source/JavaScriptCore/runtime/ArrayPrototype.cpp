@@ -390,8 +390,8 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
     UString separator;
     if (!exec->argument(0).isUndefined()) {
         JSValue argument = exec->argument(0);
-        label.merge(argument.securityLabel()); //TODO: if obj itself isn't tainted, but component is
         separator = argument.toUString(exec);
+        label.merge(separator.securityLabel());
     }
     if (separator.isNull())
         separator = UString(",");

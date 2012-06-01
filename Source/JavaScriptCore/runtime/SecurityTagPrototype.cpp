@@ -29,74 +29,73 @@
 #include <wtf/Assertions.h>
 
 namespace JSC {
-    
-    static EncodedJSValue JSC_HOST_CALL securityTagProtoFuncToString(ExecState*);
-    static EncodedJSValue JSC_HOST_CALL securityTagProtoFuncAddTo(ExecState*);
-    static EncodedJSValue JSC_HOST_CALL securityTagProtoFuncIsOn(ExecState*);
-    
+
+static EncodedJSValue JSC_HOST_CALL securityTagProtoFuncToString(ExecState*);
+static EncodedJSValue JSC_HOST_CALL securityTagProtoFuncAddTo(ExecState*);
+static EncodedJSValue JSC_HOST_CALL securityTagProtoFuncIsOn(ExecState*);
+
 }
 
 namespace JSC {
-    
-    const ClassInfo SecurityTagPrototype::s_info = { "SecurityTag", &SecurityTagObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagPrototype) };
-    
-    ASSERT_CLASS_FITS_IN_CELL(SecurityTagPrototype);
-    
-    SecurityTagPrototype::SecurityTagPrototype(ExecState* exec, Structure* structure)
-    : SecurityTagObject(exec->globalData(), structure)
-    {
-    }
-    
-    void SecurityTagPrototype::finishCreation(ExecState* exec, JSGlobalObject* globalObject)
-    {
-        Base::finishCreation(exec->globalData());
-        
-        ASSERT(inherits(&s_info));
-        
-        JSFunction* toStringFunction = JSFunction::create(exec, globalObject, 0, exec->propertyNames().toString, securityTagProtoFuncToString);
-        putDirectWithoutTransition(exec->globalData(), exec->propertyNames().toString, toStringFunction, DontEnum | DontDelete | ReadOnly);
-        
-        JSFunction* addToFunction = JSFunction::create(exec, globalObject, 1, Identifier(exec, "addTo"), securityTagProtoFuncAddTo);
-        putDirectWithoutTransition(exec->globalData(), Identifier(exec, "addTo"), addToFunction, DontEnum | DontDelete | ReadOnly);
-        
-        JSFunction* isOnFunction = JSFunction::create(exec, globalObject, 1, Identifier(exec, "inOn"), securityTagProtoFuncIsOn);
-        putDirectWithoutTransition(exec->globalData(), Identifier(exec, "isOn"), isOnFunction, DontEnum | DontDelete | ReadOnly);
-    }
-    
-    // ------------------------------ Functions ---------------------------
-    
-    EncodedJSValue JSC_HOST_CALL securityTagProtoFuncToString(ExecState* exec)
-    {
-        return JSValue::encode(jsString(exec, "SecurityTag"));
-    }
-    
-    EncodedJSValue JSC_HOST_CALL securityTagProtoFuncAddTo(ExecState* exec)
-    {
-        JSValue thisValue = exec->hostThisValue();
-        if (!thisValue.inherits(&SecurityTagObject::s_info))
-            return throwVMTypeError(exec);
 
-        SecurityTagObject* thisObject = asSecurityTagObject(thisValue);
-        JSValue argument = exec->argument(0);
-        ASSERT(!thisObject->labelForTag().isNull());
-        ASSERT(thisObject->labelForTag().hasTag(thisObject->tag()));
-        return JSValue::encode(argument, exec, thisObject->labelForTag());
-    }
+const ClassInfo SecurityTagPrototype::s_info = { "SecurityTag", &SecurityTagObject::s_info, 0, 0, CREATE_METHOD_TABLE(SecurityTagPrototype) };
 
-    EncodedJSValue JSC_HOST_CALL securityTagProtoFuncIsOn(ExecState* exec)
-    {
-        JSValue thisValue = exec->hostThisValue();
-        if (!thisValue.inherits(&SecurityTagObject::s_info))
-            return throwVMTypeError(exec);
+ASSERT_CLASS_FITS_IN_CELL(SecurityTagPrototype);
 
-        SecurityTagObject* thisObject = asSecurityTagObject(thisValue);
-        JSValue argument = exec->argument(0);
-        if (argument.isCell()) {
-            bool result = argument.asCell()->securityLabel().hasTag(thisObject->tag());
-            return JSValue::encode(jsBoolean(result));
-        } else {
-            return JSValue::encode(jsBoolean(false));
-        }
+SecurityTagPrototype::SecurityTagPrototype(ExecState* exec, Structure* structure)
+: SecurityTagObject(exec->globalData(), structure)
+{
+}
+
+void SecurityTagPrototype::finishCreation(ExecState* exec, JSGlobalObject* globalObject)
+{
+    Base::finishCreation(exec->globalData());
+    
+    ASSERT(inherits(&s_info));
+    
+    JSFunction* toStringFunction = JSFunction::create(exec, globalObject, 0, exec->propertyNames().toString, securityTagProtoFuncToString);
+    putDirectWithoutTransition(exec->globalData(), exec->propertyNames().toString, toStringFunction, DontEnum | DontDelete | ReadOnly);
+    
+    JSFunction* addToFunction = JSFunction::create(exec, globalObject, 1, Identifier(exec, "addTo"), securityTagProtoFuncAddTo);
+    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "addTo"), addToFunction, DontEnum | DontDelete | ReadOnly);
+    
+    JSFunction* isOnFunction = JSFunction::create(exec, globalObject, 1, Identifier(exec, "inOn"), securityTagProtoFuncIsOn);
+    putDirectWithoutTransition(exec->globalData(), Identifier(exec, "isOn"), isOnFunction, DontEnum | DontDelete | ReadOnly);
+}
+
+// ------------------------------ Functions ---------------------------
+
+EncodedJSValue JSC_HOST_CALL securityTagProtoFuncToString(ExecState* exec)
+{
+    return JSValue::encode(jsString(exec, "SecurityTag"));
+}
+
+EncodedJSValue JSC_HOST_CALL securityTagProtoFuncAddTo(ExecState* exec)
+{
+    JSValue thisValue = exec->hostThisValue();
+    if (!thisValue.inherits(&SecurityTagObject::s_info))
+        return throwVMTypeError(exec);
+
+    SecurityTagObject* thisObject = asSecurityTagObject(thisValue);
+    JSValue argument = exec->argument(0);
+    ASSERT(!thisObject->labelForTag().isNull());
+    ASSERT(thisObject->labelForTag().hasTag(thisObject->tag()));
+    return JSValue::encode(argument, exec, thisObject->labelForTag());
+}
+
+EncodedJSValue JSC_HOST_CALL securityTagProtoFuncIsOn(ExecState* exec)
+{
+    JSValue thisValue = exec->hostThisValue();
+    if (!thisValue.inherits(&SecurityTagObject::s_info))
+        return throwVMTypeError(exec);
+
+    SecurityTagObject* thisObject = asSecurityTagObject(thisValue);
+    JSValue argument = exec->argument(0);
+    if (argument.isCell()) {
+        bool result = argument.asCell()->securityLabel().hasTag(thisObject->tag());
+        return JSValue::encode(jsBoolean(result));
     }
+    return JSValue::encode(jsBoolean(false));
+}
 
 } // namespace JSC

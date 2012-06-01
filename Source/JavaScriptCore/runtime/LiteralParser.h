@@ -87,7 +87,7 @@ ALWAYS_INLINE void setParserTokenString(LiteralParserToken<CharType>&, const Cha
 template <typename CharType>
 class LiteralParser {
 public:
-    LiteralParser(ExecState* exec, const CharType* characters, unsigned length, ParserMode mode, SecurityLabel label=SecurityLabel())
+    LiteralParser(ExecState* exec, const CharType* characters, unsigned length, ParserMode mode, SecurityLabel label = SecurityLabel())
         : m_exec(exec)
         , m_lexer(characters, length, mode)
         , m_mode(mode)
