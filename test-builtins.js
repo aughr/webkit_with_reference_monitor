@@ -6,18 +6,33 @@ function assertTaint(obj, bool, label, desc) {
   }
 }
 
-var taint, isTainted;
+function assertTaint2(obj, bool, label, desc) {
+  if (isTainted2(obj) === bool) {
+    print("PASS (2) " + label + ": " + desc);
+  } else {
+    print("FAIL (2) " + label + ": " + desc);
+  }
+}
+
+var taint, taint2, isTainted, isTainted2;
 
 (function () {
   var tag = new SecurityTag();
+  var tag2 = new SecurityTag();
 
   taint = function(obj) {
     return tag.addTo(obj);
-  }
+  };
+  taint2 = function(obj) {
+    return tag2.addTo(obj);
+  };
 
   isTainted = function(obj) {
     return tag.isOn(obj);
-  }
+  };
+  isTainted2 = function(obj) {
+    return tag2.isOn(obj);
+  };
 })();
 
 function runTest() {
@@ -54,6 +69,36 @@ function runTest() {
   assertTaint(Date.parse(year), false, "Date.parse", "untainted string");
   assertTaint(new Date(tainted_year), true, "new Date()", "tainted string");
   assertTaint(new Date(year), false, "new Date()", "untainted string");
+
+  var date_getters = ["toString", "toISOString", "toDateString", "toTimeString", "toLocaleString", "toLocaleDateString", "toLocaleTimeString",
+                 "valueOf", "getTime", "getFullYear", "getUTCFullYear", "toGMTString", "getMonth", "getUTCMonth", "getDate", "getUTCDate",
+                 "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds",
+                 "getUTCMilliseconds", "getTimezoneOffset", "getYear", "toJSON"];
+  var date = new Date(year);
+  var tainted_date = new Date(tainted_year);
+  var i;
+  for (i = 0; i < date_getters.length; i++)
+    assertTaint(date[date_getters[i]](), false, "Date#" + date_getters[i], "untainted date");
+  for (i = 0; i < date_getters.length; i++)
+    assertTaint(tainted_date[date_getters[i]](), true, "Date#" + date_getters[i], "tainted date");
+
+  var date_setters = ["setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes",
+                      "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear",
+                      "setYear"];
+  for (i = 0; i < date_setters.length; i++) {
+    date = new Date(year);
+    date[date_setters[i]](year);
+    assertTaint(date, false, "Date#" + date_setters[i], "untainted parameter");
+  }
+  for (i = 0; i < date_setters.length; i++) {
+    date = new Date(year);
+    date[date_setters[i]](year);
+    assertTaint(date, false, "Date#" + date_setters[i], "tainted parameter");
+    date = new Date(tainted_year);
+    date[date_setters[i]](taint2(year));
+    assertTaint(date, true, "Date#" + date_setters[i], "tainted parameter");
+    assertTaint2(date, true, "Date#" + date_setters[i], "tainted parameter");
+  }
 
   var tainted_message = taint("foo");
   var message = "foo";
